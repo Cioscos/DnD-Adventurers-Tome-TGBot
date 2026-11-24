@@ -145,7 +145,6 @@ async def test_saturazione_magica_non_vale_per_un_incantesimo_di_un_altra_classe
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Sguardo Ipnotico / Hypnotic Gaze (Ammaliamento 2, pag. 85)",
                            "POST /characters/{char_id}/target-effects"])
-@pytest.mark.xfail(strict=True, reason="CB-2113: difforme dal manuale, confermato")
 async def test_sguardo_ipnotico_non_si_ripete_sulla_stessa_creatura_dopo_la_fine(client, test_session_factory, monkeypatch):
     sid, cid, g1 = await _in_serata(client, test_session_factory, monkeypatch,
                                     {"class_name": "wizard", "level": 2, "hit_die": 6, "subclass": "Scuola di Ammaliamento"})

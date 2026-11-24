@@ -19,7 +19,7 @@ from api.routers.hp import death_state, retouch_death_save
 from api.routers.items import close_grazed_attack, retouch_pending_attack
 from api.routers.sessions import active_encounter_row
 from api.services.game_sessions import touch
-from api.services.rules_targets import apply_target_effect, pending_target_effect
+from api.services.rules_targets import apply_target_effect, pending_target_effect, target_immune
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
@@ -30,7 +30,7 @@ from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import is_target_immune, item_spell_held
+from core.rules.states import item_spell_held
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
 from api.services.durations import end_concentration, is_concentrating
@@ -613,7 +613,7 @@ async def target_effect_preview(
     return TargetEffectPreview(
         result=TargetEffectRead(**effect),
         combatants=[TargetCandidate(id=c.id, name=c.name, kind=c.kind,
-                                    immune=bool(effect.get("immune_on_success")) and is_target_immune(char, effect_key, c))
+                                    immune=await target_immune(db, char, effect, effect_key, c))
                     for c in sorted(found[0].combatants, key=lambda c: c.sort_order or 0) if not c.is_dead] if found else [],
     )
 

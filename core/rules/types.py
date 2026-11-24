@@ -163,7 +163,8 @@ class TargetEffect:
     nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito.
     ``extends``: se il bersaglio porta già la condizione da chi usa il privilegio, la durata si rinnova senza un nuovo TS
     (prolungamento). ``immune_on_success``: chi supera il TS non è più bersaglio di questo effetto fino al prossimo
-    riposo lungo di chi lo usa (le «24 ore» delle schede)."""
+    riposo lungo di chi lo usa (le «24 ore» delle schede). ``immune_on_end``: lo stesso anche quando l'effetto finisce, cioè
+    dal primo uso su quel bersaglio, salvo prolungarlo finché dura (Sguardo Ipnotico 2014)."""
     condition: str | None = None
     save_ability: str | None = None
     save_dc: int | None = None
@@ -175,6 +176,7 @@ class TargetEffect:
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    immune_on_end: bool = False
     # Con un TS: se fallito, la condizione ripete il TS a ``start`` o ``end`` del turno del bersaglio (Collera della Natura)
     repeat_save: str | None = None
     # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non

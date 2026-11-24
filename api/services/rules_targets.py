@@ -20,7 +20,7 @@ from api.services.effects import apply_conditions
 from api.services.history import add_history
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
-from core.rules.states import RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune
+from core.rules.states import RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune, target_key
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -195,6 +195,23 @@ async def drop_pending_effects(db: AsyncSession, encounter_id: int) -> None:
     await db.flush()
 
 
+async def _extends_own(db: AsyncSession, char: Character, target: Combatant, slug: str | None) -> bool:
+    """Il bersaglio porta già ``slug`` da chi usa il privilegio, non in attesa di un TS: si può prolungare."""
+    return bool(slug and (await db.execute(select(ConditionEffect.id).where(
+        ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
+        ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
+        ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
+        ConditionEffect.source_character_id == char.id))).first())
+
+
+async def target_immune(db: AsyncSession, char: Character, effect: dict, effect_key: str, target: Combatant) -> bool:
+    """Il bersaglio non si può più scegliere: TS superato o, con ``immune_on_end``, effetto già usato su di lui. Finché
+    l'effetto dura lo si prolunga (Sguardo Ipnotico 2014: «una volta finito l'effetto»)."""
+    if not (effect.get("immune_on_success") or effect.get("immune_on_end")) or not is_target_immune(char, effect_key, target):
+        return False
+    return not (effect.get("extends") and await _extends_own(db, char, target, effect.get("condition")))
+
+
 async def apply_target_effect(
     db: AsyncSession, char: Character, enc: Encounter, mine: Combatant, target: Combatant, effect_key: str,
 ) -> tuple[bool, PendingSave | None]:
@@ -202,15 +219,11 @@ async def apply_target_effect(
 
     Con un TS la condizione non c'è ancora: nasce un effetto ``pending`` e il TS ne decide la sorte."""
     effect = pending_target_effect(char, effect_key)
-    if effect.get("immune_on_success") and is_target_immune(char, effect_key, target):
+    if await target_immune(db, char, effect, effect_key, target):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "target_immune"})
     slug = effect.get("condition")
     with_save = bool(slug and effect.get("save_ability") and effect.get("on_failure_only", True))
-    extending = bool(with_save and effect.get("extends") and (await db.execute(select(ConditionEffect.id).where(
-        ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
-        ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
-        ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
-        ConditionEffect.source_character_id == char.id))).first())
+    extending = bool(with_save and effect.get("extends") and await _extends_own(db, char, target, slug))
     if extending:
         with_save = False  # prolungamento: la condizione c'è già da parte nostra, la durata si rinnova senza un nuovo TS
     if with_save and (await db.execute(select(ConditionEffect.id).where(
@@ -221,6 +234,8 @@ async def apply_target_effect(
     turn = dict(char.turn_state or {})
     turn["target_effects"] = {k: v for k, v in turn["target_effects"].items() if k != effect_key}
     char.turn_state = turn
+    if effect.get("immune_on_end") and not extending:  # finito l'effetto il bersaglio non si sceglie più; mentre dura si prolunga
+        add_target_immunity(char, effect_key, target_key(target))
     if not slug:
         return False, None
     expiry, anchor_id = _expiry(effect, enc)
