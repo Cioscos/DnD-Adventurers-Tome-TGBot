@@ -55,7 +55,6 @@ async def test_in_forma_2024_valgono_i_bonus_della_bestia_se_piu_alti(client):
 @pytest.mark.caccia(id="CB-2312", fonte="2024 · Druido · Circolo delle Stelle · Calice · pag. 89", zona="regola:2024/druid", voce="regola",
                     copre=["carta:2024/classes/druid.md#Calice / Chalice (Circolo delle Stelle 3, pag. 89)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
-@pytest.mark.xfail(strict=True, reason="CB-2312: difforme dal manuale, confermato")
 async def test_il_calice_cura_una_sola_creatura_per_incantesimo(client, dadi):
     cid = await _circle(client, "stars", 5, wisdom=16)
     assert (await _use(client, cid, "druid.starry_form", params={"constellation": "chalice"})).status_code == 200
