@@ -73,6 +73,11 @@ def _shield(char: Any) -> Any:
     return next((i for i in char.items or [] if i.is_equipped and i.item_type == "shield"), None)
 
 
+def _can_react(ctx: RuleContext) -> bool:
+    from core.rules.modifiers import is_incapacitated  # import locale: modifiers usa il catalogo
+    return not is_incapacitated(ctx.char)
+
+
 def _shield_ac(ctx: RuleContext, _inputs: dict) -> int:
     from core.game.item_bonuses import item_meta
     item = _shield(ctx.char)
@@ -127,13 +132,14 @@ _register(
         available=lambda c: heavy_armor(c.char) and c.damage_type in _PHYSICAL,
         label=_both("Maestro delle Armature Pesanti: il danno viene da un'arma non magica, -3",
                     "Heavy Armor Master: the damage comes from a nonmagical weapon, -3")),)),
+    # PHB 2014 pag. 169: il bonus ai TS «se non è incapacitato»; l'evasione costa la reazione (testo intero del manuale)
     _f14("shield_master", roll_options=(
         RollOptionSpec(key="feat.shield_master", phase="before", rolls=("save",), bonus=_shield_ac,
-                       available=lambda c: c.ability == "dexterity" and _shield(c.char) is not None,
+                       available=lambda c: c.ability == "dexterity" and _shield(c.char) is not None and _can_react(c),
                        label=_both("Maestro degli Scudi: l'effetto bersaglia solo te, sommi la CA dello scudo",
                                    "Shield Master: the effect targets only you, add your shield's AC")),
-        RollOptionSpec(key="feat.shield_master_evasion", phase="damage_in", rolls=("damage_taken",), multiplier=0,
-                       available=lambda c: _shield(c.char) is not None,
+        RollOptionSpec(key="feat.shield_master_evasion", phase="damage_in", rolls=("damage_taken",), multiplier=0, slot="reaction",
+                       available=lambda c: _shield(c.char) is not None and _can_react(c),
                        label=_both("Maestro degli Scudi: hai superato il TS di Destrezza contro un effetto a metà danni",
                                    "Shield Master: you passed the Dexterity save against a half-damage effect")))),
     _f14("defensive_duelist", passive=False, action_type="reaction",
