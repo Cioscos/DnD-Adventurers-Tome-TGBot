@@ -137,13 +137,13 @@ async def test_forma_gassosa_2024_un_bersaglio_in_piu_per_slot_oltre_il_terzo(cl
                     copre=["carta:2024/spells.md#Dominare bestie", "carta:2024/spells.md#Dominare persone", "carta:2024/spells.md#Dominare mostri",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("classe, livello, indice, slot, round_attesi", [
-    ("druid", 7, "dominate-beast", 4, 10), pytest.param("druid", 9, "dominate-beast", 5, 100, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
-    pytest.param("druid", 11, "dominate-beast", 6, 600, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
-    pytest.param("druid", 13, "dominate-beast", 7, 4800, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")), ("bard", 9, "dominate-person", 5, 10),
-    pytest.param("bard", 11, "dominate-person", 6, 100, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
-    pytest.param("bard", 13, "dominate-person", 7, 600, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
-    pytest.param("bard", 15, "dominate-person", 8, 4800, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
-    pytest.param("sorcerer", 17, "dominate-monster", 9, 4800, marks=pytest.mark.xfail(strict=True, reason="CB-3717: difforme dal manuale, confermato")),
+    ("druid", 7, "dominate-beast", 4, 10), ("druid", 9, "dominate-beast", 5, 100),
+    ("druid", 11, "dominate-beast", 6, 600),
+    ("druid", 13, "dominate-beast", 7, 4800), ("bard", 9, "dominate-person", 5, 10),
+    ("bard", 11, "dominate-person", 6, 100),
+    ("bard", 13, "dominate-person", 7, 600),
+    ("bard", 15, "dominate-person", 8, 4800),
+    ("sorcerer", 17, "dominate-monster", 9, 4800),
 ])
 async def test_dominare_2024_la_concentrazione_dura_di_piu_con_uno_slot_superiore(client, classe, livello, indice, slot, round_attesi):
     cid = await _pg(client, classe, livello)

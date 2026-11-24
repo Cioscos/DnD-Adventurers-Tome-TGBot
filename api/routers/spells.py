@@ -209,8 +209,12 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool, ritual: bool) ->
 WAR_MAGIC_KEYS = {"fighter.war_magic", "fighter.improved_war_magic"}
 
 # Concentrazione che cambia con lo slot e che la riga non dice: (edizione -> slot da cui non serve più, slot -> round).
-# Immagine Maggiore 2014 pag. 242, 2024 pag. 295; Scagliare Maledizione 2014 pag. 273, 2024 pag. 245 (10 minuti con lo slot del 4°)
-_SLOT_CONCENTRATION = {"major-image": ({"2014": 6, "2024": 4}, {}), "bestow-curse": ({"2014": 5, "2024": 5}, {4: 100})}
+# Immagine Maggiore 2014 pag. 242, 2024 pag. 295; Scagliare Maledizione 2014 pag. 273, 2024 pag. 245 (10 minuti con lo slot del 4°);
+# Dominare Bestie / Persone / Mostri 2014 pag. 231-232, 2024 pag. 265-266 (10 minuti, 1 ora, 8 ore)
+_SLOT_CONCENTRATION = {"major-image": ({"2014": 6, "2024": 4}, {}), "bestow-curse": ({"2014": 5, "2024": 5}, {4: 100}),
+                       "dominate-beast": ({}, {5: 100, 6: 600, 7: 4800, 8: 4800, 9: 4800}),
+                       "dominate-person": ({}, {6: 100, 7: 600, 8: 4800, 9: 4800}),
+                       "dominate-monster": ({}, {9: 4800})}
 
 
 def _slot_concentration(char: Character, spell: Spell, level: int) -> tuple[bool, int | None]:
