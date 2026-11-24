@@ -779,8 +779,8 @@ async def test_nota_della_serata_con_accenti_ed_emoji(client):
     camp = await _new_campaign(client)
     url = f"/campaigns/{camp['id']}/schedule"
     quando = _iso_utc(timedelta(days=2))
-    for nota in ("è" * 200, "🎲" * 200):
-        r = await client.post(url, json={"starts_at": quando, "note": nota})
+    for giorni, nota in ((5, "è" * 200), (6, "🎲" * 200)):  # istanti diversi (D-014)
+        r = await client.post(url, json={"starts_at": _iso_utc(timedelta(days=giorni)), "note": nota})
         assert r.status_code == 201 and r.json()["note"] == nota
     for nota in ("è" * 201, "🎲" * 201):
         assert (await client.post(url, json={"starts_at": quando, "note": nota})).status_code == 422

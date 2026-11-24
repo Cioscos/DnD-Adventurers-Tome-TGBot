@@ -368,7 +368,7 @@ async def _check_free_instant(db: AsyncSession, campaign_id: int, starts_at: str
     """D-014: una sola serata programmata per istante."""
     taken = await db.scalar(select(CampaignSchedule.id).where(
         CampaignSchedule.campaign_id == campaign_id, CampaignSchedule.starts_at == starts_at,
-        CampaignSchedule.id != (sid or 0)).limit(1))
+        CampaignSchedule.session_id.is_(None), CampaignSchedule.id != (sid or 0)).limit(1))
     if taken is not None:
         raise _err(409, "schedule_duplicate")
 
@@ -413,7 +413,7 @@ async def create_schedule(
     return _schedule_read(row)
 
 
-@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead)
+@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead, dependencies=[Depends(user_write_lock)])
 async def update_schedule(
     campaign_id: int,
     sid: int,
