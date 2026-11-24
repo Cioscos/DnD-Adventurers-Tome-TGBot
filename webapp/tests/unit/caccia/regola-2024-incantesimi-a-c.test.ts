@@ -16,7 +16,7 @@ describe('caccia: regola 2024 incantesimi A-C', () => {
   })
 
   // caccia: {"id": "CB-3671", "fonte": "2024 · Incantesimi · Contagio · pag. 256", "zona": "regola:2024/incantesimi-A-C", "voce": "regola", "copre": ["carta:2024/spells.md#Contagio"]}
-  it.fails('Contagio aggiunto dal catalogo 2024 ha le componenti V e S', async () => {
+  it('Contagio aggiunto dal catalogo 2024 ha le componenti V e S', async () => {
     expect((await riga('contagion')).components).toBe('V, S')
   })
 })

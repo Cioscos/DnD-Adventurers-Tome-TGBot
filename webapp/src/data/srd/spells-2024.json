@@ -3829,7 +3829,10 @@
     "it": "Contatto"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V",
+    "S"
+   ],
    "material": null,
    "duration": {
     "en": "7 days",
@@ -5501,7 +5504,9 @@
     "it": "Personale"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V"
+   ],
    "material": null,
    "duration": {
     "en": "Instantaneous",
@@ -13070,7 +13075,9 @@
     "it": "60 piedi"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V"
+   ],
    "material": null,
    "duration": {
     "en": "Instantaneous",
@@ -13112,7 +13119,9 @@
     "it": "60 piedi"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V"
+   ],
    "material": null,
    "duration": {
     "en": "Instantaneous",
@@ -14157,7 +14166,10 @@
     "it": "Contatto"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V",
+    "S"
+   ],
    "material": null,
    "duration": {
     "en": "Up to 1 minute",
@@ -14589,7 +14601,9 @@
     "it": "Personale"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V"
+   ],
    "material": null,
    "duration": {
     "en": "1 minute",

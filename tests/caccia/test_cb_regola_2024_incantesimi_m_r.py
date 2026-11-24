@@ -82,7 +82,6 @@ async def test_protezione_dal_male_e_dal_bene_dal_catalogo_avvia_la_concentrazio
 @pytest.mark.parametrize("indice,componenti", [
     ("divine-smite", ["V"]), ("power-word-heal", ["V"]), ("power-word-kill", ["V"]), ("resistance", ["V", "S"]), ("searing-smite", ["V"]),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3812: difforme dal manuale, confermato")
 def test_componenti_del_catalogo_2024(indice, componenti):
     # Le componenti finiscono sull'incantesimo del personaggio: la Verbale chiude il nascondiglio 2024 (casts_verbally)
     assert CATALOGO[indice]["components"] == componenti
