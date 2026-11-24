@@ -109,7 +109,6 @@ async def test_calmare_emozioni_finita_la_concentrazione_la_condizione_torna(cli
 
 @pytest.mark.caccia(id="CB-542", fonte="invariante: dopo export e import lo stato della scheda è lo stesso, durate comprese", zona="flusso:condizioni",
                     voce="persistenza", copre=["GET /characters/{char_id}/export", "POST /characters/import", "POST /characters/{char_id}/duplicate"])
-@pytest.mark.xfail(strict=True, reason="CB-542 export/import e duplicazione perdono le durate delle condizioni")
 async def test_durata_della_condizione_resta_con_importazione_e_copia(client):
     cid = await _pg(client)
     await _cond(client, cid, {"blinded": True}, durations={"blinded": 2})

@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
+from api.services.condition_effects import ExpirySpec, SaveSpec, effects_for_character, upsert_effect
 from api.services.homebrew.dsl import RuleDSL
 from api.services.wild_shape import start_form
 from api.version import APP_VERSION
@@ -152,6 +153,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
             for h in char.homebrew_resources if h.rule_id in rule_index
         ],
         "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
+        "condition_effects": [e.__dict__ for e in await effects_for_character(session, char.id)
+                              if e.expiry_count is not None or e.save_dc is not None],
     })
 
 
@@ -265,6 +268,13 @@ async def import_character(
     await session.flush()  # assegna gli id nuovi
 
     _link_containers(data.items, items)
+    for e in data.condition_effects:  # solo per le condizioni davvero attive sulla scheda importata
+        if (char.conditions or {}).get(e.slug):
+            await upsert_effect(
+                session, ("character", char.id), e.slug,
+                expiry=ExpirySpec("owner", e.expiry_edge or "start", e.expiry_count) if e.expiry_count else None,
+                save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end") if e.save_ability and e.save_dc else None,
+                source_note=e.source_note)
 
     rolls = (char.settings or {}).get("hp_rolls")
     if isinstance(rolls, dict) and rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate
