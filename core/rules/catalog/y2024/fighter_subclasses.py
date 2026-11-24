@@ -474,6 +474,11 @@ PROTECTIVE_FIELD = RollOptionSpec(
                 "Protective Field: reduce the damage by a psionic die + Intelligence"))
 
 
+def _with_weapon(ctx: RuleContext) -> bool:
+    """Un attacco con un'arma: nel 2024 il Colpo Senz'Armi non è un'arma (Colpo Psionico pag. 98, Colpo Senz'Armi pag. 377)."""
+    return _weapon_attack(ctx) and ctx.item is not None
+
+
 def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"{_psi_die(ctx)}{_int_mod(ctx):+d}"
 
@@ -481,7 +486,7 @@ def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
 PSIONIC_STRIKE = RollOptionSpec(
     key=f"{CK}.psionic_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, cost=Cost(feature_key=PSI), extra_dice=_strike_dice,
     crit_doubles=False,  # danno a sé, tirato dopo il colpo: il critico non lo raddoppia
-    available=_weapon_attack,
+    available=_with_weapon,
     label=_both("Colpo Psionico: spendi un dado psionico per danno da Forza (dado + Intelligenza), una volta per turno",
                 "Psionic Strike: spend a psionic die for Force damage (die + Intelligence), once per turn"),
     effect=lambda c, _i: _both(f"Danno da Forza: dado psionico + Intelligenza ({_int_mod(c):+d}), già nel totale; il bersaglio entro 9 m.",
@@ -493,7 +498,7 @@ def _thrust_dc(ctx: RuleContext) -> int:
 
 
 THRUST = RollOptionSpec(
-    key=f"{CK}.telekinetic_thrust", phase="after_hit", rolls=("attack",), needs=PSIONIC_STRIKE.key, available=_weapon_attack,
+    key=f"{CK}.telekinetic_thrust", phase="after_hit", rolls=("attack",), needs=PSIONIC_STRIKE.key, available=_with_weapon,
     label=_both("Spinta Telecinetica: il bersaglio fa un TS Forza o cade prono o è spinto di 3 m",
                 "Telekinetic Thrust: the target makes a Strength save or falls prone or is moved 10 ft"),
     effect=lambda c, _i: _both(f"TS Forza CD {_thrust_dc(c)}: se fallisce è prono oppure lo sposti fino a 3 m in orizzontale.",
@@ -502,7 +507,7 @@ THRUST = RollOptionSpec(
 
 MASTER_ATTACK = RollOptionSpec(
     key=f"{CK}.telekinetic_master_attack", phase="before", rolls=("attack",), slot="bonus",
-    available=lambda c: _weapon_attack(c) and _concentrating_on_telekinesis(c),
+    available=lambda c: _with_weapon(c) and _concentrating_on_telekinesis(c),
     label=_both("Maestro Telecinetico: attacco con arma come azione bonus mentre ti concentri su Telecinesi",
                 "Telekinetic Master: weapon attack as a bonus action while you concentrate on Telekinesis"))
 
