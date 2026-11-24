@@ -13,7 +13,8 @@ import pytest
 from core.rules.weapons import small_race
 
 _RAZZE = json.loads((Path(__file__).resolve().parents[2] / "webapp/src/data/srd/races.json").read_text(encoding="utf-8"))["items"]
-_NOTE = {"poison_save": "save.constitution", "charm_save": "save.wisdom", "frightened_save": "save.wisdom"}  # species.ts NOTE_KEY
+_NOTE = {"poison_save": ["save.constitution"], "charm_save": ["save.wisdom"], "frightened_save": ["save.wisdom"],
+         "magic_save": ["save.intelligence", "save.wisdom", "save.charisma"]}  # species.ts NOTE_KEY
 _LINGUE = {"common": "Comune", "dwarvish": "Nanico", "elvish": "Elfico", "gnomish": "Gnomesco", "halfling": "Halfling",
            "orc": "Orchesco", "draconic": "Draconico", "infernal": "Infernale"}
 
@@ -30,8 +31,8 @@ def _specie(indice: str, sotto: str | None = None, lingua: str = "it") -> dict:
         sensi[s["type"]] = max(sensi.get(s["type"], 0), s["range_ft"])
     note: dict[str, str] = {}
     for nid, testo in {**razza["roll_notes"], **(sub.get("roll_notes") or {})}.items():
-        if nid in _NOTE:
-            note[_NOTE[nid]] = " ".join(x for x in (note.get(_NOTE[nid]), testo[lingua]) if x)[:120]
+        for chiave in _NOTE.get(nid, ()):
+            note[chiave] = " ".join(x for x in (note.get(chiave), testo[lingua]) if x)[:120]
     return {
         "name": (sub or razza)["name"][lingua],
         "speed_ft": sub.get("speed_ft", razza["speed_ft"]),

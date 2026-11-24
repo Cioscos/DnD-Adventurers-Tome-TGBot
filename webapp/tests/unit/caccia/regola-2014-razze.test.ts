@@ -102,7 +102,7 @@ describe('caccia: regola 2014 razze', () => {
   })
 
   // caccia: {"id": "CB-3071", "fonte": "2014 · Razze · Mezzelfo, Retaggio Fatato (pag. 39) e Gnomo, Astuzia Gnomesca (pag. 36-37): vantaggio a tiri salvezza, come le note di Elfo, Nano e Halfling", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "carta:2014/races.md#Gnomo / Gnome - tratti base (pag. 36-37)", "route:/"]}
-  it.fails.each([
+  it.each([
     ['half-elf', 'save.wisdom'],
     ['gnome', 'save.intelligence'],
     ['gnome', 'save.wisdom'],

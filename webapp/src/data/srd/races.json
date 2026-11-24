@@ -375,7 +375,12 @@
      ]
     }
    ],
-   "roll_notes": {}
+   "roll_notes": {
+    "magic_save": {
+     "en": "Advantage on Intelligence, Wisdom, and Charisma saving throws against magic.",
+     "it": "Vantaggio ai tiri salvezza di Intelligenza, Saggezza e Carisma contro la magia."
+    }
+   }
   },
   {
    "index": "half-elf",
@@ -434,7 +439,12 @@
     }
    ],
    "subraces": [],
-   "roll_notes": {}
+   "roll_notes": {
+    "charm_save": {
+     "en": "Advantage on saving throws against being charmed, and magic can't put you to sleep.",
+     "it": "Vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
+    }
+   }
   },
   {
    "index": "half-orc",

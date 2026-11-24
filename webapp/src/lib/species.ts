@@ -31,11 +31,12 @@ export interface SpeciesPayload {
   traits: { name: string; description: string }[]
 }
 
-// Curated catalogue note id -> roll-note key (what the character sheet reads).
-const NOTE_KEY: Record<string, string> = {
-  poison_save: 'save.constitution',
-  charm_save: 'save.wisdom',
-  frightened_save: 'save.wisdom',
+// Curated catalogue note id -> roll-note keys (what the character sheet reads).
+const NOTE_KEY: Record<string, string[]> = {
+  poison_save: ['save.constitution'],
+  charm_save: ['save.wisdom'],
+  frightened_save: ['save.wisdom'],
+  magic_save: ['save.intelligence', 'save.wisdom', 'save.charisma'],
 }
 
 const LANGS: Record<string, LocalizedField> = {
@@ -57,8 +58,9 @@ export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: La
   }
   const notes: Record<string, string> = {}
   for (const [id, f] of Object.entries({ ...race.roll_notes, ...(sub?.roll_notes ?? {}) })) {
-    const key = NOTE_KEY[id]
-    if (key) notes[key] = [notes[key], localized(f, lang).text].filter(Boolean).join(' ').slice(0, NOTE_MAX)
+    for (const key of NOTE_KEY[id] ?? []) {
+      notes[key] = [notes[key], localized(f, lang).text].filter(Boolean).join(' ').slice(0, NOTE_MAX)
+    }
   }
   const langs = [...new Set([...race.languages, ...(sub?.languages ?? [])])]
   return {
