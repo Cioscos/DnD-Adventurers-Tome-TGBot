@@ -34,7 +34,6 @@ async def _amuleto_cd(client, cid) -> None:
                            "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/rounds/tick", "PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("fine", ["un_minuto", "incapacitato"])
-@pytest.mark.xfail(strict=True, reason="CB-2261: difforme dal manuale, confermato")
 async def test_lo_scudo_della_fede_senza_concentrazione_finisce_con_la_benedizione_del_dio_della_guerra(client, fine):
     cid = await _dom(client, 6, "war")
     ca = (await _full(client, cid))["ac"]

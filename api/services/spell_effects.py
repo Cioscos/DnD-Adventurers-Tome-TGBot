@@ -271,10 +271,11 @@ def with_spell_hints(states: list[dict] | None) -> list[dict] | None:
 
 async def apply_spell_effects(session: AsyncSession, caster: Character, spell, slot_level: int,
                               targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = (),
-                              no_concentration: bool = False) -> SpellEffectsRead | None:
+                              no_concentration: bool = False, lasts: dict | None = None) -> SpellEffectsRead | None:
     """Dopo la spesa: uno stato per bersaglio e l'orologio su chi lancia. Fuori serata (o per un effetto solo descrittivo)
     nessuno stato e un testo per il GM. ``options``: le opzioni di lancio scelte (Esteso raddoppia la durata, Raddoppiato un bersaglio in più);
-    ``no_concentration``: lanciato senza concentrazione (Schiavo), lo stato non è legato a quella del lanciatore."""
+    ``no_concentration``: lanciato senza concentrazione (Schiavo), lo stato non è legato a quella del lanciatore;
+    ``lasts``: la durata propria del lancio (``rounds``, ``ends_on``) al posto di quella dell'incantesimo (Benedizione del Dio della Guerra)."""
     resolved = await _resolve(session, caster, spell, slot_level, targets, choices, options)
     if resolved is None:
         _remember_cast_type(caster, None, None)
@@ -284,7 +285,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
     _remember_cast_type(caster, effect.key + UPCAST_SUFFIX, chosen.get("upcast_type"))
     concentration = variant.concentration and not no_concentration
-    rounds = variant.duration(slot_level)
+    rounds = variant.duration(slot_level) if lasts is None else lasts.get("rounds")
     if EXTENDED_KEY in options and rounds is not None:
         rounds = min(rounds * 2, MAX_DURATION_ROUNDS)  # Esteso: l'orologio dell'effetto raddoppia come la concentrazione
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
@@ -342,7 +343,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         applied.append({"id": target.id, "name": target.name})
     if rolled:
         data["per_target"] = rolled
-    ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on]
+    ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on,
+            *((lasts or {}).get("ends_on") or ())]
     begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato

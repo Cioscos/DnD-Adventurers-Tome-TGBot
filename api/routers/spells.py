@@ -577,13 +577,16 @@ async def use_spell(
     if (character_edition(char) == "2024" and not (body.free_cast or body.ki or body.as_ritual)
             and (found := spell_effect("2024", spell.srd_index, spell.name)) and found[1].on_hit):
         spend(char, "bonus")  # punizione 2024 lanciata da elenco: costa l'azione bonus, 409 turn_slot_used prima di spendere lo slot
+    # lo stato del lancio gratuito, letto prima che il lancio lo chiuda: senza Concentrazione, con la durata del suo «then»
+    free = ((free_cast_state(char, spell) or {}).get("data") or {}) if body.free_cast else {}
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.options or [],
-                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or [])))
+                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))
+                                         or bool(free.get("no_concentration")), lasts=free.get("then"))
     if spell.srd_index == "find-steed" and not (body.free_cast or body.as_ritual) and any(
             s.key == STEED for s, _row in active_features(char)):  # Destriero Fedele: il lancio con slot crea il destriero del suo livello
         await session.refresh(char, attribute_names=["companions"])
