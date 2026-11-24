@@ -404,13 +404,6 @@ def _aspect_choice() -> ChoiceSpec:
                       label=lambda key: {"name": ASPECT_NAMES[key], "summary": ""})
 
 
-def _owl_range(ctx: RuleContext) -> int:
-    """Scurovisione 60 piedi; se già posseduta, la portata cresce di 60."""
-    have = max((int(s.get("range_ft") or 0) for s in (ctx.char.settings or {}).get("senses") or []
-                if isinstance(s, dict) and s.get("type") == "darkvision"), default=0)
-    return 60 + have
-
-
 def _wild(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], action_type: str | None = None, **kw: Any):
     return feature(f"wilds_{key}", CK, ED, level, title, name, summary, action_type, subclass="wild_heart", **kw)
 
@@ -646,7 +639,7 @@ FEATURES = (
             ("Scurovisione 18 m (60 ft); se ce l'hai già, la portata cresce di 18 m (60 ft).",
              "Darkvision 60 ft; if you already have it, its range grows by 60 ft."),
             subclass="wild_heart", option_group="aspect_of_the_wilds", option_key="owl",
-            modifiers=(Modifier("sense:darkvision", _owl_range, source=f"feature:{CK}.aspect_owl"),)),
+            modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.aspect_owl"),)),
     feature("aspect_panther", CK, ED, 6, "Pantera / Panther (Aspetto della Natura Selvaggia, Cammino del Cuore Selvaggio 6, pag. 55)",
             ("Pantera (Aspetto della Natura Selvaggia)", "Panther (Aspect of the Wilds)"),
             ("Velocità di scalare pari alla velocità.", "Climb Speed equal to your Speed."),

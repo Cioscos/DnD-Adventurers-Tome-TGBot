@@ -262,6 +262,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
 
     out = Applied()
     half_prof = False
+    sense_plus: dict[str, int] = {}
     flat_target = _FLAT_TARGET.get(ctx.roll)
     for m, mctx, source in pairs:
         if m.when is not None and not m.when(mctx):
@@ -299,6 +300,9 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             kind = m.target.split(":", 1)[1]
             out.senses[kind] = max(out.senses.get(kind, 0), m.value(mctx) if callable(m.value) else m.value)
             counted = False  # un senso non sta dietro nessun tiro: non è una fonte del risultato (Vista del Diavolo)
+        elif m.target.startswith("sense_plus:"):  # «portata N, o +N se ce l'hai già» (Gufo, Vista Ombrale 2024): si somma
+            kind = m.target.split(":", 1)[1]
+            sense_plus[kind] = sense_plus.get(kind, 0) + (m.value(mctx) if callable(m.value) else m.value)
         elif m.target == "jump_bonus":
             out.jump_bonus_ft = (out.jump_bonus_ft or 0) + (m.value(mctx) if callable(m.value) else m.value)
             counted = True
@@ -326,6 +330,10 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             out.notes.append(source)
     if half_prof:
         out.flat += _half_prof(ctx)
+    for kind, ft in sense_plus.items():  # la portata già posseduta: specie, altri privilegi o scritta a mano nella scheda
+        manual = max((int(s.get("range_ft") or 0) for s in (getattr(ctx.char, "settings", None) or {}).get("senses") or []
+                      if isinstance(s, dict) and s.get("type") == kind), default=0)
+        out.senses[kind] = max(out.senses.get(kind, 0), manual) + ft
     return out
 
 

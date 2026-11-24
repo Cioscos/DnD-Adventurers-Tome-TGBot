@@ -43,7 +43,6 @@ async def _strike(client, cid, comp, **body):
                     zona="regola:2024/ranger", voce="interazione",
                     copre=["carta:2024/classes/ranger.md#Vista Ombrale / Umbral Sight (Stalker delle Tenebre 3, pag. 126)",
                            "carta:2024/races.md#Nano / Dwarf (pag. 188)", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2511: difforme dal manuale, confermato")
 async def test_vista_ombrale_allunga_la_scurovisione_della_specie(client, test_session_factory):
     cid = await _sub(client, 3, "gloom_stalker")
     await _sync(test_session_factory, cid, species_key="2024_dwarf", species_options={})  # 36 m di Scurovisione dalla specie

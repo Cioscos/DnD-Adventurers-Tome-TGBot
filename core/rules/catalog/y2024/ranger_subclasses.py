@@ -16,7 +16,6 @@ from core.rules.catalog.y2014.ranger import (
     COLOSSUS_SLAYER, HORDE_BREAKER, SHARE_SPELLS_EXTEND, _permanent_note, _say, _weapon_attack,
 )
 from core.rules.catalog.y2014.rogue import _lacks_wisdom_save_proficiency
-from core.rules.catalog.y2024.barbarian import _owl_range
 from core.rules.catalog.y2024.druid import _free_slot_levels, _level_label
 from core.rules.catalog.y2024.ranger import CK, ED, _mark_dice, _wis_mod, hunters_mark_active
 from core.rules.companions import PRIMAL_COMPANION
@@ -434,7 +433,7 @@ SUBCLASS_ROWS = (
     _sub(GS, "umbral_sight", 3, "Vista Ombrale / Umbral Sight (Stalker delle Tenebre 3, pag. 126)", ("Vista Ombrale", "Umbral Sight"),
          ("Scurovisione 18 m (o +18 m se l'hai già); nell'oscurità totale sei invisibile a chi si affida alla Scurovisione (lo applica il DM).",
           "Darkvision 60 ft (or +60 ft if you have it); in total darkness you are invisible to creatures relying on Darkvision (the GM applies it)."),
-         modifiers=(Modifier("sense:darkvision", _owl_range, source=f"feature:{CK}.umbral_sight"),), passive=True),
+         modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.umbral_sight"),), passive=True),
     _sub(GS, "iron_mind", 7, "Mente di Ferro / Iron Mind (Stalker delle Tenebre 7, pag. 126)", ("Mente di Ferro", "Iron Mind"),
          ("Competenza nei tiri salvezza su Saggezza.", "Proficiency in Wisdom saving throws."),
          modifiers=(Modifier("save", lambda c: c.char.proficiency_bonus, when=_lacks_wisdom_save_proficiency, source=f"feature:{CK}.iron_mind"),),

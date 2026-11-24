@@ -77,7 +77,6 @@ async def test_aspetto_della_natura_selvaggia_si_cambia_una_volta_per_riposo_lun
                     zona="regola:2024/barbarian", voce="interazione",
                     copre=["carta:2024/classes/barbarian.md#Gufo / Owl (Aspetto della Natura Selvaggia, Cammino del Cuore Selvaggio 6, pag. 55)",
                            "PUT /characters/{char_id}/species"])
-@pytest.mark.xfail(strict=True, reason="CB-2162: difforme dal manuale, confermato")
 async def test_gufo_aggiunge_60_piedi_alla_scurovisione_della_specie_2024(client):
     cid = await _barbarian(client, 6, WILD)
     r = await client.put(f"/characters/{cid}/species", json={"key": "2024_dwarf", "options": {}})

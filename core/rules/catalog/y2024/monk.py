@@ -525,13 +525,6 @@ MERCY_ROWS = (
 # Guerriero dell'Ombra
 # ---------------------------------------------------------------------------
 
-def _darkvision_range(ctx: RuleContext) -> int:
-    """Scurovisione 18 m (60 piedi); se già posseduta, la portata cresce di altri 18 m."""
-    have = max((int(s.get("range_ft") or 0) for s in (ctx.char.settings or {}).get("senses") or []
-                if isinstance(s, dict) and s.get("type") == "darkvision"), default=0)
-    return 60 + have
-
-
 def _begin_shadow_strike(ctx: RuleContext, _params: dict) -> None:
     begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), SHADOW_STRIKE.key,
                 "Colpo dopo il Passo dell'Ombra")  # feature_key senza riga: il nome non si fonde con quello dello stato del Passo
@@ -554,7 +547,7 @@ SHADOW_ROWS = (
              ("Oscurità con 1 punto, senza componenti; Scurovisione 18 m (altri 18 m se già ce l'hai); conosci Illusione Minore con Saggezza.",
               "Darkness for 1 point, no components; Darkvision 18 m (another 18 m if you already have it); you know Minor Illusion with Wisdom."),
              "action", passive=True, granted_spells=("darkness", "minor-illusion"), ki_spells=(KiSpell("darkness", 1),),
-             modifiers=(Modifier("sense:darkvision", _darkvision_range, source=f"feature:{CK}.shadow_arts"),)),
+             modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.shadow_arts"),)),
     _sub_row("shadow", "shadow_step", 6, "Passo dell'Ombra", "Shadow Step", 105,
              ("Azione bonus, da luce fioca o oscurità: ti teletrasporti fino a 18 m in uno spazio libero anch'esso in luce fioca; vantaggio al prossimo attacco in mischia.",
               "Bonus action, from dim light or darkness: teleport up to 60 ft to a free space also in dim light; advantage on your next melee attack."),
