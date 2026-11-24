@@ -113,7 +113,6 @@ async def test_la_cd_di_incanalare_divinita_2024_e_quella_degli_incantesimi_del_
                     voce="regola",
                     copre=["carta:2024/classes/cleric.md#Guaritore Benedetto / Blessed Healer (Vita 6, pag. 74)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
-@pytest.mark.xfail(strict=True, reason="CB-2265: difforme dal manuale, confermato")
 async def test_guaritore_benedetto_2024_non_vale_se_l_unico_bersaglio_e_il_chierico(client):
     cid = await _dom(client, 6, "life")
     assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})).status_code == 200

@@ -51,6 +51,7 @@ from api.routers._helpers import collect_homebrew_notifications, refuse_null, ro
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
+from core.rules.catalog.y2014.cleric import BLESSED_HEALER
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -1172,6 +1173,8 @@ async def roll_spell_healing(
     wanted = body.target_character_ids
     if len(set(wanted)) != len(wanted) or len(wanted) + body.apply_to_self > healing.targets:
         raise HTTPException(status_code=422, detail={"code": "invalid_target"})
+    if body.apply_to_self and healing.targets == 1 and BLESSED_HEALER.key in body.options:  # l'unico bersaglio è chi lancia
+        raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": BLESSED_HEALER.key})
     allies = [await ally_target(session, char, tid) for tid in wanted]  # PG seduti alla stessa serata attiva, prima di tirare
     if any(a.is_dead for a in allies):
         raise HTTPException(status_code=409, detail={"code": "target_dead"})
