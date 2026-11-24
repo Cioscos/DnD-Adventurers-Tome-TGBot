@@ -104,7 +104,6 @@ async def test_il_druido_2024_non_prepara_incantesimi_di_un_livello_senza_slot(c
                     zona="regola:2024/druid", voce="limiti",
                     copre=["carta:2024/classes/druid.md#Costellazioni Scintillanti / Twinkling Constellations (Circolo delle Stelle 10, pag. 89)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2315: difforme dal manuale, confermato")
 async def test_la_costellazione_non_si_cambia_nel_turno_in_cui_si_assume_la_forma_stellare(client):
     cid = await _circle(client, "stars", 10, wisdom=16)
     assert (await _use(client, cid, "druid.starry_form", params={"constellation": "archer"})).status_code == 200

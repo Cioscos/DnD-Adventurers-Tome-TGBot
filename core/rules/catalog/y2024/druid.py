@@ -514,8 +514,10 @@ FREE_ARCHER = "free_archer"  # nel turno: il colpo dell'attivazione non costa un
 
 
 def _starry_effect(ctx: RuleContext, params: dict) -> None:
-    if params["constellation"] == "archer":
-        ctx.char.turn_state = {**(ctx.char.turn_state or {}), FREE_ARCHER: True}
+    turn = ctx.char.turn_state or {}
+    # Costellazioni Scintillanti cambia costellazione all'inizio dei turni seguenti in Forma Stellare, non in quello in cui la assumi (pag. 89)
+    turn = {**turn, "once_per_turn": [*(turn.get("once_per_turn") or []), f"{CK}.twinkling_constellations"]}
+    ctx.char.turn_state = {**turn, FREE_ARCHER: True} if params["constellation"] == "archer" else turn
 
 
 def _starry_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
