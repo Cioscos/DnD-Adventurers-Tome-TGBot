@@ -100,7 +100,7 @@ COUNTERCHARM_SAVE = RollOptionSpec(
 )
 
 SUPERIOR_INSPIRATION = RollOptionSpec(
-    key=f"{CK}.superior_inspiration", phase="before", rolls=("initiative",),
+    key=f"{CK}.superior_inspiration", phase="before", rolls=("initiative",), automatic=True,  # passivo: nessuna scelta
     label={"it": "Ispirazione Superiore: recupera un uso di Ispirazione Bardica",
            "en": "Superior Inspiration: regain one use of Bardic Inspiration"},
     available=_superior_available, on_confirm=_superior_confirmed,

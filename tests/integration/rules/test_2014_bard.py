@@ -464,16 +464,18 @@ async def test_magical_secrets_is_absent_below_level_10(client):
 # Superiore Ispirazione
 # ---------------------------------------------------------------------------
 
-async def test_superior_inspiration_is_offered_at_initiative_only_with_no_uses_left(client):
+async def test_superior_inspiration_regains_one_use_at_initiative_only_with_no_uses_left(client):
+    # 2014, Ispirazione Superiore (Bardo 20), pag. 54: «passivo (al tiro di iniziativa)», non un'opzione da spuntare
     cid = await _bard(client, 20, charisma=16)
-    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
     bi = await _ability(client, cid, BI)
+    await client.patch(f"/characters/{cid}/abilities/{bi['id']}", json={"uses": 1})
+    await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
+    assert (await _ability(client, cid, BI))["uses"] == 1  # scatta solo a zero usi
     await client.patch(f"/characters/{cid}/abilities/{bi['id']}", json={"uses": 0})
-    assert "bard.superior_inspiration" in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8, "options": ["bard.superior_inspiration"]})
+    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, BI))["uses"] == 1
-    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
 
 
 async def test_superior_inspiration_in_the_encounter_initiative(client, test_session_factory):
