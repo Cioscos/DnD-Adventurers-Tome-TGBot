@@ -107,14 +107,18 @@ def _rage_state(ctx: RuleContext, params: dict) -> StateSpec | None:
             data["power"] = params.get("power")
             if data["power"] == "lion":
                 others.append(f"{CK}.power_lion")
-    if _subclass(ctx, "world_tree") and level >= 14:
-        data["far_used"] = False
+    if _world_tree_travel(ctx):
+        data["far_used"] = bool(params.get("far"))  # il teletrasporto dell'attivazione può già essere quello da 150 piedi
     data["others"] = others
     # Ira Persistente (15): dura 10 minuti e finisce solo con la perdita dei sensi o un'armatura pesante
     ends = ("unconscious", "heavy_armor") if level >= 15 else ("unconscious", "incapacitated", "turn_end_unextended", "heavy_armor")
     return StateSpec(
         "rage", rounds=100, ends_on=ends, blocks_casting=True, end_slot="bonus",
         immune_conditions=("charmed", "frightened") if _subclass(ctx, "berserker") and level >= 6 else (), data=data)
+
+
+def _world_tree_travel(ctx: RuleContext) -> bool:
+    return _subclass(ctx, "world_tree") and ctx.class_level >= 14
 
 
 def _rage_available(ctx: RuleContext) -> bool:
@@ -186,9 +190,10 @@ def _rage_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     if _rage_opt(ctx, "wild") == "eagle":
         it.append("Aquila: Disimpegno e Scatto fanno parte di questa azione bonus.")
         en.append("Eagle: Disengage and Dash are part of this bonus action.")
-    if _subclass(ctx, "world_tree") and ctx.class_level >= 14:
-        it.append(f"Viaggio lungo l'Albero: puoi teletrasportarti fino a {_m(60)} in uno spazio libero che vedi.")
-        en.append("Travel along the Tree: you can teleport up to 60 ft to an unoccupied space you can see.")
+    if _world_tree_travel(ctx):
+        travel = _travel_message(ctx, {"far": params.get("far")})
+        it.append(f"Viaggio lungo l'Albero: {travel['it']}")
+        en.append(f"Travel along the Tree: {travel['en']}")
     return _both(" ".join(it), " ".join(en)) if it else None
 
 
@@ -208,7 +213,10 @@ RAGE_USE = OnUse(
     check=_rage_check, temp_hp=_entry_temp_hp,
     removal=ConditionRemoval(("charmed", "frightened"), count=None, ally=False, auto=_entry_clears), effect=_rage_effect, message=_rage_message,
     toggles=(UseToggle("divine_form", _both("Forma divina (Ira degli Dei)", "Divine form (Rage of the Gods)"),
-                       available=lambda c: _divine_ready(c) and not state_on(c, "rage")),),
+                       available=lambda c: _divine_ready(c) and not state_on(c, "rage")),
+             UseToggle("far", _both("Viaggio lungo l'Albero fino a 45 m, con sei alleati (una volta per Ira)",
+                                    "Travel along the Tree up to 150 ft with six allies (once per Rage)"),
+                       available=lambda c: _world_tree_travel(c) and not state_on(c, "rage"))),
     choices=(
         UseChoice("extend_via", _both("Prolunga l'Ira con", "Extend the Rage by"), options=lambda _c: ["bonus", "save"],
                   option_label=lambda k: {"bonus": _both("Azione bonus", "Bonus action"),
