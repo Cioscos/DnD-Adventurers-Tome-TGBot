@@ -159,11 +159,11 @@ async def test_form_uses_beast_stats_for_physical_rolls(client):
     assert full["skill_bonuses"]["athletics"] == 4 and full["skill_bonuses"]["acrobatics"] == 2  # 2014: sostituisce
     assert full["initiative_bonus"] == base["initiative_bonus"] + 2
     assert full["skill_bonuses"]["perception"] == base["skill_bonuses"]["perception"]  # SAG resta del druido
-    # 2024: vale il modificatore più alto fra druido e bestia
+    # 2024 Regole della Forma Selvatica pag. 81: anche For, Des e Cos sono della Bestia (restano del druido solo Int, Sag e Car)
     new = await _druid(client, 4, edition="2024", strength=18, dexterity=10)
     await _activate(client, new, await _form(client, new, **{"str": 8, "dex": 16}))
     full = await _full(client, new)
-    assert full["skill_bonuses"]["athletics"] == 4 and full["skill_bonuses"]["acrobatics"] == 3
+    assert full["skill_bonuses"]["athletics"] == -1 and full["skill_bonuses"]["acrobatics"] == 3
     # 2014: la forma con FOR 8 abbassa anche chi ha 18
     low = await _druid(client, 4, strength=18)
     await _activate(client, low, await _form(client, low, **{"str": 8}))
