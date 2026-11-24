@@ -1444,7 +1444,8 @@
         "skill_added": "{{skill}} proficiency added.",
         "skill_removed": "{{skill}} proficiency removed.",
         "feat_added": "{{feat}} feat added.",
-        "feat_removed": "{{feat}} feat removed."
+        "feat_removed": "{{feat}} feat removed.",
+        "spell_removed": "{{name}} spell removed."
       },
       "errors": {
         "species_edition": "Only characters using the 2024 rules can choose a 2024 species.",

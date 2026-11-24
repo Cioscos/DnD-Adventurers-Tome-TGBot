@@ -293,7 +293,6 @@ async def test_nome_ripulito_alla_creazione_come_alla_modifica(client):
     assert r.json()["name"] == "Pippo"
 
 
-@pytest.mark.xfail(strict=True, reason="CB-658 al cambio di specie gli incantesimi della vecchia specie restano sulla scheda e non sono nel riepilogo")
 @pytest.mark.caccia(id="CB-658", fonte="decisione D-005 (2024 · Specie · Elfo · pag. 190)", zona="flusso:creazione", voce="annullamento",
                     copre=["PUT /characters/{char_id}/species", "POST /characters/{char_id}/species/preview"])
 async def test_cambio_specie_toglie_gli_incantesimi_della_vecchia(client):

@@ -17,8 +17,13 @@ from api.services.choices import _SRD_DIR, remove_feat, take_feat
 from api.services.class_features import sync_cataloged_features
 from core.data.feats_2024 import ALL_FEATS
 from core.data.species_2024 import SPECIES_2024, required_choices
+from api.services.condition_effects import release_concentration_effects
+from api.services.durations import end_concentration
 from core.db.models import Ability, Character
+from core.rules.catalog import active_features
+from core.rules.catalog.species_2024 import SPECIES_TRAITS, SpeciesSource
 from core.rules.edition import character_edition
+from core.rules.feature_sync import GRANTED_CREATED, GRANTED_SPELL_KEYS
 
 GRANTED_SKILL = "_granted_skill"
 FEAT_ABILITY_ID = "_feat_ability_id"
@@ -71,6 +76,7 @@ class SpeciesPlan:
     drop_feat: Ability | None = None
     add_feat: str | None = None
     keep_feat: Ability | None = None
+    drop_spells: list[str] = field(default_factory=list)  # srd_index
 
 
 def _feat_row(char: Character, old: dict) -> Ability | None:
@@ -137,6 +143,22 @@ def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesP
                 raise _bad("species_options_invalid")
             plan.add_feat = new_feat
             plan.changes.append(f"feat_added:{new_feat}")
+
+    # D-005: gli incantesimi che la vecchia specie ha creato sulla scheda se ne vanno con lei, come abilità e talento.
+    # Restano quelli che il personaggio aveva già di suo e quelli che dà anche un altro privilegio o la nuova specie.
+    level = max(1, sum(c.level or 0 for c in char.classes))
+
+    def spells_of(species: str | None, chosen: dict) -> set[str]:
+        return {k for s in SPECIES_TRAITS.get(species or "", ()) if s.level <= level
+                and (s.option_group is None or s.option_key == chosen.get(s.option_group)) for k in s.granted_spells}
+
+    leaving = spells_of(char.species_key, old) & set((char.settings or {}).get(GRANTED_CREATED) or [])
+    if leaving:
+        kept = spells_of(key, options) | {k for spec, src in active_features(char)
+                                         if not isinstance(src, SpeciesSource) for k in spec.granted_spells}
+        plan.drop_spells = sorted(leaving - kept)
+        names = {s.srd_index: s.name for s in char.spells}
+        plan.changes += [f"spell_removed:{names[k]}" for k in plan.drop_spells if k in names]
     return plan
 
 
@@ -178,4 +200,14 @@ async def apply_species(session: AsyncSession, char: Character, key: str, option
     char.species_key = key
     char.species_options = stored
     await sync_cataloged_features(session, char, lang)
+    for spell in [s for s in char.spells if s.srd_index in plan.drop_spells]:
+        if char.concentrating_spell_id == spell.id:
+            end_concentration(char)
+            await session.flush()
+            await release_concentration_effects(session, char)
+        char.spells.remove(spell)
+        await session.delete(spell)
+    if plan.drop_spells:
+        char.settings = {**(char.settings or {}), **{k: [x for x in (char.settings or {}).get(k) or [] if x not in plan.drop_spells]
+                                                     for k in (GRANTED_CREATED, GRANTED_SPELL_KEYS)}}
     return plan.changes

@@ -1443,7 +1443,8 @@
         "skill_added": "Competenza in {{skill}} aggiunta.",
         "skill_removed": "Competenza in {{skill}} tolta.",
         "feat_added": "Talento {{feat}} aggiunto.",
-        "feat_removed": "Talento {{feat}} tolto."
+        "feat_removed": "Talento {{feat}} tolto.",
+        "spell_removed": "Incantesimo {{name}} tolto."
       },
       "errors": {
         "species_edition": "Solo i personaggi con le regole 2024 possono scegliere una specie 2024.",
