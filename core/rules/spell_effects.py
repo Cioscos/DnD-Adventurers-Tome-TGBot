@@ -109,13 +109,14 @@ def own_aura_clocks(char: Any) -> list[dict]:
     return out
 
 
-def _hp_max(variant: SpellVariant, data: dict) -> int:
-    return sum(m.value for m in variant.modifiers(data) if m.target == "hp_max")
+def _potency(variant: SpellVariant, data: dict) -> tuple[int, int]:
+    """Fra due lanciatori dello stesso incantesimo vale il più potente: PF massimi, poi PF temporanei a inizio turno (Eroismo)."""
+    return sum(m.value for m in variant.modifiers(data) if m.target == "hp_max"), variant.turn_temp_hp(data) if variant.turn_temp_hp else 0
 
 
 def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, dict]]:
     """Gli incantesimi che agiscono su ``char``: ``(stato, effetto, variante, data)``. Sono i suoi stati ``spell:*`` e le aure vive di incantesimi,
-    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo (con due lanciatori sullo stesso bersaglio, l'ultimo; per i PF massimi il più forte)."""
+    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo (con due lanciatori sullo stesso bersaglio, l'ultimo; per i PF massimi e i PF temporanei il più forte)."""
     from core.rules.auras import party_auras  # import locale: auras usa il catalogo
     from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
 
@@ -129,8 +130,8 @@ def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, 
         variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
         if variant:
             held = by_spell.get(effect.key)
-            if held and _hp_max(held[2], held[3]) > _hp_max(variant, data):
-                continue  # PF massimi: fra due lanciatori vale il più potente (manuale), non il più recente
+            if held and _potency(held[2], held[3]) > _potency(variant, data):
+                continue  # fra due lanciatori vale il più potente (Combinare Effetti Magici, 2014 pag. 205), non il più recente
             by_spell.pop(effect.key, None)
             by_spell[effect.key] = (state, effect, variant, data)
     out = list(by_spell.values())

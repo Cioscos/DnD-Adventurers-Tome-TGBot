@@ -143,7 +143,6 @@ async def test_dopo_un_incantesimo_di_livello_senza_slot_quello_bonus_va_conferm
 @pytest.mark.caccia(id="CB-2814", fonte="2014 · Lancio di incantesimi · Combinare Effetti Magici · pag. 205 (vale il più potente)", zona="regola:2014/generali",
                     voce="interazione", copre=["carta:2014/general.md#Combinare Effetti Magici / Combining Magical Effects (pag. 205)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/turn/new"])
-@pytest.mark.xfail(strict=True, reason="CB-2814: difforme dal manuale, confermato")
 async def test_due_eroismi_sullo_stesso_bersaglio_vale_il_piu_potente(client, test_session_factory):
     sessione, eroe = await seed_session(test_session_factory)
     forte = await _seduto(client, test_session_factory, sessione, GM_ID, "bard", 1, "charisma", 20, "Eroismo", "heroism", 1, True)
