@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from typing import Annotated
 
@@ -64,6 +65,15 @@ _RANGES_PER_KIND = {
 }
 
 
+def _shown_rolls(notation: str | None, rolls: list[int]) -> list[int]:
+    """I dadi da elencare accanto al totale: con ``khN`` solo quelli tenuti; nessuno per il d100, dove i due d10 sono
+    decine e unità e la loro somma non è il totale."""
+    kept = re.search(r"kh(\d+)", notation or "")
+    if kept:
+        return sorted(rolls, reverse=True)[:int(kept.group(1))]
+    return [] if "d100" in (notation or "") else rolls
+
+
 def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list[int], total: int, modifier: int,
               source: str, label: str | None, with_inspiration: bool = False) -> None:
     """Storico dei dadi e feed generale, così il tiro compare anche in /history."""
@@ -79,8 +89,9 @@ def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
 
-    if len(rolls) > 1:
-        rolls_str = "+".join(str(r) for r in rolls)
+    shown = _shown_rolls(notation, rolls)
+    if len(shown) > 1:
+        rolls_str = "+".join(str(r) for r in shown)
         description = f"🎲 {notation}: [{rolls_str}] = {total}"
     else:
         description = f"🎲 {notation}: {total}"
@@ -241,7 +252,7 @@ async def post_dice_to_chat(
     if not telegram_notify.bot_token_configured():
         raise HTTPException(status_code=503, detail="BOT_TOKEN not configured")
 
-    rolls = body.rolls
+    rolls = _shown_rolls(body.notation, body.rolls)
     if len(rolls) > 1:
         rolls_str = " + ".join(str(r) for r in rolls)
         text = f"🎲 {body.notation}: {rolls_str} = *{body.total}*"

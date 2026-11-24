@@ -225,7 +225,6 @@ async def test_cronologia_duecento_voci_e_anteprima_di_pulizia(client, test_sess
     assert (await client.get(f"/characters/{cid}/history/retention-preview?days=3651")).status_code == 422
 
 
-@pytest.mark.xfail(strict=True, reason="CB-749 messaggio in chat di 4d6kh3 somma anche il dado scartato")
 @pytest.mark.caccia(id="CB-749", fonte="invariante: il messaggio in chat «a + b = totale» deve tornare come somma", zona="flusso:dadi",
                     voce="normale", copre=["POST /characters/{char_id}/dice/post-to-chat", "POST /characters/{char_id}/dice/result"])
 async def test_messaggio_in_chat_di_un_4d6_scarta_il_piu_basso(client, monkeypatch):
@@ -244,7 +243,6 @@ async def test_messaggio_in_chat_di_un_4d6_scarta_il_piu_basso(client, monkeypat
     assert sum(numeri) == 12, testi[0]
 
 
-@pytest.mark.xfail(strict=True, reason="CB-750 feed di 4d6kh3 elenca anche il dado scartato senza segnalarlo")
 @pytest.mark.caccia(id="CB-750", fonte="invariante: la cronologia generale descrive il tiro in modo coerente col totale", zona="flusso:dadi",
                     voce="normale", copre=["POST /characters/{char_id}/dice/result", "GET /characters/{char_id}/history"])
 async def test_cronologia_di_un_4d6_scarta_il_piu_basso(client):
