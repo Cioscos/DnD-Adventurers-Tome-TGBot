@@ -27,7 +27,7 @@ from core.rules.roll_options import refund_spent
 from api.services.rules_states import end_on_action
 from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import (
-    deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
+    deactivate_other_forms, end_form, form_armor_class, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
 from api.services.history import add_history
 from core.db.models import Ability, Character, Companion, SpellSlot
@@ -59,6 +59,7 @@ def form_limits_moon(char: Character) -> bool:
 def _read(char: Character, comp: Companion) -> CompanionRead:
     """La riga com'è scritta, con PF, CA e bonus del compagno di privilegio calcolati dal livello e dalla competenza."""
     out = CompanionRead.model_validate(comp)
+    out.armor_class = form_armor_class(char, comp)
     stats = companion_stats(char, comp)
     if stats is not None:
         out.max_hp = stats.max_hp if stats.max_hp is not None else comp.max_hp

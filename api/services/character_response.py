@@ -15,7 +15,7 @@ from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
 from api.services.choices import choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
-from api.services.wild_shape import form_own_hp, get_active_form
+from api.services.wild_shape import form_armor_class, form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
 from api.services.session_allies import attach_spell_auras
@@ -98,7 +98,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     if form is not None:
         response.active_form = ActiveForm(
             companion_id=form.id, name=form.name, current_hp=form.current_hp,
-            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class,
+            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form_armor_class(char, form),
             own_hp=form_own_hp(char))
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac", snap)

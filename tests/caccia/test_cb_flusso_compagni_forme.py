@@ -29,7 +29,6 @@ async def _nuovo_turno(client, cid) -> None:
 # Rossi
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason="CB-337 la CA 13+SAG della Luna resta scritta dopo l'uscita dalla forma")
 @pytest.mark.caccia(id="CB-337", fonte="2024 · Druido · Circolo della Luna · Forme del Circolo · pag. 86", zona="flusso:compagni-forme",
                     voce="annullamento", copre=["POST /characters/{char_id}/companions/{comp_id}/deactivate",
                                                 "carta:2024/classes/druid.md#Forme del Circolo / Circle Forms (Circolo della Luna 3, pag. 86)"])
