@@ -9,3 +9,5 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-003 | Export/import e «Duplica» devono portare storico dei tiri e statistiche dei dadi? | No: sono un registro del personaggio originale, la copia riparte da zero | 2026-11-24 |
 | D-004 | Un d100 (due d10) conta nelle statistiche del d10? | No: il d100 non deve entrare nelle facce e nella media del d10 | 2026-11-24 |
 | D-005 | Al cambio di specie che cosa succede agli incantesimi dati dalla vecchia specie? | Vanno rimossi, come abilità e talento, e compaiono nel riepilogo del cambio | 2026-11-24 |
+| D-006 | Creazione 2024: un'abilità già data dal background scelta anche fra quelle di classe? | Va rifiutata, come già succede per l'abilità della specie: il giocatore ne sceglie un'altra | 2026-11-24 |
+| D-007 | Serve una lunghezza massima per il nome del personaggio? | No: nessun limite | 2026-11-24 |
