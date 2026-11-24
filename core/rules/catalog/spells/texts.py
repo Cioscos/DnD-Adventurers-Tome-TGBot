@@ -75,11 +75,14 @@ SPELLS: tuple[SpellEffect, ...] = (
                       "Choose: breathe underwater and swim, change appearance, or natural weapons (unarmed strikes 1d6, proficient, magical with +1 to attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True),
         "2024": _text("Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (Colpo Senz'Armi 1d6, con il modificatore da incantatore per colpire e per i danni). Il tipo di danno delle armi naturali lo decidi a mano.",
                       "Choose: breathe underwater and swim, change appearance, or natural weapons (Unarmed Strike 1d6, using your spellcasting modifier for attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True)}),
+    # 2014 p.237 e 2024 (SRD 5.2): termina sul bersaglio che scende a 0 PF
     SpellEffect("gaseous_form", ("gaseous-form",), ("Forma Gassosa", "Gaseous Form"), _ALLY, {
-        "2014": _text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
-                      "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
-        "2024": _text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
-                      "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True)}),
+        "2014": replace(_text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                              "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
+                        ends_on=("unconscious", "manual")),
+        "2024": replace(_text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                              "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
+                        ends_on=("unconscious", "manual"))}),
     SpellEffect("wind_walk", ("wind-walk",), ("Camminare nel Vento", "Wind Walk"), SpellTarget("allies", lambda slot: 11), _WIND_WALK),
     SpellEffect("mirror_image", ("mirror-image",), ("Immagine Speculare", "Mirror Image"), _SELF, {"2014": _MIRROR_2014, "2024": _MIRROR_2024}),
     SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
