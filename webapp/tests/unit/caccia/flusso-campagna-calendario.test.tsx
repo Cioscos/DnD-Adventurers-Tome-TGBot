@@ -138,3 +138,93 @@ describe('caccia: campagna e calendario', () => {
     await waitFor(() => expect(scheduleCreate).toHaveBeenCalledTimes(2))
   })
 })
+
+
+// --- aggiunte del giro del 2026-11-24 (seconda parte) ---
+import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
+
+describe('caccia: campagna e calendario, seconda parte', () => {
+  // caccia: {"id": "CB-888", "fonte": "invariante: una serata già giocata compare una volta sola nel calendario, non anche come programmata", "zona": "flusso:campagna-calendario", "voce": "interazione", "copre": ["route:/campaign/:id"]}
+  it('una serata programmata e poi giocata si vede una sola volta, come giocata', async () => {
+    const giorno = new Date(new Date().getFullYear(), new Date().getMonth(), 15, 12)
+    const utc = giorno.toISOString().slice(0, 19)
+    scheduleList.mockResolvedValue([{ id: 1, starts_at: utc, note: 'Da Marco', session_id: 8, status: 'done' }])
+    renderWithProviders(
+      <CampaignCalendar campaignId={3} isGm sessions={[{ id: 8, created_at: utc, duration_seconds: 60, number: 1, has_recap: true }]} />,
+    )
+    await waitFor(() => expect(scheduleList).toHaveBeenCalled())
+    await userEvent.click(screen.getByRole('button', { name: new RegExp('^15 ') }))
+    const dettaglio = await screen.findByTestId('day-detail')
+    expect(dettaglio.textContent).toContain('campaign.night_n {"n":1}')
+    expect(dettaglio.textContent).not.toContain('campaign.calendar.planned')
+    expect(dettaglio.textContent).not.toContain('campaign.calendar.skipped')
+    expect(dettaglio.textContent).not.toContain('Da Marco')
+    expect(document.querySelectorAll('[data-mark="done"]')).toHaveLength(1)
+    expect(document.querySelectorAll('[data-mark="planned"], [data-mark="skipped"]')).toHaveLength(0)
+  })
+
+  // caccia: {"id": "CB-889", "fonte": "invariante: in italiano la settimana parte dal lunedì (1 novembre 2026 è una domenica: va nell'ultima colonna)", "zona": "flusso:campagna-calendario", "voce": "limiti", "copre": ["route:/campaign/:id"]}
+  it('il calendario italiano mette la domenica nell’ultima colonna', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(2026, 10, 15, 12))
+      scheduleList.mockResolvedValue([])
+      renderWithProviders(<CampaignCalendar campaignId={3} isGm={false} sessions={[]} />)
+      const primo = await screen.findByRole('button', { name: new RegExp('^1 ') })
+      expect(primo.style.gridColumnStart).toBe('7')
+      const intestazioni = screen.getAllByTestId('weekday').map((e) => e.textContent?.toLowerCase())
+      expect(intestazioni[0]).toMatch(/^lun/)
+      expect(intestazioni[6]).toMatch(/^dom/)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // caccia: {"id": "CB-890", "fonte": "invariante: una nuova serata parte con l'ora locale scelta (21:00 di default) come ISO UTC e senza nota se è vuota", "zona": "flusso:campagna-calendario", "voce": "normale", "copre": ["route:/campaign/:id"]}
+  it('una nuova serata senza nota invia l’ora locale 21:00 in UTC e nessuna nota', async () => {
+    scheduleCreate.mockResolvedValue({ id: 6 })
+    renderWithProviders(<ScheduleSheet open campaignId={3} row={null} defaultDate="2030-03-10" onClose={vi.fn()} />)
+    const salva = (await screen.findByText('common.save')).closest('button')!
+    await waitFor(() => expect(salva).toBeEnabled())
+    await userEvent.click(salva)
+    await waitFor(() => expect(scheduleCreate).toHaveBeenCalledTimes(1))
+    const [camp, body] = scheduleCreate.mock.calls[0]
+    expect(camp).toBe(3)
+    expect(body.starts_at).toMatch(/Z$/)
+    const quando = new Date(body.starts_at)
+    expect([quando.getFullYear(), quando.getMonth(), quando.getDate(), quando.getHours(), quando.getMinutes()]).toEqual([2030, 2, 10, 21, 0])
+    expect('note' in body).toBe(false)
+  })
+
+  // caccia: {"id": "CB-891", "fonte": "invariante: il riepilogo mostra ogni personaggio, anche quello eliminato a serata aperta, senza chiavi doppie", "zona": "flusso:campagna-calendario", "voce": "contratto", "copre": ["route:/campaign/:id/recap/:sessionId"]}
+  it('il riepilogo con un PG eliminato (id negativo) li mostra tutti e due', async () => {
+    const base = (vecchio as SessionRecap).characters[0]
+    recap.mockResolvedValue({
+      ...vecchio,
+      characters: [
+        { ...base, character_id: 1, name: 'Eroe', damage_taken: 4, conditions: ['exhaustion'], condition_levels: { exhaustion: 3 } },
+        { ...base, character_id: -4, name: 'Eliminato', damage_taken: 7, healing_given: 2 },
+      ],
+    })
+    getCampaign.mockResolvedValue({ id: 3, is_gm: false })
+    const errori = vi.spyOn(console, 'error').mockImplementation(() => {})
+    renderWithProviders(<CampaignRecap />)
+    expect(await screen.findByText('Eliminato')).toBeInTheDocument()
+    expect(screen.getByText('Eroe')).toBeInTheDocument()
+    expect(errori.mock.calls.flat().join(' ')).not.toContain('same key')
+    errori.mockRestore()
+  })
+
+  // caccia: {"id": "CB-892", "fonte": "invariante: chi è morto non si propone per entrare in serata; si parte dal PG dell'ultima serata, se vivo, altrimenti dal primo vivo", "zona": "flusso:campagna-calendario", "voce": "regola", "copre": ["route:/campaign/:id"]}
+  it('il foglio «chi gioca» esclude il PG morto e preseleziona il primo vivo', async () => {
+    const m = (id: number, name: string, status: string) => ({ character_id: id, character_name: name, is_mine: true, status })
+    getCampaign.mockResolvedValue({ id: 3, members: [m(1, 'Morto', 'dead'), m(2, 'Vivo', 'active'), m(3, 'Terzo', 'reserve')] })
+    renderWithProviders(
+      <JoinCampaignSessionSheet open onClose={vi.fn()} item={{ campaign_id: 3, campaign_name: 'Saga', session_id: 9, my_last_character_id: 1 }} />,
+    )
+    const vivo = await screen.findByText('Vivo')
+    expect(screen.queryByText('Morto')).toBeNull()
+    expect(vivo.closest('button')!.className).toContain('bg-dnd-gold/20')
+    expect(screen.getByText('Terzo').closest('button')!.className).not.toContain('bg-dnd-gold/20')
+  })
+})

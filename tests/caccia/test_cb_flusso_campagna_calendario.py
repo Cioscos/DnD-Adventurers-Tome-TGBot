@@ -535,3 +535,395 @@ async def test_id_riusato_non_mescola_le_voci_del_riepilogo(client, test_session
     pg = (await client.get(f"/sessions/{sid}/recap")).json()["characters"]
     assert len({c["character_id"] for c in pg}) == len(pg) == 3
     assert {c["name"]: c["healing_given"] for c in pg} == {"Eroe": 6, "Nuovo": 0, "Curato": 0}
+
+
+# --- aggiunte del giro del 2026-11-24 (seconda parte) ---
+import re  # noqa: E402
+
+from api.services import telegram_notify  # noqa: E402,F401
+from api.services.recap import format_recap_text  # noqa: E402
+from api.tasks import campaign_reminders  # noqa: E402
+from tests.integration._telegram_stub import install_fake_telegram  # noqa: E402
+
+_CHIAVI_PG = {"character_id", "name", "player_name", "class_summary", "level", "dice", "damage_taken", "healed", "downed",
+              "death_saves", "spells_cast", "slots_used", "rests", "conditions", "condition_levels", "healing_given"}
+_CHIAVI_RECAP = {"version", "session_id", "campaign_id", "campaign_name", "number", "started_at", "ended_at", "duration_seconds",
+                 "characters", "combat", "items", "lore", "places", "highlights"}
+
+
+async def _apri_serata(client, camp_id, uid_pg):
+    """Il master apre la serata; `uid_pg` = [(utente, personaggio)] si siedono. Restituisce l'id della sessione."""
+    act(GM_ID)
+    sid = (await client.post("/sessions", json={"campaign_id": camp_id})).json()["id"]
+    for uid, pg in uid_pg:
+        act(uid)
+        r = await client.post(f"/campaigns/{camp_id}/session/join", json={"character_id": pg})
+        assert r.status_code == 200, r.text
+    return sid
+
+
+def _messaggi(cap):
+    return [(c["json"]["chat_id"], c["json"]["text"]) for c in cap if str(c["url"]).endswith("/sendMessage")]
+
+
+@pytest.mark.caccia(id="CB-873", fonte="webapp/src/types/index.ts SessionRecap: il frontend legge gli stessi campi per ogni PG, anche eliminato",
+                    zona="flusso:campagna-calendario", voce="contratto",
+                    copre=["GET /sessions/{session_id}/recap", "DELETE /characters/{char_id}"])
+async def test_riepilogo_ha_i_campi_letti_dal_frontend_anche_per_il_pg_eliminato(client, test_session_factory):
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    altro = await _char(f, 7777, "Bardo")
+    act(7777)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": altro})).status_code == 200
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, cid), (7777, altro)])
+    act(PLAYER_ID)
+    await _hp(client, cid, ("set_max", 20), ("set_current", 20), ("damage", 4))
+    assert (await client.delete(f"/characters/{cid}")).status_code == 204
+    act(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
+    rec = (await client.get(f"/sessions/{sid}/recap")).json()
+    assert set(rec) == _CHIAVI_RECAP
+    assert len(rec["characters"]) == 2
+    for c in rec["characters"]:
+        assert set(c) == _CHIAVI_PG, c["name"]
+        assert set(c["dice"]) == {"rolls", "nat20", "nat1", "highest"}
+        assert set(c["death_saves"]) == {"successes", "failures"} and set(c["rests"]) == {"short", "long"}
+    assert set(rec["combat"]) >= {"encounters", "rounds", "monsters", "defeated", "damage_dealt"}
+    assert set(rec["items"]) == {"gm_grants", "trades", "stash"}
+
+
+@pytest.mark.caccia(id="CB-874", fonte="CLAUDE.md: promemoria Telegram 24h e 1h prima della serata; docstring del task: il promemoria del giorno non scatta dopo quello dell'ora",
+                    zona="flusso:campagna-calendario", voce="normale", copre=["POST /campaigns/{campaign_id}/schedule"])
+async def test_promemoria_del_giorno_e_dell_ora_una_volta_sola(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    cap = install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    camp, cid = await _enrolled(client, f)
+    act(GM_ID)
+    r = await client.post(f"/campaigns/{camp['id']}/schedule", json={"starts_at": _iso_utc(timedelta(hours=20)), "note": "porta i dadi"})
+    assert r.status_code == 201
+    now = datetime.utcnow()
+    esiti = [await campaign_reminders._remind_once(now + timedelta(minutes=m), f) for m in (0, 5, 19 * 60 + 10, 19 * 60 + 15)]
+    assert esiti == [1, 0, 1, 0]
+    destinatari = sorted(u for u, _t in _messaggi(cap))
+    assert destinatari == sorted([GM_ID, PLAYER_ID] * 2)
+    assert all("Saga" in t and "porta i dadi" in t for _u, t in _messaggi(cap))
+
+
+@pytest.mark.caccia(id="CB-875", fonte="invariante: spostare una serata riarma i promemoria, cambiare solo la nota no",
+                    zona="flusso:campagna-calendario", voce="persistenza", copre=["PATCH /campaigns/{campaign_id}/schedule/{sid}"])
+async def test_promemoria_dopo_modifica_della_serata(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    camp, _cid = await _enrolled(client, f)
+    act(GM_ID)
+    url = f"/campaigns/{camp['id']}/schedule"
+    sid = (await client.post(url, json={"starts_at": _iso_utc(timedelta(hours=20))})).json()["id"]
+    now = datetime.utcnow()
+    assert await campaign_reminders._remind_once(now, f) == 1
+    assert (await client.patch(f"{url}/{sid}", json={"note": "nuova nota"})).status_code == 200
+    assert await campaign_reminders._remind_once(now + timedelta(minutes=5), f) == 0  # la nota non riarma
+    assert (await client.patch(f"{url}/{sid}", json={"starts_at": _iso_utc(timedelta(hours=26))})).status_code == 200
+    assert await campaign_reminders._remind_once(now + timedelta(minutes=10), f) == 0  # fuori dalle 24 ore
+    assert await campaign_reminders._remind_once(now + timedelta(hours=3), f) == 1  # spostata: il promemoria del giorno torna
+    assert (await client.patch(f"{url}/{sid}", json={"starts_at": _iso_utc(timedelta(hours=30))})).status_code == 200
+    assert await campaign_reminders._remind_once(now + timedelta(hours=3, minutes=5), f) == 0
+    assert await campaign_reminders._remind_once(now + timedelta(hours=29, minutes=30), f) == 1  # l'ora: dopo due spostamenti
+
+
+@pytest.mark.caccia(id="CB-876", fonte="invariante: una serata cancellata non manda più promemoria", zona="flusso:campagna-calendario",
+                    voce="annullamento", copre=["DELETE /campaigns/{campaign_id}/schedule/{sid}"])
+async def test_serata_cancellata_non_ricorda_piu(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    cap = install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    camp, _cid = await _enrolled(client, f)
+    act(GM_ID)
+    url = f"/campaigns/{camp['id']}/schedule"
+    sid = (await client.post(url, json={"starts_at": _iso_utc(timedelta(hours=20))})).json()["id"]
+    now = datetime.utcnow()
+    assert await campaign_reminders._remind_once(now, f) == 1
+    assert (await client.delete(f"{url}/{sid}")).status_code == 204
+    cap.clear()
+    assert await campaign_reminders._remind_once(now + timedelta(hours=19, minutes=30), f) == 0
+    assert _messaggi(cap) == []
+    assert (await client.get(url)).json() == []
+
+
+@pytest.mark.caccia(id="CB-877", fonte="invariante: una richiesta ripetuta non spende due volte (il riepilogo parte una volta a persona)",
+                    zona="flusso:campagna-calendario", voce="ripetizione",
+                    copre=["POST /sessions/{session_id}/close", "POST /sessions/{session_id}/leave"])
+async def test_chiusura_ripetuta_manda_il_riepilogo_una_volta(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    cap = install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    camp, cid = await _enrolled(client, f)
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, cid)])
+    act(GM_ID)
+    cap.clear()
+
+    async def prova(coro):
+        try:
+            return (await coro).status_code
+        except Exception:  # noqa: BLE001
+            return 500
+    esiti = await asyncio.gather(prova(client.post(f"/sessions/{sid}/close")), prova(client.post(f"/sessions/{sid}/close")),
+                                 prova(client.post(f"/sessions/{sid}/leave")))
+    assert esiti == [204, 204, 204]
+    assert sorted(u for u, _t in _messaggi(cap)) == sorted([GM_ID, PLAYER_ID])
+    assert (await client.get(f"/sessions/{sid}/recap")).json()["number"] == 1
+
+
+@pytest.mark.caccia(id="CB-878", fonte="invariante: solo il master della serata condivide il riepilogo; prima della chiusura non c'è nulla da condividere",
+                    zona="flusso:campagna-calendario", voce="permessi", copre=["POST /share/recap/{session_id}"])
+async def test_condividere_il_riepilogo_solo_il_master(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    cap = install_fake_telegram(monkeypatch)
+    camp, cid = await _enrolled(client, f)
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, cid)])
+    act(GM_ID)
+    assert (await client.post(f"/share/recap/{sid}")).status_code == 404  # ancora aperta
+    assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
+    act(8888)  # master di un'altra campagna
+    await _new_campaign(client, "Altra")
+    esiti = {}
+    for uid in (PLAYER_ID, 8888, STRANGER_ID):
+        act(uid)
+        esiti[uid] = (await client.post(f"/share/recap/{sid}")).status_code
+    assert esiti == {PLAYER_ID: 403, 8888: 403, STRANGER_ID: 403}
+    assert not [c for c in cap if "savePreparedInlineMessage" in str(c["url"])]
+    act(GM_ID)
+    r = await client.post(f"/share/recap/{sid}")
+    assert r.status_code == 200 and r.json() == {"prepared_message_id": "prep-1"}
+    prep = [c for c in cap if "savePreparedInlineMessage" in str(c["url"])]
+    assert len(prep) == 1 and prep[0]["json"]["user_id"] == GM_ID
+
+
+@pytest.mark.caccia(id="CB-879", fonte="invariante: il ruolo è per campagna, non per utente (master qui, giocatore là)",
+                    zona="flusso:campagna-calendario", voce="interazione",
+                    copre=["GET /campaigns", "GET /campaigns/{campaign_id}", "PATCH /campaigns/{campaign_id}", "POST /campaigns/{campaign_id}/schedule"])
+async def test_master_di_una_campagna_e_giocatore_di_un_altra(client, test_session_factory):
+    f = test_session_factory
+    act(PLAYER_ID)
+    a = await _new_campaign(client, "Mia")
+    act(GM_ID)
+    b = await _new_campaign(client, "Altrui")
+    cid = await _char(f, PLAYER_ID)
+    act(PLAYER_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": b["invite_code"], "character_id": cid})).status_code == 200
+    assert {c["name"]: c["is_gm"] for c in (await client.get("/campaigns")).json()} == {"Mia": True, "Altrui": False}
+    assert (await client.get(f"/campaigns/{a['id']}")).json()["invite_code"] == a["invite_code"]
+    det_b = (await client.get(f"/campaigns/{b['id']}")).json()
+    assert det_b["is_gm"] is False and det_b["invite_code"] is None
+    base = f"/campaigns/{b['id']}"
+    assert (await client.patch(base, json={"name": "X"})).status_code == 403
+    assert (await client.post(f"{base}/invite-code")).status_code == 403
+    assert (await client.post(f"{base}/schedule", json={"starts_at": _iso_utc(timedelta(days=2))})).status_code == 403
+    assert (await client.delete(base)).status_code == 403
+    assert (await client.patch(f"/campaigns/{a['id']}", json={"name": "Mia 2"})).status_code == 200
+    act(GM_ID)
+    assert (await client.get(f"/campaigns/{a['id']}")).status_code == 404  # il master di B non vede la A di lui
+    assert (await client.get(f"/campaigns/{b['id']}")).json()["name"] == "Altrui"
+
+
+@pytest.mark.xfail(strict=True, reason="CB-880 il riepilogo attribuisce i regali per utente: vince l'ultimo PG")
+@pytest.mark.caccia(id="CB-880", fonte="invariante: il riepilogo dice a quale PG è andato l'oggetto, anche se il giocatore cambia PG a serata in corso",
+                    zona="flusso:campagna-calendario", voce="interazione",
+                    copre=["POST /sessions/{session_id}/gm/grant_item", "GET /sessions/{session_id}/recap"])
+async def test_regalo_del_master_resta_al_pg_che_lo_ha_ricevuto(client, test_session_factory):
+    f = test_session_factory
+    camp, a = await _enrolled(client, f)
+    b = await _char(f, PLAYER_ID, "Secondo")
+    act(PLAYER_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": b})).status_code == 200
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, a)])
+    act(GM_ID)
+    r = await client.post(f"/sessions/{sid}/gm/grant_item", json={"recipient_user_ids": [PLAYER_ID], "item": {"name": "Pozione", "quantity": 1}})
+    assert r.status_code == 201 and r.json()["results"][0]["character_id"] == a
+    act(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/leave")).status_code == 204
+    assert (await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": b})).status_code == 200
+    act(GM_ID)
+    r = await client.post(f"/sessions/{sid}/gm/grant_item", json={"recipient_user_ids": [PLAYER_ID], "item": {"name": "Corda", "quantity": 2}})
+    assert r.json()["results"][0]["character_id"] == b
+    await client.post(f"/sessions/{sid}/close")
+    rec = (await client.get(f"/sessions/{sid}/recap")).json()
+    assert [(g["item"], g["to"]) for g in rec["items"]["gm_grants"]] == [("Pozione", "Eroe"), ("Corda", "Secondo")]
+
+
+@pytest.mark.xfail(strict=True, reason="CB-881 dopo leave il banner propone il PG della serata precedente")
+@pytest.mark.caccia(id="CB-881", fonte="invariante: dopo essere usciti dalla serata il banner propone il PG con cui si stava giocando",
+                    zona="flusso:campagna-calendario", voce="persistenza", copre=["GET /campaigns/active-for-me", "GET /campaigns/{campaign_id}"])
+async def test_rientro_propone_il_pg_appena_lasciato(client, test_session_factory):
+    f = test_session_factory
+    camp, a = await _enrolled(client, f)
+    b = await _char(f, PLAYER_ID, "Secondo")
+    act(PLAYER_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": b})).status_code == 200
+    s1 = await _apri_serata(client, camp["id"], [(PLAYER_ID, b)])
+    act(GM_ID)
+    await client.post(f"/sessions/{s1}/close")
+    s2 = await _apri_serata(client, camp["id"], [(PLAYER_ID, a)])
+    act(PLAYER_ID)
+    assert (await client.post(f"/sessions/{s2}/leave")).status_code == 204
+    banner = (await client.get("/campaigns/active-for-me")).json()
+    assert [x["my_last_character_id"] for x in banner] == [a]
+    assert (await client.get(f"/campaigns/{camp['id']}")).json()["my_last_character_id"] == a
+
+
+@pytest.mark.caccia(id="CB-882", fonte="invariante: la nota della serata è ≤200 caratteri (non byte), vuota o solo spazi = nessuna nota, omessa = invariata",
+                    zona="flusso:campagna-calendario", voce="limiti",
+                    copre=["POST /campaigns/{campaign_id}/schedule", "PATCH /campaigns/{campaign_id}/schedule/{sid}"])
+async def test_nota_della_serata_con_accenti_ed_emoji(client):
+    act(GM_ID)
+    camp = await _new_campaign(client)
+    url = f"/campaigns/{camp['id']}/schedule"
+    quando = _iso_utc(timedelta(days=2))
+    for nota in ("è" * 200, "🎲" * 200):
+        r = await client.post(url, json={"starts_at": quando, "note": nota})
+        assert r.status_code == 201 and r.json()["note"] == nota
+    for nota in ("è" * 201, "🎲" * 201):
+        assert (await client.post(url, json={"starts_at": quando, "note": nota})).status_code == 422
+    riga = (await client.post(url, json={"starts_at": quando, "note": "  Da Marco  "})).json()
+    assert riga["note"] == "Da Marco"
+    r = await client.patch(f"{url}/{riga['id']}", json={"starts_at": _iso_utc(timedelta(days=3))})  # nota omessa: resta
+    assert r.status_code == 200 and r.json()["note"] == "Da Marco"
+    r = await client.patch(f"{url}/{riga['id']}", json={"note": "   "})
+    assert r.status_code == 200 and r.json()["note"] is None
+
+
+@pytest.mark.caccia(id="CB-883", fonte="Telegram Bot API (MarkdownV2): ogni carattere riservato nel testo va preceduto da una barra; messaggio ≤4096 caratteri",
+                    zona="flusso:campagna-calendario", voce="limiti", copre=["POST /share/recap/{session_id}"])
+def test_testo_del_riepilogo_con_nomi_pieni_di_simboli():
+    nome = "Ser_Aria*(il-Grande)[x]~`>#+=|{}.!\\"
+    pg = {"character_id": 1, "name": nome, "player_name": nome, "class_summary": nome, "level": 3,
+          "dice": {"rolls": 4, "nat20": 1, "nat1": 1, "highest": 17}, "damage_taken": 5, "healed": 2, "downed": 1,
+          "death_saves": {"successes": 1, "failures": 2}, "spells_cast": 2, "slots_used": {"1": 2}, "rests": {"short": 1, "long": 1},
+          "conditions": ["prone"], "condition_levels": {}, "healing_given": 1}
+    rec = {"campaign_name": nome, "number": 3, "duration_seconds": 3700, "started_at": "2026-11-20T19:00:00",
+           "characters": [pg], "combat": {"encounters": 1, "rounds": 3, "monsters": [nome]},
+           "items": {"gm_grants": [{"to": nome, "item": nome, "quantity": 2}], "trades": [{"from": nome, "to": nome, "summary": nome}],
+                     "stash": [{"kind": "stash_put", "who": nome, "summary": nome}]},
+           "lore": [{"id": 1, "title": nome}], "places": [{"map_id": 1, "marker_id": None, "title": nome}],
+           "highlights": [{"key": "healer", "character_id": 1, "name": nome, "value": 4}]}
+    for lang in ("it", "en"):
+        testo = format_recap_text(rec, lang)
+        nudo = re.sub(r"\\.", "", testo, flags=re.S)
+        assert not re.search(r"[_\[\]()~`>#+\-=|{}.!\\]", nudo), (lang, nudo)
+        assert nudo.count("*") % 2 == 0 and len(testo) <= 4096
+    molti = {**rec, "characters": [{**pg, "character_id": i, "name": f"PG {i} " + "x" * 80} for i in range(60)]}
+    lungo = format_recap_text(molti, "it")
+    assert len(lungo) <= 4096 and lungo.endswith("…")
+
+
+@pytest.mark.caccia(id="CB-884", fonte="invariante: i PF curati sono quelli davvero recuperati, non il valore chiesto",
+                    zona="flusso:campagna-calendario", voce="regola", copre=["PATCH /characters/{char_id}/hp", "GET /sessions/{session_id}/recap"])
+async def test_riepilogo_conta_i_pf_curati_davvero(client, test_session_factory):
+    camp, cid = await _enrolled(client, test_session_factory)
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, cid)])
+    act(PLAYER_ID)
+    await _hp(client, cid, ("set_max", 20), ("set_current", 20), ("heal", 5))  # a PF pieni: nulla da curare
+    await _hp(client, cid, ("damage", 6), ("heal", 40))  # 14 → 20: sei PF
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    c = (await client.get(f"/sessions/{sid}/recap")).json()["characters"][0]
+    assert (c["healed"], c["damage_taken"]) == (6, 6)
+
+
+@pytest.mark.caccia(id="CB-885", fonte="invariante: chi esce dalla campagna e rientra a serata aperta resta un solo PG nel riepilogo, con i dati dall'inizio",
+                    zona="flusso:campagna-calendario", voce="annullamento",
+                    copre=["DELETE /campaigns/{campaign_id}/members/{character_id}", "POST /campaigns/enroll", "GET /sessions/{session_id}/recap"])
+async def test_pg_tolto_e_reiscritto_a_serata_aperta(client, test_session_factory):
+    camp, cid = await _enrolled(client, test_session_factory)
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, cid)])
+    act(PLAYER_ID)
+    await _hp(client, cid, ("set_max", 20), ("set_current", 20), ("damage", 7))
+    act(GM_ID)
+    assert (await client.delete(f"/campaigns/{camp['id']}/members/{cid}")).status_code == 204
+    act(PLAYER_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": cid})).status_code == 200
+    assert (await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})).status_code == 200
+    await _hp(client, cid, ("damage", 3))
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    rec = (await client.get(f"/sessions/{sid}/recap")).json()
+    assert [(c["character_id"], c["damage_taken"]) for c in rec["characters"]] == [(cid, 10)]
+
+
+@pytest.mark.caccia(id="CB-886", fonte="invariante: togliere un PG dalla campagna toglie anche l'accesso a ciò che è della campagna, riepilogo compreso",
+                    zona="flusso:campagna-calendario", voce="permessi",
+                    copre=["DELETE /campaigns/{campaign_id}/members/{character_id}", "GET /sessions/{session_id}/recap", "GET /campaigns/{campaign_id}/schedule"])
+async def test_ex_membro_mai_seduto_perde_l_accesso(client, test_session_factory):
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    altro = await _char(f, 7777, "Bardo")
+    act(7777)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": altro})).status_code == 200
+    sid = await _apri_serata(client, camp["id"], [(7777, altro)])
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    act(PLAYER_ID)
+    assert (await client.get(f"/sessions/{sid}/recap")).status_code == 200  # iscritto
+    act(GM_ID)
+    assert (await client.delete(f"/campaigns/{camp['id']}/members/{cid}")).status_code == 204
+    act(PLAYER_ID)
+    assert (await client.get(f"/sessions/{sid}/recap")).status_code == 403
+    assert (await client.get(f"/campaigns/{camp['id']}")).status_code == 404
+    assert (await client.get(f"/campaigns/{camp['id']}/schedule")).status_code == 404
+    assert (await client.get("/campaigns")).json() == []
+
+
+@pytest.mark.caccia(id="CB-887", fonte="invariante: il banner «entra in serata» propone per ogni campagna il PG usato in quella, non uno di un'altra",
+                    zona="flusso:campagna-calendario", voce="interazione", copre=["GET /campaigns/active-for-me"])
+async def test_banner_con_due_campagne_propone_il_pg_giusto_per_ciascuna(client, test_session_factory):
+    f = test_session_factory
+    camp_b, x = await _enrolled(client, f)  # master GM_ID
+    act(8888)
+    camp_c = await _new_campaign(client, "Seconda")
+    y = await _char(f, PLAYER_ID, "Yara")
+    act(PLAYER_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": camp_c["invite_code"], "character_id": y})).status_code == 200
+    z = await _char(f, PLAYER_ID, "Zed")
+    assert (await client.post("/campaigns/enroll", json={"code": camp_b["invite_code"], "character_id": z})).status_code == 200
+    sb = await _apri_serata(client, camp_b["id"], [(PLAYER_ID, z)])
+    act(GM_ID)
+    await client.post(f"/sessions/{sb}/close")
+    act(8888)
+    sc = (await client.post("/sessions", json={"campaign_id": camp_c["id"]})).json()["id"]
+    act(PLAYER_ID)
+    assert (await client.post(f"/campaigns/{camp_c['id']}/session/join", json={"character_id": y})).status_code == 200
+    act(8888)
+    await client.post(f"/sessions/{sc}/close")
+    sb2 = await _apri_serata(client, camp_b["id"], [])
+    act(8888)
+    sc2 = (await client.post("/sessions", json={"campaign_id": camp_c["id"]})).json()["id"]
+    act(PLAYER_ID)
+    banner = {b["campaign_id"]: (b["session_id"], b["my_last_character_id"]) for b in (await client.get("/campaigns/active-for-me")).json()}
+    assert banner == {camp_b["id"]: (sb2, z), camp_c["id"]: (sc2, y)}
+
+
+@pytest.mark.xfail(strict=True, reason="CB-894 D-014: due serate allo stesso istante vengono create entrambe")
+@pytest.mark.caccia(id="CB-894", fonte="decisione D-014 (tests/caccia/decisioni.md): due serate programmate allo stesso istante sono rifiutate con 409",
+                    zona="flusso:campagna-calendario", voce="ripetizione",
+                    copre=["POST /campaigns/{campaign_id}/schedule", "DELETE /campaigns/{campaign_id}/schedule/{sid}"])
+async def test_serata_allo_stesso_istante_una_sola(client):
+    act(GM_ID)
+    camp = await _new_campaign(client)
+    url = f"/campaigns/{camp['id']}/schedule"
+    t1, t2 = _iso_utc(timedelta(days=3)), _iso_utc(timedelta(days=4))
+    prima = await client.post(url, json={"starts_at": t1})
+    assert prima.status_code == 201
+    assert (await client.post(url, json={"starts_at": t1})).status_code == 409
+    assert (await client.post(url, json={"starts_at": t2})).status_code == 201
+
+    async def prova(t):
+        try:
+            return (await client.post(url, json={"starts_at": t})).status_code
+        except Exception:  # noqa: BLE001
+            return 500
+    t3 = _iso_utc(timedelta(days=5))
+    assert sorted(await asyncio.gather(*[prova(t3) for _ in range(4)])) == [201, 409, 409, 409]
+    assert len((await client.get(url)).json()) == 3
+    assert (await client.delete(f"{url}/{prima.json()['id']}")).status_code == 204
+    assert (await client.post(url, json={"starts_at": t1})).status_code == 201
