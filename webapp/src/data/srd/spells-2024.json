@@ -3800,8 +3800,8 @@
     "it": "Entri mentalmente in contatto con un semidio, con lo spirito di un saggio morto da tempo o con qualche altra entità sapiente di un altro piano. Contattare questa intelligenza ultraterrena può spezzare la tua mente. Quando lanci questo incantesimo, effettua un tiro salvezza su Intelligenza con CD 15. Se lo superi, puoi porre all'entità fino a cinque domande. Devi porre le tue domande prima che l'incantesimo termini. Il GM risponde a ogni domanda con una sola parola, come \"sì\", \"no\", \"forse\", \"mai\", \"irrilevante\" o \"non è chiaro\" (se l'entità non conosce la risposta alla domanda). Se una risposta di una sola parola fosse fuorviante, il GM potrebbe invece offrire come risposta una breve frase.\n\nSe fallisci il tiro salvezza, subisci 6d6 danni Psichici e hai la condizione Incapacitato finché non completi un Riposo Lungo. Un incantesimo Ristorare superiore lanciato su di te pone fine a questo effetto."
    },
    "higher_level": null,
-   "attack_type": "SAVE",
-   "save_ability": "int",
+   "attack_type": null,
+   "save_ability": null,
    "damage_dice": "6d6",
    "damage_type": "psychic",
    "higher_levels_dice": null,
