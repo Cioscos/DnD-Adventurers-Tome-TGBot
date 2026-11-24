@@ -35,7 +35,7 @@ const entry = (type: string, cr: number, speed: Record<string, number> = {}) =>
   ({ index: 'x', type, challenge_rating: cr, speed: { walk_ft: 30, ...speed } }) as Parameters<typeof wildShapeWarning>[0]
 
 // caccia: {"id": "CB-359", "fonte": "invariante: un bonus negativo si scrive con il segno meno, mai come «+-1» (Saggezza 8 dà -1 ai danni della bestia 2024)", "zona": "flusso:compagni-forme", "voce": "limiti", "copre": ["route:/char/:id/extras"]}
-it.fails('il bonus ai danni negativo della bestia non appare come «+-1»', () => {
+it('il bonus ai danni negativo della bestia non appare come «+-1»', () => {
   const { container } = renderWithProviders(
     <CompanionCard charId={7} comp={scheda({ feature_key: 'ranger.primal_companion', attack_bonus_extra: 1, damage_bonus_extra: -1 })} wildShapeUses={null} />,
   )

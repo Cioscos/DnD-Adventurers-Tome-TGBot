@@ -244,7 +244,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
                 {a.name}
                 <span className="block text-xs font-mono text-dnd-text-muted tabular-nums">
                   {a.attack_bonus! + (comp.attack_bonus_extra ?? 0) >= 0 ? '+' : ''}{a.attack_bonus! + (comp.attack_bonus_extra ?? 0)}
-                  {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `+${comp.damage_bonus_extra}` : ''}` : ''}
+                  {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `${comp.damage_bonus_extra > 0 ? '+' : ''}${comp.damage_bonus_extra}` : ''}` : ''}
                 </span>
               </span>
               <RollButton
