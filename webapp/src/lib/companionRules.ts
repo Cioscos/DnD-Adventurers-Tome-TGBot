@@ -32,6 +32,7 @@ export function wildShapeMaxCr(druidLevel: number, isMoon: boolean, edition: str
 
 /** i18n key of the first broken Wild Shape limit, or null. Advisory: the server asks to confirm on activation. */
 export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean, edition: string = '2014'): string | null {
+  if (druidLevel === 1) return 'character.extras.reasons.no_wild_shape' // dal 2° livello, in entrambe le edizioni
   if (edition !== '2024' && isMoon && druidLevel >= 10 && ELEMENTALS.has(entry.index)) return null // Forma Selvatica Elementale
   if (entry.type !== 'beast') return 'character.extras.warn.not_beast'
   if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon, edition)) return 'character.extras.warn.cr'

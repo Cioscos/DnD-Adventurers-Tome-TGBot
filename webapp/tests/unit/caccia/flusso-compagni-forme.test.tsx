@@ -71,7 +71,7 @@ it('nel 2024 la forma attiva non mostra PF propri, quella non attiva sì', () =>
 })
 
 // caccia: {"id": "CB-1086", "fonte": "2014 e 2024 · Druido · Forma Selvatica · dal 2° livello (pag. 66 e 80): a 1° livello nessuna forma, e il server chiede conferma", "zona": "flusso:compagni-forme", "voce": "regola", "copre": ["route:/char/:id/extras"]}
-it.fails('un druido di 1° livello non ha ancora Forma Selvatica: l\'avviso della scheda lo segnala', () => {
+it('un druido di 1° livello non ha ancora Forma Selvatica: l\'avviso della scheda lo segnala', () => {
   expect(wildShapeWarning(entry('beast', 0.25), 1, false, '2014')).not.toBeNull()
   expect(wildShapeWarning(entry('beast', 0.25), 1, false, '2024')).not.toBeNull()
 })
