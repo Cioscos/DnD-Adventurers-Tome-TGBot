@@ -109,7 +109,6 @@ async def test_serata_oltre_l_anno_9999_e_rifiutata(client):
     assert (await client.get(f"/campaigns/{camp['id']}/schedule")).status_code == 200
 
 
-@pytest.mark.xfail(strict=True, reason="CB-138 iscrizioni in parallelo: IntegrityError, 500 invece di 409")
 @pytest.mark.caccia(id="CB-138", fonte="invariante: una richiesta ripetuta non spende due volte (un PG sta in una sola campagna)",
                     zona="flusso:campagna-calendario", voce="ripetizione", copre=["POST /campaigns/enroll"])
 async def test_doppia_iscrizione_insieme_una_sola_vale(client, test_session_factory):

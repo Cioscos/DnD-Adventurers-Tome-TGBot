@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_telegram_user, get_current_user
-from api.locks import character_locks
+from api.locks import character_locks, user_write_lock
 from api.database import get_db
 from api.schemas.campaign import (
     CampaignCreate,
@@ -222,7 +222,7 @@ async def list_campaigns(
 
 
 # Static routes before /{campaign_id}.
-@router.post("/enroll", response_model=CampaignDetail)
+@router.post("/enroll", response_model=CampaignDetail, dependencies=[Depends(user_write_lock)])
 async def enroll(
     body: CampaignEnroll,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
