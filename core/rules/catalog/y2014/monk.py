@@ -79,6 +79,13 @@ def _till_my_next_turn() -> dict:
     return {"anchor": "source", "edge": "end", "count": 1}
 
 
+def _dodging_dex_save(ctx: RuleContext) -> bool:
+    """Schivata di Difesa Paziente (pag. 193): vantaggio ai TS su Destrezza; si perde con velocità 0 (afferrato, trattenuto).
+    L'incapacitato chiude già lo stato."""
+    on = {k for k, v in (ctx.char.conditions or {}).items() if v}
+    return ctx.roll == "save" and ctx.ability == "dexterity" and state_on(ctx, "patient_defense") and not on & {"grappled", "restrained"}
+
+
 def _attack_action_done(ctx: RuleContext) -> bool:
     """Subito dopo l'azione Attacco: almeno un attacco dell'azione è già stato fatto in questo turno."""
     return int(_turn(ctx).get("action_attacks") or 0) >= 1
@@ -418,7 +425,7 @@ FEATURES = (
             ("Difesa Paziente", "Patient Defense"),
             ("Azione bonus e 1 ki: Schivata. Chi ti attacca ha svantaggio al tiro per colpire fino al tuo prossimo turno.",
              "Bonus action and 1 ki: Dodge. Attackers have disadvantage on their attack rolls until your next turn."),
-            "bonus_action",
+            "bonus_action", modifiers=(Modifier("advantage", 1, when=_dodging_dex_save, source=f"feature:{PD}"),),
             on_use=OnUse(slot="bonus", spends=KI, state=StateSpec(
                 "patient_defense", rounds=1, ends_on=("new_turn", "incapacitated", "manual"), data={"others": [PD]}))),
     feature("step_of_the_wind", CK, ED, 2, "Passo del Vento / Step of the Wind (Monaco 2, pag. 91)",

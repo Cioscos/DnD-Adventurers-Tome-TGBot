@@ -224,6 +224,16 @@ async def test_patient_defense_ends_at_the_new_turn_and_when_incapacitated(clien
     assert "patient_defense" not in await _states(client, cid)
 
 
+async def test_patient_defense_dex_save_advantage_is_lost_at_speed_zero(client):
+    # 2014, Schivata (pag. 193): vantaggio ai TS su Destrezza, perso se la velocità scende a 0
+    cid = await _monk(client, 2)
+    await _use(client, cid, PATIENT)
+    await _conditions(client, cid, grappled=True)
+    r = await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode"] == "normal"
+
+
 async def test_patient_defense_is_visible_to_gm_and_group(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)

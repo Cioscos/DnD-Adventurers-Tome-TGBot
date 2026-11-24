@@ -44,7 +44,6 @@ async def test_elusione_da_stordito_solo_nel_2024_si_perde(client, edizione, off
                     copre=["carta:2014/classes/monk.md#Difesa Paziente / Patient Defense (Monaco 2, pag. 91)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-1812: difforme dal manuale, confermato")
 async def test_difesa_paziente_da_vantaggio_ai_ts_su_destrezza(client, dadi):
     # Difesa Paziente fa l'azione di Schivata: fino al prossimo turno i TS su Destrezza hanno vantaggio (Schivata, pag. 193)
     cid = await _monk(client, 2)
