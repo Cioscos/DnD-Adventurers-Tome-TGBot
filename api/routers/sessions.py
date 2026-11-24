@@ -937,6 +937,7 @@ async def gm_grant_item(
             body=whisper_body,
             sent_at=now_iso,
             recipient_user_id=rid,
+            recipient_character_id=char.id,
             sender_display_name="__GM__",
             item_id=granted_item_id,
             item_name=body.item.name,

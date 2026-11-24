@@ -264,6 +264,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
     for c in characters:
         c["healing_given"] = given.get(c["character_id"], 0)
     characters += [d["stats"] for d in deleted]  # con le cure già contate
+    name_by_char = {**{d["stats"]["character_id"]: d["stats"]["name"] for d in deleted}, **{c.id: c.name for c in chars.values()}}
     name_by_user = {**{d["user_id"]: d["stats"]["name"] for d in deleted}, **{c.user_id: c.name for c in chars.values()}}
 
     encs = (await db.execute(
@@ -315,7 +316,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
                 who = to if kind == "stash_take" else frm  # "gm" for the GM rows
                 stash.append({"kind": kind, "who": who, "summary": _summary(pl.get("items"), pl.get("coins"))})
         elif m.item_name is not None:
-            gm_grants.append({"to": name_by_user.get(m.recipient_user_id), "item": m.item_name,
+            gm_grants.append({"to": name_by_char.get(m.recipient_character_id) or name_by_user.get(m.recipient_user_id), "item": m.item_name,
                               "quantity": m.item_quantity or 1})
 
     return {

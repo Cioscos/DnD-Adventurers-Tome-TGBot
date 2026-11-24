@@ -823,6 +823,8 @@ class SessionMessage(Base):
     recipient_user_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, nullable=True, index=True
     )
+    # PG che ha ricevuto l'oggetto: il giocatore può cambiarlo a serata aperta
+    recipient_character_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sender_display_name: Mapped[Optional[str]] = mapped_column(
         String(120), nullable=True
     )
