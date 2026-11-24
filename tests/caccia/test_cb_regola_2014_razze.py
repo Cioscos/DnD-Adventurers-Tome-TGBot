@@ -72,7 +72,6 @@ async def _scheda(client, cid: int) -> dict:
                            "carta:2014/equipment.md#Armature / Armor (pag. 145)",
                            "POST /characters", "POST /characters/{char_id}/items", "GET /characters/{char_id}"])
 @pytest.mark.parametrize("indice,sotto,lingua", [("dwarf", None, "it"), ("dwarf", "hill-dwarf", "en")])
-@pytest.mark.xfail(strict=True, reason="CB-3061: difforme dal manuale, confermato")
 async def test_nano_2014_in_armatura_pesante_senza_forza_non_perde_velocita(client, indice, sotto, lingua):
     pg = await _crea(client, species=_specie(indice, sotto, lingua),
                      initial_class={"class_name": "fighter", "level": 1})  # Forza 10, addestrato alle armature pesanti

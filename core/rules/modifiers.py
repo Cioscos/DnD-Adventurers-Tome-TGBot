@@ -4,6 +4,7 @@ I modificatori homebrew restano sommati dai router accanto a questi: qui non si 
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -195,6 +196,16 @@ def _strength_required(item: Any) -> int:
         return 0
 
 
+_DWARF = re.compile(r"\b(dwarf|nan[oa])\b")
+
+
+def _ignores_armor_strength(ctx: RuleContext) -> bool:
+    """La colonna Forza delle armature non vale con la variante dell'ingombro (2014 pag. 176: conta solo il peso) né per il
+    nano 2014, non rallentato dall'armatura pesante (pag. 28; il nano 2024 sì)."""
+    return bool((getattr(ctx.char, "settings", None) or {}).get("encumbrance_variant")) or (
+        ctx.edition == "2014" and bool(_DWARF.search((getattr(ctx.char, "race", None) or "").lower())))
+
+
 def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
     """Armatura o scudo (R21): senza addestramento, Forza insufficiente (velocità -10 ft) e Furtività. Il blocco degli
     incantesimi è del Task 15."""
@@ -206,7 +217,7 @@ def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
             continue
         if item.item_type == "armor":
             required = _strength_required(item)
-            if required and ability_score(ctx.char, "strength") < required:
+            if required and ability_score(ctx.char, "strength") < required and not _ignores_armor_strength(ctx):
                 out.append(Modifier("speed", -10, source="armor:strength"))
             if (item_meta(item).get("stealth_disadvantage") and ctx.roll == "skill" and ctx.skill == "stealth"
                     and not _medium_armor_master(ctx.char)):

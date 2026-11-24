@@ -64,7 +64,6 @@ async def _spendi_tutti_i_dadi_vita(client, cid) -> None:
                     copre=["carta:2014/general.md#Forza / Strength (pag. 175-176)",
                            "carta:2014/equipment.md#Armature / Armor (pag. 145)",
                            "PATCH /characters/{char_id}", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2761: difforme dal manuale, confermato")
 async def test_con_la_variante_dell_ingombro_l_armatura_pesante_non_toglie_velocita_per_la_forza(client):
     cid = await _pg(client, "fighter", 1)  # Forza 10, addestrato alle armature pesanti
     senza_armatura = (await _scheda(client, cid))["computed"]["speed"]
