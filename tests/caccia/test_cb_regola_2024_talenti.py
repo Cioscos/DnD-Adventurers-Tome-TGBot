@@ -102,7 +102,6 @@ async def test_il_terzo_incantatore_soddisfa_il_prerequisito_incantesimi(client,
 @pytest.mark.caccia(id="CB-3463", fonte="2024 · Talenti · Dono del Richiamo degli incantesimi · pag. 211", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Dono del Richiamo degli incantesimi / Boon of Spell Recall (pag. 211) - Dono epico (livello 19+, privilegio Incantesimi)",
                            "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3463: difforme dal manuale, confermato")
 async def test_il_dono_del_richiamo_non_si_prende_con_la_sola_magia_del_patto(client):
     mago = await _pg(client, "wizard", 19)
     assert (await _prendi(client, mago["id"], "2024_boon_spell_recall", "intelligence")).status_code == 201

@@ -29,7 +29,7 @@ from core.rules.level_choices import (  # noqa: F401
 from core.rules.edition import character_edition, class_key
 from core.rules.feature_sync import REPLACED_AT_REST
 from core.rules.schools import normalize_school
-from core.rules.spellcasting import slots_for
+from core.rules.spellcasting import caster_ability, slots_for
 from core.rules.types import RuleContext
 
 
@@ -351,6 +351,9 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
         if not any(_score_row(char, n).value >= minimum for n in names):
             raise _bad("feat_prerequisite_ability")
     if spec.needs_spellcasting and not any(c.spellcasting_ability for c in char.classes):
+        raise _bad("feat_prerequisite_spellcasting")
+    # «privilegio Incantesimi» (Dono del Richiamo degli incantesimi, PHB 2024 pag. 211): la Magia del Patto non basta
+    if not spec.pact_magic_counts and not any(caster_ability(c) and class_key(c) != "warlock" for c in char.classes):
         raise _bad("feat_prerequisite_spellcasting")
     if spec.prereq_armor and not armor_trained(char, spec.prereq_armor):
         raise _bad("feat_prerequisite_armor")
