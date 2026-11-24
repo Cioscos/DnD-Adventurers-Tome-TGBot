@@ -41,7 +41,6 @@ async def test_in_forma_selvatica_i_dadi_vita_del_druido_non_curano_la_forma_nor
                     voce="regola", copre=["carta:2014/classes/druid.md#Rifugio della Natura / Nature's Sanctuary (Circolo della Terra 14, pag. 69)",
                                           "POST /characters/{char_id}/features/{feature_key}/use",
                                           "GET /characters/{char_id}/target-effects/{effect_key}"])
-@pytest.mark.xfail(strict=True, reason="CB-1712: difforme dal manuale, confermato")
 async def test_il_rifugio_della_natura_usa_la_cd_degli_incantesimi_del_druido(client):
     cid = await _druid(client, 14, "land", wisdom=16)
     r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory",

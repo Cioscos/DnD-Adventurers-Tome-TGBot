@@ -7,6 +7,7 @@ La Forma Selvatica vive nei compagni (``kind="wild_shape"``): limiti, durata e P
 from __future__ import annotations
 
 from core.rules.catalog._common import feature
+from core.rules.catalog.y2014.cleric import spell_dc  # CD degli incantesimi della classe, oggetti compresi
 from core.rules.types import ChoiceSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, TargetEffect, Uses
 
 ED, CK = "2014", "druid"
@@ -38,11 +39,6 @@ TERRITORY_SPELLS: dict[str, tuple[tuple[str, str], ...]] = {
     "underdark": (("spider-climb", "web"), ("gaseous-form", "stinking-cloud"), ("greater-invisibility", "stone-shape"),
                   ("cloudkill", "insect-plague")),
 }
-
-
-def spell_dc(ctx: RuleContext) -> int:
-    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
-    return 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
 
 
 def _no_options(_ctx: RuleContext) -> list[str]:
