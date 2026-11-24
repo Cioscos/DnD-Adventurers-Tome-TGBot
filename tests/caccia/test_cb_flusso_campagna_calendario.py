@@ -457,7 +457,6 @@ async def test_riepilogo_parte_da_quando_il_pg_si_siede(client, test_session_fac
     assert (c["damage_taken"], c["healed"]) == (1, 0)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-161 una serata già giocata si può spostare nel futuro")
 @pytest.mark.caccia(id="CB-161", fonte="invariante: una serata già giocata non cambia data", zona="flusso:campagna-calendario",
                     voce="limiti", copre=["PATCH /campaigns/{campaign_id}/schedule/{sid}"])
 async def test_serata_fatta_non_si_sposta(client):

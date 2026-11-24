@@ -410,6 +410,8 @@ async def update_schedule(
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     row = await _get_schedule(db, campaign_id, sid)
     if body.starts_at is not None and body.starts_at != row.starts_at:
+        if row.session_id is not None:
+            raise _err(409, "schedule_done")
         if body.starts_at <= _naive_now():
             raise _err(422, "starts_at_in_past")
         row.starts_at = body.starts_at
