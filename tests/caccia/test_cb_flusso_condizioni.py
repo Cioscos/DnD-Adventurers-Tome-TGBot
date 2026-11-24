@@ -358,10 +358,11 @@ async def test_2024_privo_di_sensi_accende_anche_prono(client):
 
 @pytest.mark.caccia(id="CB-566", fonte="2014 · Privo di Sensi · pag. 292 (cade prono una volta)", zona="flusso:condizioni", voce="edizioni",
                     copre=["PATCH /characters/{char_id}/conditions"])
-async def test_2014_privo_di_sensi_e_prono_restano_interruttori_separati(client):
+async def test_2014_privo_di_sensi_fa_cadere_prono_che_resta_al_risveglio(client):
     cid = await _pg(client, "2014")
     j = (await _cond(client, cid, {"unconscious": True})).json()
-    assert j["conditions"] == {"unconscious": True}
+    # 2014 pag. 292 (Privo di Sensi): «lascia cadere ciò che impugna e cade prono», anche se la condizione non viene dagli 0 PF
+    assert j["conditions"] == {"unconscious": True, "prone": True}
     j = (await _cond(client, cid, {"unconscious": False, "prone": True})).json()
     assert j["conditions"] == {"unconscious": False, "prone": True}
 

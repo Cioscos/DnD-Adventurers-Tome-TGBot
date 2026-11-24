@@ -170,8 +170,8 @@ async def apply_conditions(session: AsyncSession, char: Character,
     all other conditions are booleans. Returns {"changed": bool}.
     """
     old_conditions = dict(char.conditions or {})
-    # 2024 (pag. 377): chi diventa Privo di sensi è anche Prono, e lo resta quando si riprende.
-    if changes.get("unconscious") and not old_conditions.get("unconscious") and character_edition(char) == "2024":
+    # Chi diventa Privo di sensi cade Prono (2014 pag. 292; 2024 pag. 377), e lo resta quando si riprende.
+    if changes.get("unconscious") and not old_conditions.get("unconscious"):
         changes = {**changes, "prone": True}
     # Uno stato attivo (Ira Incontenibile) impedisce di aggiungere quelle condizioni; toglierle resta possibile.
     immune = immune_conditions(char) if any(changes.values()) else set()  # solo chi aggiunge ha da guardare le immunità

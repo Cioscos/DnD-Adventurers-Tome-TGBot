@@ -39,3 +39,13 @@ async def test_il_rilancio_con_ispirazione_tiene_l_altro_d20_e_il_modo(client, p
     assert (r.json()["mode"], r.json()["die"]) == atteso, r.json()
     assert len(r.json()["dice"]) == 2 and nuovo in r.json()["dice"], r.json()
 
+
+@pytest.mark.caccia(id="CB-4232", fonte="2014 · Condizioni · Privo di Sensi · pag. 292", zona="regola:2014/generali",
+                    voce="edizioni", copre=["carta:2014/general.md#Privo di Sensi / Unconscious (pag. 292)",
+                                            "PATCH /characters/{char_id}/conditions"])
+async def test_2014_privo_di_sensi_messo_a_mano_fa_cadere_prono(client):
+    cid = await _pg(client, "2014")
+    # «lascia cadere ciò che impugna e cade prono», da qualunque fonte venga la condizione (non solo dagli 0 PF)
+    assert (await _cond(client, cid, unconscious=True))["conditions"] == {"unconscious": True, "prone": True}
+    # risvegliandosi resta prono: ci si rialza spendendo movimento
+    assert (await _cond(client, cid, unconscious=False))["conditions"] == {"unconscious": False, "prone": True}
