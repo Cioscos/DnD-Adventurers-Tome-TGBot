@@ -114,7 +114,6 @@ async def test_un_arma_a_due_mani_nella_mano_secondaria_non_convive_con_un_arma_
                     copre=["carta:2014/equipment.md#Regole",
                            "carta:2014/equipment.md#Armature / Armor (pag. 145)",
                            "PATCH /characters/{char_id}/items/{item_id}", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-3165: difforme dal manuale, confermato")
 async def test_correggere_il_bonus_dello_scudo_imbracciato_cambia_la_ca(client):
     cid = await _pg(client, "fighter", 1, dexterity=10)
     scudo = await _oggetto(client, cid, "Scudo", "shield", item_metadata={"ac_bonus": 2})

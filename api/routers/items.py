@@ -313,7 +313,8 @@ async def update_item(
         if not item.is_equipped:
             item.equipment_slot = None
 
-    if "is_equipped" in data or "equipment_slot" in data:
+    # Anche il bonus o il tipo corretto di uno scudo già imbracciato vale subito per la CA (2014 pag. 144-145).
+    if "is_equipped" in data or "equipment_slot" in data or (item.is_equipped and {"item_metadata", "item_type"} & data.keys()):
         apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
