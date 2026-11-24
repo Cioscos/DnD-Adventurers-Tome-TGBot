@@ -399,9 +399,10 @@ ASPECT_NAMES = {"owl": "Owl", "panther": "Panther", "salmon": "Salmon"}
 
 
 def _aspect_choice() -> ChoiceSpec:
+    # un cambio dopo ogni riposo lungo, contato a parte da quello della Padronanza delle Armi;
     # `label` serve solo all'import da Beyond, che chiama l'opzione col nome nudo
     return ChoiceSpec(group="aspect_of_the_wilds", levels={6: 1}, options=lambda _c: list(ASPECT_NAMES), replaceable=True,
-                      label=lambda key: {"name": ASPECT_NAMES[key], "summary": ""})
+                      replace_per_long_rest=1, replace_own_count=True, label=lambda key: {"name": ASPECT_NAMES[key], "summary": ""})
 
 
 def _wild(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], action_type: str | None = None, **kw: Any):

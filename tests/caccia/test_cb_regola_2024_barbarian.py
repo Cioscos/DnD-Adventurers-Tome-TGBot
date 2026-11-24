@@ -61,7 +61,6 @@ async def _turno_del_goblin(client, sid, cid) -> None:
                     zona="regola:2024/barbarian", voce="regola",
                     copre=["carta:2024/classes/barbarian.md#Aspetto della Natura Selvaggia / Aspect of the Wilds (Cammino del Cuore Selvaggio 6, pag. 55)",
                            "POST /characters/{char_id}/classes/{class_id}/options/replace", "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2161: difforme dal manuale, confermato")
 async def test_aspetto_della_natura_selvaggia_si_cambia_una_volta_per_riposo_lungo(client):
     cid = await _barbarian(client, 6, WILD)
     await _pick(client, cid, "aspect_of_the_wilds", "owl")

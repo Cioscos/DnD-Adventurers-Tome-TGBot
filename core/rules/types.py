@@ -45,6 +45,9 @@ class ChoiceSpec:
     replaceable: bool = False
     # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
     replace_per_long_rest: int = 0  # quanti cambi per riposo lungo (True = 1)
+    # Con ``replace_per_long_rest``: i cambi si contano a parte, non con gli altri gruppi della classe (Aspetto della Natura
+    # Selvaggia accanto alla Padronanza delle Armi del barbaro); senza, la classe ha un solo contatore (Maestria negli Incantesimi)
+    replace_own_count: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
