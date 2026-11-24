@@ -156,8 +156,8 @@ async def test_scudo_di_fuoco_gelido_infligge_danni_da_freddo(client):
 @pytest.mark.caccia(id="CB-3418", fonte="2014 · Incantesimi · Sogno · pag. 279; Tempesta di Nevischio · pag. 284; Druido · Incantesimi del Circolo · pag. 68; Chierico · Dominio della Tempesta · pag. 62",
                     zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Sogno", "carta:2014/spells.md#Tempesta di Nevischio"])
-@pytest.mark.parametrize("indice", ["dream", "sleet-storm"])
-@pytest.mark.xfail(strict=True, reason="CB-3418: difforme dal manuale, confermato")
+@pytest.mark.parametrize("indice", [pytest.param("dream", marks=pytest.mark.xfail(strict=True, reason="CB-3418: difforme dal manuale, confermato")),
+                                    "sleet-storm"])  # Tempesta di Nevischio corretta con CB-3865 (stessa riga, TS in entrambe le edizioni)
 def test_incantesimi_concessi_2014_con_un_ts_nella_carta_sono_segnati_come_ts(indice):
     assert granted_spell(indice, "2014").attack_save == "SAVE"
 

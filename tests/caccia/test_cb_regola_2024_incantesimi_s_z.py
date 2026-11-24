@@ -141,7 +141,6 @@ async def test_tempesta_di_ghiaccio_concessa_nel_2024_usa_i_d10_del_manuale_2024
     ("sleet-storm", {"attack_save": "SAVE"}),  # Circolo della Terra polare 2024
     ("fire-shield", {"damage_dice": "2d8"}),  # Dominio della Guerra e Patrono Immondo 2024
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3865: difforme dal manuale, confermato")
 def test_incantesimo_concesso_nel_2024_ha_ts_e_dadi_della_carta(indice, attesi):
     riga = granted_spell(indice, "2024")
     assert {campo: getattr(riga, campo) for campo in attesi} == attesi

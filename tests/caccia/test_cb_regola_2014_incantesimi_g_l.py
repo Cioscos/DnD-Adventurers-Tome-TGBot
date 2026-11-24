@@ -79,7 +79,6 @@ async def test_lama_infuocata_sale_di_1d6_ogni_due_livelli_di_slot(client, slot,
                     copre=["carta:2014/spells.md#Guardiani Spirituali",
                            "carta:2014/classes/cleric.md#Incantesimi del Dominio della Guerra / War Domain Spells (Guerra 1, pag. 60)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3312: difforme dal manuale, confermato")
 async def test_guardiani_spirituali_del_dominio_della_guerra_tirano_i_loro_dadi(client):
     cid = await _pg(client, "cleric", 5, "Chierico", "Dominio della Guerra")
     spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "spirit-guardians")
@@ -128,7 +127,6 @@ async def test_interdizione_alle_lame_vale_ancora_nel_turno_successivo_di_chi_la
                            "carta:2014/classes/cleric.md#Incantesimi del Dominio della Vita / Life Domain Spells (Vita 1, pag. 63)",
                            "carta:2014/classes/cleric.md#Incantesimi del Dominio della Luce / Light Domain Spells (Luce 1, pag. 61)"])
 @pytest.mark.parametrize("indice", ["spirit-guardians", "guardian-of-faith"])
-@pytest.mark.xfail(strict=True, reason="CB-3315: difforme dal manuale, confermato")
 def test_gli_incantesimi_di_dominio_con_tiro_salvezza_lo_dichiarano(indice):
     # la riga creata dal dominio dice che il danno si evita con un TS (Saggezza / Destrezza): la scheda mostra CD e metà danni
     assert GRANTED_SPELLS[indice].attack_save == "SAVE"

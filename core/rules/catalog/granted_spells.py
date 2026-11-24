@@ -73,7 +73,8 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'spiritual-weapon': GrantedSpell(
         'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force', concentration_2024=True),
     'spirit-guardians': GrantedSpell(
-        'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+        'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True,
+        attack_save='SAVE', damage_dice='3d8', higher_levels_dice='1d8'),  # tipo: radiosi o necrotici secondo l'allineamento (Q-2014-incantesimi-g-l-2)
     'crusaders-mantle': GrantedSpell(
         'crusaders-mantle', {"it": 'Manto del crociato', "en": "Crusader's Mantle"}, 3, '1 azione', 'Personale (raggio 9 m)', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'freedom-of-movement': GrantedSpell(
@@ -118,7 +119,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'fireball': GrantedSpell(
         'fireball', {"it": 'Palla di fuoco', "en": 'Fireball'}, 3, '1 azione', '45 m', 'Istantanea', attack_save='SAVE', damage_dice='8d6', damage_type='fire', higher_levels_dice='1d6'),
     'guardian-of-faith': GrantedSpell(
-        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore'),
+        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore', attack_save='SAVE'),
     'wall-of-fire': GrantedSpell(
         'wall-of-fire', {"it": 'Muro di fuoco', "en": 'Wall of Fire'}, 4, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='fire', higher_levels_dice='1d8'),
     'animal-friendship': GrantedSpell(
@@ -150,7 +151,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'call-lightning': GrantedSpell(
         'call-lightning', {"it": 'Invocare fulmine', "en": 'Call Lightning'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='3d10', damage_type='lightning', higher_levels_dice='1d10'),
     'sleet-storm': GrantedSpell(
-        'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+        'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'control-water': GrantedSpell(
         'control-water', {"it": 'Controllare acqua', "en": 'Control Water'}, 4, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning'),
     'ice-storm': GrantedSpell(
@@ -460,7 +461,8 @@ for _spell, _comp in (
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "S, M"),
         (GrantedSpell("guiding-bolt", {"it": "Dardo guida", "en": "Guiding Bolt"}, 1, "1 azione", "36 m", "1 round", attack_save="ATK",
                       damage_dice="4d6", damage_type="radiant", higher_levels_dice="1d6"), "V, S"),
-        (GrantedSpell("fire-shield", {"it": "Scudo di fuoco", "en": "Fire Shield"}, 4, "1 azione", "Personale", "10 minuti"),
+        (GrantedSpell("fire-shield", {"it": "Scudo di fuoco", "en": "Fire Shield"}, 4, "1 azione", "Personale", "10 minuti",
+                      damage_dice="2d8", damage_type="fire"),
          "V, S, M"),
         (GrantedSpell("steel-wind-strike", {"it": "Colpo del vento d'acciaio", "en": "Steel Wind Strike"}, 5, "1 azione", "9 m",
                       "Istantanea", attack_save="ATK", damage_dice="6d10", damage_type="force"), "S, M")):
@@ -551,7 +553,8 @@ for _spell, _comp in (
         (GrantedSpell("chromatic-orb", {"it": "Sfera cromatica", "en": "Chromatic Orb"}, 1, "1 azione", "27 m", "Istantanea",
                       attack_save="ATK", damage_dice="3d8", damage_type="fire", higher_levels_dice="1d8"), "V, S, M"),
         (GrantedSpell("dragons-breath", {"it": "Soffio del drago", "en": "Dragon's Breath"}, 2, "1 azione bonus", "Contatto",
-                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="3d6",
+                      damage_type="fire", higher_levels_dice="1d6"), "V, S, M"),
         (GrantedSpell("charm-monster", {"it": "Charme su mostri", "en": "Charm Monster"}, 4, "1 azione", "9 m", "1 ora",
                       attack_save="SAVE"), "V, S"),
         (GrantedSpell("summon-dragon", {"it": "Evocare drago", "en": "Summon Dragon"}, 5, "1 azione", "18 m",
