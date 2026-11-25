@@ -121,7 +121,6 @@ async def test_evoca_fatato_2024_sale_di_2d12_per_slot_oltre_il_sesto(client, sl
 
 @pytest.mark.caccia(id="CB-3716", fonte="2024 · Incantesimi · Forma gassosa · pag. 277", zona="regola:2024/incantesimi-D-F", voce="limiti",
                     copre=["carta:2024/spells.md#Forma gassosa", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3716: difforme dal manuale, confermato")
 async def test_forma_gassosa_2024_un_bersaglio_in_piu_per_slot_oltre_il_terzo(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(GM_ID)

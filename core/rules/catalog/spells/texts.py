@@ -82,7 +82,7 @@ SPELLS: tuple[SpellEffect, ...] = (
                         ends_on=("unconscious", "manual")),
         "2024": replace(_text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
                               "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
-                        ends_on=("unconscious", "manual"))}),
+                        ends_on=("unconscious", "manual"), max_targets=lambda slot: max(slot - 2, 1))}),  # 2024 p.277: un bersaglio in più per slot oltre il 3°
     SpellEffect("wind_walk", ("wind-walk",), ("Camminare nel Vento", "Wind Walk"), SpellTarget("allies", lambda slot: 11), _WIND_WALK),
     SpellEffect("mirror_image", ("mirror-image",), ("Immagine Speculare", "Mirror Image"), _SELF, {"2014": _MIRROR_2014, "2024": _MIRROR_2024}),
     SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
