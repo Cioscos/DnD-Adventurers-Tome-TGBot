@@ -170,7 +170,6 @@ async def test_sguardo_ipnotico_non_si_ripete_sulla_stessa_creatura_dopo_la_fine
                     zona="regola:2014/wizard", voce="limiti",
                     copre=["carta:2014/classes/wizard.md#Comandare Non Morti / Command Undead (Necromanzia 14, pag. 88)",
                            "POST /characters/{char_id}/target-effects", "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2114: difforme dal manuale, confermato")
 async def test_comandare_non_morti_immunita_anche_dopo_il_riposo_lungo(client, test_session_factory, monkeypatch):
     sid, cid, g1 = await _in_serata(client, test_session_factory, monkeypatch,
                                     {"class_name": "wizard", "level": 14, "hit_die": 6, "subclass": "Scuola di Necromanzia"})

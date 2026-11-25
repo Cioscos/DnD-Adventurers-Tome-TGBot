@@ -279,6 +279,9 @@ ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del pe
 
 
 TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}
+# Effetti la cui immunità il riposo lungo non chiude: «se il TS riesce, non si può più usare contro quella creatura»
+# (Comandare Non Morti 2014, pag. 88)
+LASTING_IMMUNITY = frozenset({"wizard.command_undead"})
 
 
 def target_key(combatant: Any) -> str:
@@ -297,10 +300,12 @@ def add_target_immunity(char: Any, effect_key: str, target: str) -> None:
 
 
 def reset_target_immunity(char: Any) -> None:
-    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri."""
+    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri, non quelle per sempre (``LASTING_IMMUNITY``)."""
     settings = char.settings or {}
-    if settings.get(TARGET_IMMUNITY):
-        char.settings = {k: v for k, v in settings.items() if k != TARGET_IMMUNITY}
+    immune = settings.get(TARGET_IMMUNITY) or {}
+    kept = {k: v for k, v in immune.items() if k in LASTING_IMMUNITY}
+    if kept != immune:
+        char.settings = {**{k: v for k, v in settings.items() if k != TARGET_IMMUNITY}, **({TARGET_IMMUNITY: kept} if kept else {})}
 
 
 def reset_zero_hp_uses(char: Any) -> None:
