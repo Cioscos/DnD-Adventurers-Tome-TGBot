@@ -127,3 +127,20 @@ async def test_il_danno_del_secondo_bersaglio_di_raddoppiato_non_scende_sotto_ze
     r = await client.post(f"/characters/{cid}/spells/{raggio}/roll_damage", json={})
     assert r.status_code == 200, r.text
     assert (r.json()["total"], r.json()["twinned_damage"]["total"]) == (0, 0)
+
+
+@pytest.mark.caccia(id="CB-4708", fonte="2024 · Paladino · Aura di Interdizione (solo dentro l'aura) · pag. 116; Aura di Protezione, inattiva da Incapacitato · pag. 111",
+                    zona="regola:2024/paladin", voce="interazione",
+                    copre=["carta:2024/classes/paladin.md#Aura di Interdizione / Aura of Warding (Giuramento degli Antichi, Paladino 7, pag. 116)",
+                           "GET /characters/{char_id}/roll-options", "PATCH /characters/{char_id}/conditions"])
+async def test_l_interdizione_di_un_altro_paladino_protegge_chi_ha_la_propria_spenta(client, test_session_factory):
+    as_user(PLAYER_ID)
+    compagno = await _oath(client, 7, "ancients")
+    as_user(GM_ID)
+    cid = await _oath(client, 7, "ancients")
+    await _seduti(test_session_factory, (GM_ID, cid), (PLAYER_ID, compagno))
+    as_user(GM_ID)
+    chiave = "aura:warding_2024"
+    assert chiave not in await _roll_keys(client, cid, "damage_taken", damage_type="necrotic")  # ha la sua
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})).status_code == 200
+    assert chiave in await _roll_keys(client, cid, "damage_taken", damage_type="necrotic")

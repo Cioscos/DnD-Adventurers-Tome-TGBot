@@ -37,5 +37,6 @@ def party_auras(char: Any, kind: str | None = None) -> list[dict]:
 
 
 def has_own_aura(char: Any, kind: str) -> bool:
-    """Chi ha già l'aura non ne somma una uguale di un compagno: vale la sua."""
-    return any(spec.aura is not None and spec.aura.kind == kind for spec, _row in active_features(char))
+    """Chi ha già l'aura non ne somma una uguale di un compagno: vale la sua, finché non è spenta (svenuto, Incapacitato nel 2024)."""
+    return any(spec.aura is not None and spec.aura.kind == kind and (is_conscious(char) or not spec.aura.needs_conscious)
+               for spec, _row in active_features(char))
