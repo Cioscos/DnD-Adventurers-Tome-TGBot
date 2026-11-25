@@ -392,11 +392,13 @@ def _armor_block(char: Any) -> bool:
 
 
 def _form_block(char: Any, spell: Any = None) -> bool:
-    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali) o che
-    concede proprio questo (Incantesimi del Circolo della Luna)."""
+    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali; 2014 pag. 67:
+    solo quelli della classe del privilegio) o che concede proprio questo (Incantesimi del Circolo della Luna)."""
     index = getattr(spell, "srd_index", None)
+    own = {c.id for c in _spell_rows(char, spell)} if character_edition(char) == "2014" else None
     return (any(s.get("key") == "wild_shape" for s in char.active_states or [])
-            and not any(spec.cast_in_form or (index and index in spec.cast_in_form_spells) for spec, _row in active_features(char)))
+            and not any((spec.cast_in_form and (own is None or row.id in own)) or (index and index in spec.cast_in_form_spells)
+                        for spec, row in active_features(char)))
 
 
 def at_will(char: Any, spell: Any) -> bool:

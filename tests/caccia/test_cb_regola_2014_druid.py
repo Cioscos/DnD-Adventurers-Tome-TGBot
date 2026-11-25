@@ -70,7 +70,6 @@ async def test_il_druido_non_prepara_incantesimi_di_un_livello_senza_slot(client
 @pytest.mark.caccia(id="CB-1714", fonte="2014 · Druido · Incantesimi Bestiali (solo incantesimi da druido) · pag. 67", zona="regola:2014/druid",
                     voce="interazione", copre=["carta:2014/classes/druid.md#Incantesimi Bestiali / Beast Spells (Druido 18, pag. 67)",
                                                "GET /characters/{char_id}/spells/{spell_id}/cast-check"])
-@pytest.mark.xfail(strict=True, reason="CB-1714: difforme dal manuale, confermato")
 async def test_incantesimi_bestiali_non_sbloccano_gli_incantesimi_di_un_altra_classe(client):
     cid = await _druid(client, 18, "land")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 2, "hit_die": 6})
