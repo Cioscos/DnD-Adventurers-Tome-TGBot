@@ -95,7 +95,6 @@ async def test_incantesimo_2024_preso_dal_catalogo_infligge_anche_il_secondo_tip
 @pytest.mark.caccia(id="CB-3862", fonte="2024 · Incantesimi · Tempesta di Radiosità di Jallarzi · pag. 289", zona="regola:2024/incantesimi-S-Z",
                     voce="limiti",
                     copre=["carta:2024/spells.md#Tempesta di radiosità di Jallarzi", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3862: difforme dal manuale, confermato")
 async def test_tempesta_di_radiosita_con_slot_alto_aggiunge_un_d10_di_ciascun_tipo(client):
     cid = await _pg(client, "warlock", 13)
     sid = await _impara(client, cid, "jallarzis-storm-of-radiance")

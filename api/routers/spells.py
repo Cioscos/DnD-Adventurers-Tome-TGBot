@@ -885,6 +885,7 @@ _UPCAST = {
     ("hail-of-thorns", "2014"): _Upcast(max_extra=5),  # massimo 6d10 (pag. 266)
     ("sleep", "2014"): _Upcast(dice="2d8"),  # la riserva di PF cresce di 2d8 per slot (pag. 279)
     ("flame-strike", "2024"): _Upcast(both=True),  # +1d6 fuoco e +1d6 radiosi per livello (pag. 275)
+    ("jallarzis-storm-of-radiance", "2024"): _Upcast(both=True),  # +1d10 radiosi e +1d10 da tuono per livello (pag. 289)
 }
 # Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
 _ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}

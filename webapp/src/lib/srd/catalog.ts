@@ -234,6 +234,7 @@ const UPCAST_RULES: Record<string, Partial<Record<'2014' | '2024', UpcastRule>>>
   'hail-of-thorns': { '2014': { maxExtra: 5 } },
   sleep: { '2014': { dice: '2d8' } },
   'flame-strike': { '2024': { both: true } },
+  'jallarzis-storm-of-radiance': { '2024': { both: true } },
 }
 
 /** I dadi in più valgono anche per la seconda parte del danno (Colonna di fiamme 2024). */

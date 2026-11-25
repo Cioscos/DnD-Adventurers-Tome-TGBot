@@ -63,6 +63,7 @@ describe('catalog', () => {
     // Raffica di Spine 2014 (pag. 266): al massimo 6d10
     expect(upcastExtraDice({ level: 1, srd_index: 'hail-of-thorns', higher_levels_dice: '1d10' }, 9, 10, '2014')).toBe(5)
     expect(upcastBoth('flame-strike', '2024')).toBe(true)
+    expect(upcastBoth('jallarzis-storm-of-radiance', '2024')).toBe(true)
     expect(upcastBoth('flame-strike', '2014')).toBe(false)
     expect(upcastExtraDice({ level: 0, higher_levels_dice: '1d6' }, 5, 6)).toBe(0)
     expect(upcastExtraDice({ level: 3 }, 5, 6)).toBe(0)
