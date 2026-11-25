@@ -216,14 +216,28 @@ def _concentrates(data: object, edition: str) -> bool:
 
 async def _realign_renamed(session: AsyncSession, char: Character, rows: list[Spell]) -> list[Spell]:
     """Le righe con una chiave di prima (``RENAMED_SPELLS``) passano all'indice del catalogo. Se il giocatore ha già quella del
-    catalogo resta la sua, che eredita concentrazione ed effetti in corso, e la copia concessa si toglie."""
+    catalogo resta la sua, che eredita concentrazione, effetti in corso e testi scritti, e la copia concessa si toglie; una riga
+    che la concessione non ha creato (import da Beyond) non si toglie mai."""
     old = [r for r in rows if r.srd_index in RENAMED_SPELLS]
+    created, previous = ((char.settings or {}).get(s) or [] for s in (GRANTED_CREATED, GRANTED_SPELL_KEYS))
+    merged = set()
     for row in old:
-        twin = next((r for r in rows if r.srd_index == RENAMED_SPELLS[row.srd_index]), None)
+        key = row.srd_index
+        twin = next((r for r in rows if r.srd_index == RENAMED_SPELLS[key]), None)
         if twin is None:
-            row.srd_index = RENAMED_SPELLS[row.srd_index]
+            row.srd_index = RENAMED_SPELLS[key]
+            continue
+        merged.add(key)  # la riga che resta è del giocatore: i segni della copia non passano a lei
+        if key not in created:
+            row.srd_index = RENAMED_SPELLS[key]
+            row.always_prepared = row.always_prepared and key not in previous
             continue
         twin.is_pinned = twin.is_pinned or row.is_pinned
+        twin.is_prepared = twin.is_prepared or row.is_prepared
+        for column in ("description", "higher_level"):
+            mine, other = getattr(twin, column), getattr(row, column)
+            if other and other != mine:
+                setattr(twin, column, f"{mine}\n\n{other}" if mine else other)
         if char.concentrating_spell_id == row.id:
             char.concentrating_spell_id = twin.id
         await session.execute(update(ConditionEffect).where(ConditionEffect.source_spell_id == row.id).values(source_spell_id=twin.id))
@@ -234,7 +248,7 @@ async def _realign_renamed(session: AsyncSession, char: Character, rows: list[Sp
     for setting in (GRANTED_SPELL_KEYS, GRANTED_CREATED):
         keys = (char.settings or {}).get(setting) or []
         if any(k in RENAMED_SPELLS for k in keys):
-            char.settings = {**char.settings, setting: list(dict.fromkeys(RENAMED_SPELLS.get(k, k) for k in keys))}
+            char.settings = {**char.settings, setting: list(dict.fromkeys(RENAMED_SPELLS.get(k, k) for k in keys if k not in merged))}
     return rows
 
 

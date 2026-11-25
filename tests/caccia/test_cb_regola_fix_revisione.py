@@ -6,7 +6,7 @@ import pytest
 
 from sqlalchemy import select
 
-from core.db.models import Character, SessionParticipant, SessionRole, SpellSlot
+from core.db.models import Character, SessionParticipant, SessionRole, Spell, SpellSlot
 from core.rules.catalog.granted_spells import granted_spell
 from tests.caccia.test_cb_regola_2024_fighter import _guerriero, _manovre, _scheda, _usa
 from tests.caccia.test_cb_regola_fix_lancio_core import _pg
@@ -715,3 +715,33 @@ async def test_ripristinare_l_equilibrio_vale_se_lo_svantaggio_viene_da_un_altra
     assert r.status_code == 200, r.text[:200]
     assert r.json()["mode_applied"] == "normal"
     assert (await _ability(client, cid, "sorcerer.restore_balance"))["uses"] == 2
+
+
+@pytest.mark.caccia(id="CB-4851", fonte="invariante: l'allineamento delle chiavi rinominate non perde dati del giocatore; decisione D-036 (tests/caccia/decisioni.md): le righe del giocatore restano sue",
+                    zona="regola:2024/incantesimi-G-L", voce="persistenza",
+                    copre=["GET /characters/{char_id}/spells", "PATCH /characters/{char_id}"])
+@pytest.mark.parametrize("concessa, testo", [(True, None), (True, "appunti sulla copia"), (False, "importata")])
+async def test_l_allineamento_delle_chiavi_non_perde_dati_del_giocatore(client, test_session_factory, concessa, testo):
+    cid = await _crea(client, "2024", ("sorcerer", 9, "Stregoneria Aberrante"))
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        copia = (await s.execute(select(Spell).where(Spell.character_id == cid, Spell.srd_index == "black-tentacles"))).scalar_one()
+        copia.srd_index, copia.description, copia.higher_level = "evards-black-tentacles", testo, "a livelli superiori"
+        scambio = lambda chiavi: ["evards-black-tentacles" if k == "black-tentacles" else k for k in chiavi]  # noqa: E731
+        sett = {**char.settings, **{k: scambio(char.settings[k]) for k in ("granted_spell_keys", "granted_created")}}
+        if not concessa:  # l'ha portata l'import da Beyond (chiave dal nome), non la concessione
+            sett["granted_created"] = [k for k in sett["granted_created"] if k != "evards-black-tentacles"]
+        char.settings = sett
+        s.add(Spell(character_id=cid, name="I miei Tentacoli", level=4, srd_index="black-tentacles", description="mia", is_concentration=False))
+        await s.commit()
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    assert r.status_code == 200, r.text
+    righe = [x for x in r.json()["spells"] if x["srd_index"] == "black-tentacles"]
+    mia = next(x for x in righe if x["name"] == "I miei Tentacoli")
+    assert not mia["is_concentration"], "la riga è del giocatore: il sync non la riscrive come se l'avesse creata"
+    if concessa:  # la copia si toglie; i testi scritti su di lei passano alla riga del giocatore
+        assert len(righe) == 1 and mia["higher_level"] == "a livelli superiori"
+        assert mia["description"] == ("mia" if testo is None else f"mia\n\n{testo}")
+    else:
+        assert {x["description"] for x in righe} == {"mia", testo}
