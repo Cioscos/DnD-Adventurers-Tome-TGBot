@@ -180,7 +180,8 @@ def _delirium_state(ctx: RuleContext, params: dict) -> StateSpec:
 
 DARK_DELIRIUM_USE = OnUse(
     slot="action", concentration=True, state=_delirium_state, choices=(_mode_choice(),),
-    target_effect=lambda ctx, p: TargetEffect(condition=p["mode"], save_ability="wisdom", save_dc=_dc(ctx), rounds=10))
+    target_effect=lambda ctx, p: TargetEffect(condition=p["mode"], save_ability="wisdom", save_dc=_dc(ctx), rounds=10,
+                                              ends_with_concentration=True))
 
 
 # ---------------------------------------------------------------------------

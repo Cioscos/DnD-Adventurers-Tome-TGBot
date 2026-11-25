@@ -34,7 +34,6 @@ async def test_fortuna_dell_oscuro_vale_su_iniziativa_e_ts_contro_morte(client, 
 @pytest.mark.caccia(id="CB-2062", fonte="2014 · Warlock · Delirio Oscuro · pag. 117", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Delirio Oscuro / Dark Delirium (Signore Fatato 14, pag. 117)",
                            "POST /characters/{char_id}/target-effects", "PATCH /characters/{char_id}/concentration"])
-@pytest.mark.xfail(strict=True, reason="CB-2062: difforme dal manuale, confermato")
 async def test_delirio_oscuro_sul_bersaglio_finisce_con_la_concentrazione(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)
