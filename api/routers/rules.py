@@ -255,7 +255,8 @@ async def last_roll_options(
         record_dice(char, d20_records(added))
         best = max(die, *(dice or []), added.kept)  # anche l'altro d20 di uno svantaggio
         total += best - die
-        die, dice, mode = best, [*(dice or [die]), added.kept], "advantage"
+        # dopo uno svantaggio si sceglie fra tre d20: l'etichetta non dice «vantaggio» (svantaggio + Fortunato = scelta libera)
+        die, dice, mode = best, [*(dice or [die]), added.kept], "normal" if mode == "disadvantage" else "advantage"
     elif opts.reroll:
         outcome = resolve_applied(body.mode, body.dice, None, applied)
         total += outcome.kept - die

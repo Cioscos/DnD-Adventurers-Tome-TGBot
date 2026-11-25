@@ -84,6 +84,7 @@ async def test_lucky_extra_d20_uses_the_best_of_all_dice(client):
     assert r.status_code == 200, r.text
     assert (r.json()["die"], r.json()["total"]) == (15, tiro.json()["total"] + 11)
     assert sorted(r.json()["dice"]) == [4, 9, 15]
+    assert r.json()["mode"] == "normal"  # si sceglie fra tre d20: non è più uno svantaggio, ma nemmeno un vantaggio
 
 
 async def test_migration_drops_feat_rules_once(client, test_session_factory):
