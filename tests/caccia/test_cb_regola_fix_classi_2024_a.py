@@ -12,6 +12,7 @@ from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin_combat import _attack, _listed
 from tests.integration.rules.test_2024_paladin import _paladin24
 from tests.integration.rules.test_2024_monk import _monk24
+from tests.integration.rules.test_2014_paladin import _rest
 from tests.integration.rules.test_2024_ranger import _spell_id
 from tests.integration.rules.test_2024_ranger_subclasses import _sub as _ranger_sub
 from tests.integration.rules.test_2014_bard import _roll_keys
@@ -110,3 +111,26 @@ async def test_rinforzi_fatati_rinuncia_alla_concentrazione_anche_lanciando_con_
     r = await client.post(f"/characters/{cid}/spells/{evoca}/use", json={"slot_level": 3, "options": [chiave]})
     assert r.status_code == 200, r.text
     assert not (await client.get(f"/characters/{cid}")).json().get("concentrating_spell_id"), "lanciato con lo slot, dura 1 minuto senza Concentrazione"
+
+
+@pytest.mark.caccia(id="CB-4477", fonte="2024 · Ranger · Nemico Prescelto · pag. 119; Viandante Fatato · Rinforzi Fatati · pag. 125",
+                    zona="regola:2024/ranger", voce="annullamento",
+                    copre=["carta:2024/classes/ranger.md#Nemico Prescelto / Favored Enemy (Ranger 1, pag. 119)",
+                           "carta:2024/classes/ranger.md#Rinforzi Fatati / Fey Reinforcements (Viandante Fatato 11, pag. 125)",
+                           "POST /characters/{char_id}/rest", "DELETE /characters/{char_id}/active-states/{key}"])
+@pytest.mark.parametrize("chiave,stato,incantesimo", [("ranger.favored_enemy", "favored_enemy_free", "hunters-mark"),
+                                                      ("ranger.fey_reinforcements", "fey_reinforcements_free", "summon-fey")])
+async def test_il_lancio_gratuito_non_fatto_non_consuma_l_uso(client, chiave, stato, incantesimo):
+    cid = await _ranger_sub(client, 11, "fey_wanderer")
+    pieni = (await _ability(client, cid, chiave))["uses"]
+    assert (await _use_feature(client, cid, chiave)).status_code == 200
+    await _rest(client, cid, "short")  # l'autorizzazione finisce col riposo breve, senza lancio
+    assert (await _ability(client, cid, chiave))["uses"] == pieni, "le carte contano i lanci: senza lancio l'uso resta"
+    assert (await _use_feature(client, cid, chiave)).status_code == 200
+    r = await client.delete(f"/characters/{cid}/active-states/{stato}")
+    assert r.status_code == 200, r.text
+    assert (await _ability(client, cid, chiave))["uses"] == pieni, "chiusa a mano senza lancio"
+    assert (await _use_feature(client, cid, chiave)).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{await _spell_id(client, cid, incantesimo)}/use", json={"free_cast": True})
+    assert r.status_code == 200, r.text
+    assert (await _ability(client, cid, chiave))["uses"] == pieni - 1, "il lancio fatto spende l'uso"

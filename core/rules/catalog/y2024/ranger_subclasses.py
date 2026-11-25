@@ -190,7 +190,8 @@ def _free_use(state_key: str, spell: str, slot: str, toggle: bool = False) -> On
         return (409, "feature_unavailable") if has_state(ctx.char, state_key) else None
 
     def effect(ctx: RuleContext, params: dict) -> None:
-        data = {"free_cast": spell, "free_cast_slot": slot, "spell": spell, **({"no_concentration": True} if params.get("no_concentration") else {})}
+        data = {"free_cast": spell, "free_cast_slot": slot, "spell": spell, "refund": f"{CK}.{state_key.removesuffix('_free')}",  # senza lancio l'uso torna
+                **({"no_concentration": True} if params.get("no_concentration") else {})}
         begin_state(ctx.char, StateSpec(state_key, ends_on=("manual", "rest_short", "rest_long"), data=data), f"{CK}.{state_key}", None)
 
     return OnUse(

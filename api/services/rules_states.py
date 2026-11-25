@@ -128,8 +128,10 @@ def end_states_on_rest(char, rest: str) -> list[str]:
     oltre, ai quali il riposo toglie la sua durata (600 round il breve, 4800 il lungo). ``rest`` è il riposo che vale
     davvero: un riposo interrotto che non dà benefici non arriva qui (2014 lungo, 2024 breve), il lungo 2024 interrotto
     vale un breve e arriva come ``short``."""
+    before = get_states(char)
     closed = (end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS) if rest == "long"
               else end_states(char, "rest_short", within=SHORT_REST_ROUNDS))
+    refund_unused_cast(char, [s for s in before if s["key"] in closed])
     # la concentrazione legata a uno stato chiuso finisce con lui (quella degli incantesimi resta, D8)
     held = item_spell_held(char).get("feature_key")
     if held and held not in {s.get("feature_key") for s in get_states(char)}:
@@ -224,6 +226,16 @@ def extend_state(char, key: str, rounds: int) -> None:
     char.active_states = [{**s, "rounds_left": rounds} if s["key"] == key else s for s in states]
 
 
+def refund_unused_cast(char, closed: list[dict]) -> None:
+    """R43: un'autorizzazione al lancio gratuito che ha speso un uso (``data["refund"]`` = il privilegio) e finisce senza
+    lancio, a mano o col riposo, rende l'uso: la carta conta i lanci. Il lancio la chiude da sé, senza passare di qui."""
+    for s in closed:
+        key = (s.get("data") or {}).get("refund")
+        row = next((a for a in char.abilities if a.feature_key == key), None) if key else None
+        if row is not None and row.max_uses is not None:
+            row.uses = min(row.max_uses, (row.uses or 0) + 1)
+
+
 def remove_state(char, key: str, *, by_player: bool = False) -> None:
     """Chiude lo stato. ``by_player``: lo chiude il giocatore, e se lo stato dichiara ``end_slot`` ne spende lo slot;
     con lo slot già speso lo stato finisce lo stesso (un tocco sbagliato si corregge)."""
@@ -237,6 +249,8 @@ def remove_state(char, key: str, *, by_player: bool = False) -> None:
         raise _err(status.HTTP_409_CONFLICT, "state_locked")
     char.active_states = [s for s in states if s["key"] != key]
     settle_closed(char, closed)
+    if by_player:
+        refund_unused_cast(char, closed)
     slot = closed[0].get("end_slot")
     if by_player and slot:
         try:
