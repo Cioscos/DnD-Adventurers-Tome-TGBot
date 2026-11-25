@@ -203,6 +203,16 @@ def _free_use(state_key: str, spell: str, slot: str, toggle: bool = False) -> On
 # Viandante Fatato
 # ---------------------------------------------------------------------------
 
+FEY_NO_CONCENTRATION_KEY = f"{CK}.fey_reinforcements_no_concentration"  # lo legge il router degli incantesimi
+
+# «Prima di lanciarlo»: la rinuncia vale per ogni lancio di Summon Fey, con lo slot o senza
+FEY_NO_CONCENTRATION = RollOptionSpec(
+    key=FEY_NO_CONCENTRATION_KEY, phase="before", rolls=("cast",),
+    available=lambda c: c.spell is not None and c.spell.srd_index == "summon-fey",
+    label=_both("Rinforzi Fatati: senza Concentrazione, per 1 minuto", "Fey Reinforcements: no Concentration, for 1 minute"),
+    effect=_say("L'incantesimo non richiede Concentrazione e dura 1 minuto; senza componente materiale.",
+                "The spell needs no Concentration and lasts 1 minute; no material component."))
+
 def _strikes_dice(ctx: RuleContext, _inputs: dict) -> str:
     return "1d6" if ctx.class_level >= 11 else "1d4"
 
@@ -424,7 +434,8 @@ SUBCLASS_ROWS = (
     _sub(FW, "fey_reinforcements", 11, "Rinforzi Fatati / Fey Reinforcements (Viandante Fatato 11, pag. 125)", ("Rinforzi Fatati", "Fey Reinforcements"),
          ("Summon Fey gratis una volta per riposo lungo, senza materiali; puoi rinunciare alla Concentrazione (dura 1 minuto).",
           "Summon Fey free once per long rest, no materials; you can give up Concentration (it lasts 1 minute)."),
-         "action", uses=Uses(table={11: 1}), restoration="long_rest", on_use=_free_use("fey_reinforcements_free", "summon-fey", "action", toggle=True)),
+         "action", uses=Uses(table={11: 1}), restoration="long_rest", on_use=_free_use("fey_reinforcements_free", "summon-fey", "action", toggle=True),
+         roll_options=(FEY_NO_CONCENTRATION,)),
     _sub(FW, "misty_wanderer", 15, "Vagabondo Nebbioso / Misty Wanderer (Viandante Fatato 15, pag. 125)", ("Vagabondo Nebbioso", "Misty Wanderer"),
          ("Misty Step gratis (azione bonus), usi pari a Saggezza (minimo 1), riposo lungo; porti con te una creatura consenziente entro 1,5 m.",
           "Misty Step free (bonus action), uses equal to Wisdom (minimum 1), long rest; bring a willing creature within 5 ft."),

@@ -12,6 +12,9 @@ from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin_combat import _attack, _listed
 from tests.integration.rules.test_2024_paladin import _paladin24
 from tests.integration.rules.test_2024_monk import _monk24
+from tests.integration.rules.test_2024_ranger import _spell_id
+from tests.integration.rules.test_2024_ranger_subclasses import _sub as _ranger_sub
+from tests.integration.rules.test_2014_bard import _roll_keys
 
 RAGE = "barbarian.rage"
 RECKLESS = "barbarian.reckless_attack"
@@ -93,3 +96,17 @@ async def test_punizione_e_assalti_radianti_valgono_con_un_arma_da_mischia_lanci
     colpo = await _attack(client, cid, accetta, attack_mode="thrown")
     assert colpo.status_code == 200, colpo.text
     assert "paladin.radiant_strikes" in (colpo.json().get("option_result") or {}).get("keys", [])
+
+
+@pytest.mark.caccia(id="CB-4476", fonte="2024 · Ranger, Viandante Fatato · Rinforzi Fatati · pag. 125",
+                    zona="regola:2024/ranger", voce="regola",
+                    copre=["carta:2024/classes/ranger.md#Rinforzi Fatati / Fey Reinforcements (Viandante Fatato 11, pag. 125)",
+                           "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_rinforzi_fatati_rinuncia_alla_concentrazione_anche_lanciando_con_uno_slot(client):
+    cid = await _ranger_sub(client, 11, "fey_wanderer")
+    evoca = await _spell_id(client, cid, "summon-fey")
+    chiave = "ranger.fey_reinforcements_no_concentration"
+    assert chiave in await _roll_keys(client, cid, "cast", spell_id=evoca), "«prima di lanciarlo»: ogni lancio di Summon Fey"
+    r = await client.post(f"/characters/{cid}/spells/{evoca}/use", json={"slot_level": 3, "options": [chiave]})
+    assert r.status_code == 200, r.text
+    assert not (await client.get(f"/characters/{cid}")).json().get("concentrating_spell_id"), "lanciato con lo slot, dura 1 minuto senza Concentrazione"

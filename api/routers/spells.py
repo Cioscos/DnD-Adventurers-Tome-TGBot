@@ -52,6 +52,7 @@ from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
+from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.warlock_subclasses import PSYCHIC_SILENT, THRALL_CAST
 from core.rules.modifiers import modifiers_for
@@ -295,7 +296,7 @@ def _consume_cast(
             spend(char, turn_slot)  # 409 turn_slot_used: nulla è ancora scritto
         if not data.get("free_cast_keep"):  # il Mantello di Maestà ripete il lancio finché dura
             remove_state(char, free_state["key"])
-        no_concentration = bool(data.get("no_concentration"))
+        no_concentration = no_concentration or bool(data.get("no_concentration"))  # l'opzione al lancio vale anche qui (Rinforzi Fatati)
         if data.get("then"):  # lo stato che il lancio avvia al posto della concentrazione (durata propria)
             begin_state(char, StateSpec(**data["then"]), free_state.get("feature_key") or free_state["key"], free_state.get("name"))
         add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
@@ -552,9 +553,9 @@ async def use_spell(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
-        no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
+        no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.options or [],
-                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or [])))
+                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or [])))
     if spell.srd_index == "find-steed" and not (body.free_cast or body.as_ritual) and any(
             s.key == STEED for s, _row in active_features(char)):  # Destriero Fedele: il lancio con slot crea il destriero del suo livello
         await session.refresh(char, attribute_names=["companions"])
@@ -625,9 +626,9 @@ async def spell_attack(
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.cast_options or [])),
                                                       war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
-                                                      no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options or []))))
+                                                      no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.cast_options or []))))
         spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.cast_options,
-                                             no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options)))
+                                             no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.cast_options)))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         marks = _slot_marks(char)
