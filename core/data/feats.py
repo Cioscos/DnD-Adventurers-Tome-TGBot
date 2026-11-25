@@ -29,6 +29,7 @@ class FeatSpec:
     min_level: int = 0  # livello totale del personaggio
     prereq_abilities: Optional[tuple[tuple[str, ...], int]] = None  # (una fra queste, minimo)
     needs_spellcasting: bool = False
+    pact_magic_counts: bool = True  # False: serve il privilegio Incantesimi, Magia del Patto non basta (Dono del Richiamo degli incantesimi)
     max_score: int = 20
     repeatable: bool = False  # si prende più volte (Abile, Iniziato alla magia): ogni riga è un'istanza
     prereq_armor: Optional[str] = None  # addestramento richiesto: light | medium | heavy | shields

@@ -97,12 +97,11 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
   return (
     <Sheet open={open} onClose={onClose} title={`${t(isBoon ? 'character.level_choice.epic_boon' : 'character.level_choice.title')} · ${classLabel} ${choice.level}`}>
       <div className="p-5 space-y-3">
-        {!isBoon && (
-          <div className="flex gap-2">
-            {tab('asi', t('character.level_choice.asi'))}
-            {tab('feat', t('character.level_choice.feat'))}
-          </div>
-        )}
+        {/* anche il Dono Epico: un altro talento per cui si è qualificati, Aumento di caratteristica compreso (2024 pag. 92, 202) */}
+        <div className="flex gap-2">
+          {tab('asi', t('character.level_choice.asi'))}
+          {tab('feat', t('character.level_choice.feat'))}
+        </div>
 
         {mode === 'asi' ? (
           <div className="space-y-2">

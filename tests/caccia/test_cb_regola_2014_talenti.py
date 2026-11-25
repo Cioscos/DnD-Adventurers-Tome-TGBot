@@ -50,7 +50,6 @@ def _punteggio(body: dict, nome: str) -> int:
 @pytest.mark.caccia(id="CB-3011", fonte="2014 · Talenti · Fortunato · pag. 167", zona="regola:2014/talenti", voce="regola",
                     copre=["carta:2014/feats.md#Fortunato / Lucky (pag. 167)", "POST /characters/{char_id}/last-roll/options",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-3011: difforme dal manuale, confermato")
 async def test_fortunato_lascia_scegliere_il_d20_da_tenere(client):
     ch = await _char14(client, "fighter")
     cid = ch["id"]
@@ -150,7 +149,6 @@ async def test_maestro_d_armi_2014_sceglie_fra_le_armi_del_manuale_2014(client, 
 @pytest.mark.caccia(id="CB-3019", fonte="2014 · Talenti · Maestro degli Scudi · pag. 169", zona="regola:2014/talenti", voce="regola",
                     copre=["carta:2014/feats.md#Maestro degli Scudi / Shield Master (pag. 169)", "GET /characters/{char_id}/roll-options",
                            "PATCH /characters/{char_id}/conditions"])
-@pytest.mark.xfail(strict=True, reason="CB-3019: difforme dal manuale, confermato")
 async def test_maestro_degli_scudi_incapacitato_non_somma_lo_scudo_ai_ts(client):
     ch = await _char14(client, "fighter")
     cid = ch["id"]

@@ -21,6 +21,27 @@ class PactCast:
     uses_left: int | None
     also_slot: bool = False  # si lancia anche con uno slot normale (Incantesimi Personali, Mutaforma del Mago)
     ability_id: int | None = None  # la riga precisa che spende (un talento ripetibile ha una riga per istanza)
+    free_key: str | None = None  # un lancio gratuito per incantesimo: la chiave da segnare in ``FREE_CASTS`` spendendo
+
+
+# ``Ability.options``: gli incantesimi che hanno usato il loro lancio gratuito (Toccato dalle fate / dall'ombra)
+FREE_CASTS = "free_casts"
+
+
+def spent_free_casts(ability: Any) -> list[str]:
+    """Valgono solo gli ultimi ``max_uses - uses`` lanci segnati: il riposo che rende gli usi svuota il registro senza scriverlo."""
+    gone = (ability.max_uses or 0) - (ability.uses or 0)
+    return list(((ability.options or {}).get(FREE_CASTS) or [])[-gone:]) if gone > 0 else []
+
+
+def _feat_cast(spec: Any, row: Any, key: str) -> PactCast:
+    """Un talento che spende gli usi della sua riga, anche con uno slot (Iniziato alla magia). Con ``free_spell``
+    (Toccato dalle fate / dall'ombra, PHB 2024 pag. 204 e 207) ognuno dei due incantesimi ha un solo lancio gratuito."""
+    left = row.ability.uses or 0
+    per_spell = spec.free_spell is not None
+    if per_spell and key in spent_free_casts(row.ability):
+        left = 0
+    return PactCast("arcanum", spec.key, False, left, also_slot=True, ability_id=row.ability.id, free_key=key if per_spell else None)
 
 
 def _uses(char: Any, feature_key: str, class_id: int) -> int | None:
@@ -39,8 +60,10 @@ def pact_cast(char: Any, spell: Any) -> PactCast | None:
         if spec.arcanum_group and ((index or name) in ((row.options or {}).get(spec.arcanum_group) or [])
                                    or (name in ((row.options or {}).get(spec.arcanum_group) or []))):
             if spec.class_key == "feat":  # Iniziato alla magia: gli usi sono della riga del talento, anche con uno slot
-                return PactCast("arcanum", spec.key, False, row.ability.uses or 0, also_slot=True, ability_id=row.ability.id)
+                return _feat_cast(spec, row, index or name)
             return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=spec.class_key == "wizard")
+        if spec.free_spell and index == spec.free_spell and spec.class_key == "feat" and spec.arcanum_group:  # l'incantesimo fisso di Toccato dalle fate
+            return _feat_cast(spec, row, index)
         if spec.free_spell and index == spec.free_spell:  # Mutaforma: senza slot, spende l'uso come un Arcanum
             return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=True)
         if spec.pact_spell and index == spec.pact_spell and index in granted:

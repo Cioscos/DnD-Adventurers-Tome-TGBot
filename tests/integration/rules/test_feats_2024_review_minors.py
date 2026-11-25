@@ -128,3 +128,16 @@ async def test_removing_moderately_armored_keeps_shields_from_lightly_armored(cl
     r = await client.delete(f"/characters/{ch['id']}/feats/{mod['id']}")
     armor = [a.lower() for a in r.json()["general_proficiencies"]["armor"]]
     assert any("scudi" in a for a in armor) and not any("medie" in a for a in armor)
+
+
+async def test_removing_moderately_armored_drops_the_shields_it_used_to_grant(client):
+    # CB-3464: prima della correzione Armatura media 2024 dava anche gli Scudi (PHB 2024 pag. 205: solo le armature medie);
+    # chi li ha salvati allora li perde togliendo il talento, invece di tenerli per sempre
+    ch = await _char(client, "rogue", 4, **STATS)
+    mod = await _row(client, ch["id"], "moderately_armored", "strength")
+    profs = (await _full(client, ch["id"]))["general_proficiencies"]
+    r = await client.patch(f"/characters/{ch['id']}", json={"general_proficiencies": {**profs, "armor": [*profs["armor"], "Scudi"]}})
+    assert r.status_code == 200, r.text
+    r = await client.delete(f"/characters/{ch['id']}/feats/{mod['id']}")
+    armor = [a.lower() for a in r.json()["general_proficiencies"]["armor"]]
+    assert any("legger" in a for a in armor) and not any("scudi" in a or "medie" in a for a in armor), armor

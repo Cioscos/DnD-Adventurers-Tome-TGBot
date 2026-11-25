@@ -11,7 +11,7 @@ const cavaliereMistico = {
 
 describe('caccia: regola 2014 talenti', () => {
   // caccia: {"id": "CB-3027", "fonte": "2014 · Talenti · Incantatore da Guerra · pag. 168; Guerriero · Cavaliere Mistico · pag. 75", "zona": "regola:2014/talenti", "voce": "interazione", "copre": ["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)", "route:/char/:id/abilities"]}
-  it.fails('il Cavaliere Mistico vede Incantatore da Guerra fra i talenti che può prendere', () => {
+  it('il Cavaliere Mistico vede Incantatore da Guerra fra i talenti che può prendere', () => {
     const talento = featByKey('war_caster')
     expect(talento).toBeTruthy()
     expect(meetsPrerequisites(talento!, cavaliereMistico, { manual: true })).toBe(true)

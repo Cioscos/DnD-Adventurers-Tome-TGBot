@@ -100,7 +100,6 @@ async def test_il_terzo_incantatore_soddisfa_il_prerequisito_incantesimi(client,
 @pytest.mark.caccia(id="CB-3463", fonte="2024 · Talenti · Dono del Richiamo degli incantesimi · pag. 211", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Dono del Richiamo degli incantesimi / Boon of Spell Recall (pag. 211) - Dono epico (livello 19+, privilegio Incantesimi)",
                            "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3463: difforme dal manuale, confermato")
 async def test_il_dono_del_richiamo_non_si_prende_con_la_sola_magia_del_patto(client):
     mago = await _pg(client, "wizard", 19)
     assert (await _prendi(client, mago["id"], "2024_boon_spell_recall", "intelligence")).status_code == 201
@@ -112,7 +111,6 @@ async def test_il_dono_del_richiamo_non_si_prende_con_la_sola_magia_del_patto(cl
 @pytest.mark.caccia(id="CB-3464", fonte="2024 · Talenti · Armatura media · pag. 205", zona="regola:2024/talenti", voce="edizioni",
                     copre=["carta:2024/feats.md#Armatura media / Moderately Armored (pag. 205) - Generale (livello 4+, Addestramento con armature leggere)",
                            "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3464: difforme dal manuale, confermato")
 async def test_armatura_media_2024_non_addestra_agli_scudi(client):
     ch = await _pg(client, "rogue", 4)
     assert not any("scud" in a.lower() or "shield" in a.lower() for a in ch["general_proficiencies"]["armor"])
@@ -124,7 +122,6 @@ async def test_armatura_media_2024_non_addestra_agli_scudi(client):
 
 @pytest.mark.caccia(id="CB-3465", fonte="2024 · Talenti · Attaccabrighe da taverna · pag. 202", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Attaccabrighe da taverna / Tavern Brawler (pag. 202) - Origine", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3465: difforme dal manuale, confermato")
 async def test_attaccabrighe_da_taverna_da_competenza_nelle_armi_improvvisate(client):
     ch = await _pg(client, "wizard", 1)
     body = await _preso(client, ch["id"], "2024_tavern_brawler")
@@ -134,7 +131,6 @@ async def test_attaccabrighe_da_taverna_da_competenza_nelle_armi_improvvisate(cl
 
 @pytest.mark.caccia(id="CB-3466", fonte="2024 · Talenti · Avvelenatore · pag. 206", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Avvelenatore / Poisoner (pag. 206) - Generale (livello 4+)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3466: difforme dal manuale, confermato")
 async def test_avvelenatore_da_competenza_nel_kit_da_avvelenatore(client):
     ch = await _pg(client, "fighter", 4)
     body = await _preso(client, ch["id"], "2024_poisoner", "dexterity")
@@ -166,7 +162,6 @@ async def test_maestro_d_armi_sceglie_solo_un_arma_in_cui_si_e_competenti(client
 
 @pytest.mark.caccia(id="CB-3469", fonte="2024 · Talenti · Dono del Fato · pag. 210", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Dono del Fato / Boon of Fate (pag. 210) - Dono epico", "POST /characters/{char_id}/dice/initiative"])
-@pytest.mark.xfail(strict=True, reason="CB-3469: difforme dal manuale, confermato")
 async def test_il_dono_del_fato_torna_quando_tiri_l_iniziativa(client, test_session_factory):
     ch = await _pg(client, "fighter", 19)
     riga = _righe(await _preso(client, ch["id"], "2024_boon_fate", "charisma"), "2024_boon_fate")[0]
@@ -180,7 +175,6 @@ async def test_il_dono_del_fato_torna_quando_tiri_l_iniziativa(client, test_sess
 @pytest.mark.caccia(id="CB-3470", fonte="2024 · Talenti · Toccato dalle fate · pag. 204", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Toccato dalle fate / Fey-Touched (pag. 204) - Generale (livello 4+)",
                            "PUT /characters/{char_id}/feats/{ability_id}/options", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3470: difforme dal manuale, confermato")
 async def test_toccato_dalle_fate_passo_velato_gratis_una_sola_volta(client):
     ch = await _pg(client, "fighter", 4)
     cid = ch["id"]
@@ -198,11 +192,10 @@ async def test_toccato_dalle_fate_passo_velato_gratis_una_sola_volta(client):
 @pytest.mark.caccia(id="CB-3471", fonte="2024 · Talenti · Dono dello Spirito della notte · pag. 211", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Dono dello Spirito della notte / Boon of the Night Spirit (pag. 211) - Dono epico",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3471: difforme dal manuale, confermato")
 async def test_fondersi_con_le_ombre_rende_invisibile(client):
     ch = await _pg(client, "fighter", 19)
     await _preso(client, ch["id"], "2024_boon_night_spirit", "dexterity")
-    r = await client.post(f"/characters/{ch['id']}/features/feat.2024_boon_night_spirit/use", json={})
+    r = await client.post(f"/characters/{ch['id']}/features/feat.2024_boon_night_spirit/use", json={"params": {"mode": "blend"}})
     assert r.status_code == 200, r.text
     assert (await _scheda(client, ch["id"]))["conditions"].get("invisible"), (await _scheda(client, ch["id"]))["conditions"]
 

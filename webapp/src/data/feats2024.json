@@ -1622,6 +1622,7 @@
   "prereq_abilities": null,
   "needs_spellcasting": true,
   "repeatable": false,
+  "pact_magic_counts": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
   "needs": []
