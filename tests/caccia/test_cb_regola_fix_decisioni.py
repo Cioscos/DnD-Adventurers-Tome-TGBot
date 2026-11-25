@@ -36,3 +36,21 @@ async def test_terminare_l_ira_a_mano_costa_l_azione_bonus_solo_nel_2014(client,
     await client.post(f"/characters/{cid}/turn/new")
     assert (await client.delete(f"/characters/{cid}/active-states/rage")).status_code == 200
     assert (await _turno(client, cid))["bonus_used"] is speso
+
+
+@pytest.mark.caccia(id="CB-4602", fonte="decisione D-022 (tests/caccia/decisioni.md): per edizione, nel 2024 il dado del Valore raddoppia sul critico e nel 2014 no; 2024 · Bardo · pag. 67; 2014 · pag. 55",
+                    zona="regola:2024/bard", voce="regola",
+                    copre=["carta:2024/classes/bard.md#Ispirazione in Combattimento / Combat Inspiration (Collegio del Valore 3, pag. 67)",
+                           "POST /characters/{char_id}/attack/{attack_id}/damage"])
+@pytest.mark.parametrize("edizione, dadi_tirati", [("2014", 1), ("2024", 2)])
+async def test_il_dado_del_valore_2024_raddoppia_sul_critico_di_un_arma(client, test_session_factory, edizione, dadi_tirati):
+    from tests.integration.rules import test_2014_bard_inspiration as b14, test_2024_bard as b24
+    modulo = b14 if edizione == "2014" else b24
+    _sid, bard, hero = await modulo._table(client, test_session_factory, level=3, subclass=modulo.VALOR)
+    assert (await b14._give(client, bard, hero)).status_code == 200
+    as_user(PLAYER_ID)
+    arma = await b14._sword(client, hero)
+    colpo = (await client.post(f"/characters/{hero}/items/{arma}/attack", json={"die": 20, "defer_damage": True})).json()
+    assert colpo["is_critical"], colpo
+    r = await client.post(f"/characters/{hero}/attack/{colpo['attack_id']}/damage", json={"options": ["bardic_die:damage"]})
+    assert r.status_code == 200 and len(r.json()["option_result"]["extra_rolls"]) == dadi_tirati, r.text

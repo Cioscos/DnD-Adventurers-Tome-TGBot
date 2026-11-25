@@ -40,6 +40,12 @@ def _bardic_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"1d{((_bardic_state(ctx) or {}).get('data') or {}).get('die') or 6}"
 
 
+def _combat_die(ctx: RuleContext) -> str | None:
+    """Edizione del dado del Collegio del Valore ricevuto; ``None`` se non c'è."""
+    data = (_bardic_state(ctx) or {}).get("data") or {}
+    return data.get("edition", "2014") if data.get("combat") else None
+
+
 def _ally_aura(kind: str, edition: str | None = None):
     """Un compagno della serata proietta questa aura (nell'edizione data: l'Interdizione cambia fra 2014 e 2024) e chi tira non
     ne ha una uguale per conto suo."""
@@ -89,12 +95,13 @@ _CONDITION_OPTIONS = (
         label={"it": "Dado di Ispirazione Bardica: somma il dado al tiro", "en": "Bardic Inspiration die: add the die to the roll"},
         available=lambda ctx: _bardic_state(ctx) is not None,
     ),
-    RollOptionSpec(
-        key="bardic_die:damage", phase="after_hit", rolls=("attack",), crit_doubles=False,
+    # Sul danno di un'arma il dado del Valore raddoppia sul critico solo nel 2024 (D-022).
+    *(RollOptionSpec(
+        key="bardic_die:damage", phase="after_hit", rolls=("attack",), crit_doubles=edition == "2024",
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
-        available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
-    ),
+        available=lambda ctx, edition=edition: _combat_die(ctx) == edition,
+    ) for edition in ("2014", "2024")),
     # Il dado del Valore 2024 vale dopo qualsiasi tiro per colpire a segno, anche di un incantesimo (pag. 67; il 2014, pag. 55,
     # solo sui danni dell'arma): il danno dell'incantesimo si conferma prima di tirarlo, a colpo già messo a segno. Nel 2024
     # raddoppia sul critico (D-022).
@@ -102,8 +109,7 @@ _CONDITION_OPTIONS = (
         key="bardic_die:damage", phase="before", rolls=("spell_damage",),
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
-        available=lambda ctx: ((((_bardic_state(ctx) or {}).get("data")) or {}).get("edition") == "2024"
-                               and bool(_bardic_state(ctx)["data"].get("combat")) and ctx.spell is not None
+        available=lambda ctx: (_combat_die(ctx) == "2024" and ctx.spell is not None
                                and (ctx.spell.attack_save or "").strip().upper() == "ATK"),
     ),
     # Aure dei compagni di serata (Paladino 2014): il giocatore conferma di essere nella gittata (D1)
@@ -365,8 +371,9 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
     """Le opzioni dei privilegi attivi (e quelle generali) valide per ``ctx.roll`` e disponibili adesso, non ancora pagate."""
     # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
     kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
-    # solo quelle di questo tiro: una chiave può avere una variante per tiro (``bardic_die:damage`` su arma e incantesimo)
-    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS if any(k in s.rolls for k in kinds)}
+    # solo quelle di questo tiro: una chiave può avere più varianti (``bardic_die:damage`` su arma, per edizione, e incantesimo)
+    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS
+                                    if any(k in s.rolls for k in kinds) and s.available(ctx)}
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         for option in spec.roll_options:
