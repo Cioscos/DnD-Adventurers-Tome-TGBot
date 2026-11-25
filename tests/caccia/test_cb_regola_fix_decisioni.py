@@ -68,3 +68,28 @@ async def test_un_set_di_punti_esperienza_verso_l_alto_non_toglie_livelli(client
     assert livello(r) == 6
     r = await client.patch(f"/characters/{cid}/xp", json={"set": 2700})  # correzione esplicita verso il basso
     assert livello(r) == 4
+
+
+@pytest.mark.caccia(id="CB-4604", fonte="decisione D-034 (tests/caccia/decisioni.md): abilità doppie 2024 dopo la creazione rifiutate, come alla creazione e nel 2014",
+                    zona="regola:2024/background", voce="interazione",
+                    copre=["carta:2024/backgrounds.md#Nobile / Noble (pag. 183)", "POST /characters/{char_id}/classes",
+                           "PUT /characters/{char_id}/feats/{ability_id}/options"])
+async def test_abilita_gia_possedute_rifiutate_nel_2024_per_la_seconda_classe_e_abile(client):
+    r = await client.post("/characters", json={"name": "Prova", "rules_edition": "2024", "skills": {"stealth": True, "religion": True},
+                                               "initial_class": {"class_name": "fighter", "level": 4}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 1, "skill_choices": ["stealth"]})
+    assert r.status_code == 422, r.status_code
+    # il manuale 2024 non fa scegliere fuori dall'elenco della classe
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 1, "skill_choices": ["arcana"]})
+    assert r.status_code == 422, r.status_code
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 1, "skill_choices": ["acrobatics"]})
+    assert r.status_code == 201, r.text
+    r = await client.post(f"/characters/{cid}/feats", json={"feat_key": "2024_skilled", "ability": None})
+    assert r.status_code == 201, r.text
+    riga = next(a["id"] for a in r.json()["abilities"] if a["feature_key"] == "feat.2024_skilled")
+    for scelte, esito in ((["religion", "arcana", "history"], 422), (["tool:thieves_tools", "arcana", "history"], 422),
+                          (["arcana", "history", "nature"], 200)):  # gli arnesi da scasso li dà già la multiclasse Ladro
+        r = await client.put(f"/characters/{cid}/feats/{riga}/options", json={"options": {"picks": scelte}, "spells": []})
+        assert r.status_code == esito, (scelte, r.status_code)
