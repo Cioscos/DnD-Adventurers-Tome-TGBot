@@ -98,16 +98,16 @@ _ELEMENTAL = SpellVariant(
              "The chosen weapon is magical: +1 to attack rolls (+2 with a 5th-6th level slot, +3 from 7th) and 1d4 extra damage of the chosen type (2d4, 3d4) with it only: already in the total."))
 
 # --- Danni extra --------------------------------------------------------------------------------------------------
-_DIVINE_FAVOR_OPTION = _extra("divine_favor:damage", txt("Favore Divino: +1d4 radiosi", "Divine Favor: extra 1d4 radiant"), "1d4", "radiant", _weapon)
-_DIVINE_FAVOR_2014 = SpellVariant(options=(_DIVINE_FAVOR_OPTION,), concentration=True, rounds=MIN1)
-_DIVINE_FAVOR_2024 = SpellVariant(options=(_DIVINE_FAVOR_OPTION,), rounds=MIN1)  # 2024: niente concentrazione
+def _divine_favor_option(available) -> RollOptionSpec:
+    return _extra("divine_favor:damage", txt("Favore Divino: +1d4 radiosi", "Divine Favor: extra 1d4 radiant"), "1d4", "radiant", available)
+
+
+_DIVINE_FAVOR_2014 = SpellVariant(options=(_divine_favor_option(_weapon_or_unarmed),), concentration=True, rounds=MIN1)  # anche senz'armi (D-030)
+_DIVINE_FAVOR_2024 = SpellVariant(options=(_divine_favor_option(_weapon),), rounds=MIN1)  # 2024: niente concentrazione
 
 _MANTLE_TEXT = txt("Chi è nell'aura infligge 1d4 radiosi in più con gli attacchi con arma (già nel totale).",
                    "Whoever is in the aura deals an extra 1d4 radiant damage with weapon attacks (already in the total).")
-_MANTLE_2014 = SpellVariant(
-    options=(_extra("crusaders_mantle:damage", txt("Manto del Crociato: +1d4 radiosi", "Crusader's Mantle: extra 1d4 radiant"), "1d4", "radiant", _weapon),),
-    concentration=True, rounds=MIN1, text=_MANTLE_TEXT)
-_MANTLE_2024 = SpellVariant(  # 2024: anche il Colpo Senz'Armi
+_MANTLE = SpellVariant(  # anche il colpo senz'armi: lo dice il 2024, nel 2014 è un attacco con arma (D-030)
     options=(_extra("crusaders_mantle:damage", txt("Manto del Crociato: +1d4 radiosi", "Crusader's Mantle: extra 1d4 radiant"), "1d4", "radiant", _weapon_or_unarmed),),
     concentration=True, rounds=MIN1, text=_MANTLE_TEXT)
 
@@ -168,7 +168,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("divine_favor", ("divine-favor",), ("Favore Divino", "Favore divino", "Divine Favor"), SpellTarget("self"),
                 {"2014": _DIVINE_FAVOR_2014, "2024": _DIVINE_FAVOR_2024}),
     SpellEffect("crusaders_mantle", ("crusaders-mantle",), ("Manto del Crociato", "Mantello del Crociato", "Crusader's Mantle"), SpellTarget("aura"),
-                {"2014": _MANTLE_2014, "2024": _MANTLE_2024}),
+                both(_MANTLE)),
     SpellEffect("fount_of_moonlight", ("fount-of-moonlight",), ("Fonte di Luce Lunare", "Fount of Moonlight"), SpellTarget("self"), {"2024": _FOUNT_OF_MOONLIGHT}),
     SpellEffect("conjure_minor_elementals", ("conjure-minor-elementals",), ("Evoca Elementali Minori", "Conjure Minor Elementals"),
                 SpellTarget("self"), {"2024": _MINOR_ELEMENTALS}),

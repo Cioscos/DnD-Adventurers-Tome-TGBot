@@ -149,3 +149,42 @@ async def test_la_vista_cieca_2024_toglie_lo_svantaggio_di_accecato(client):
     assert (await _attack(client, stile, spada, dice=[3, 17]))["mode_applied"] == "disadvantage"
     visto = await _attack(client, stile, spada, options=[chiave])
     assert visto["mode_applied"] == "normal" and "condition:blinded" not in visto["notes"]
+
+
+@pytest.mark.caccia(id="CB-4608", fonte="decisione D-030 (tests/caccia/decisioni.md): nel 2014 il colpo senz'armi è un attacco con arma; 2014 · Favore Divino · pag. 235, Manto del Crociato · pag. 250 (Q-2014-incantesimi-d-f-2, Q-2014-incantesimi-m-r-2)",
+                    zona="regola:2014/incantesimi-D-F", voce="regola",
+                    copre=["carta:2014/spells.md#Favore Divino", "carta:2014/spells.md#Manto del Crociato",
+                           "POST /characters/{char_id}/attack/unarmed"])
+@pytest.mark.parametrize("edizione, nome, indice, livello, vale", [
+    ("2014", "Favore Divino", "divine-favor", 1, True), ("2024", "Favore Divino", "divine-favor", 1, False),
+    ("2014", "Manto del Crociato", "crusaders-mantle", 3, True), ("2024", "Manto del Crociato", "crusaders-mantle", 3, True)])
+async def test_favore_divino_e_manto_2014_valgono_col_colpo_senz_armi(client, edizione, nome, indice, livello, vale):
+    cid = await _pg(client, edizione, "paladin", 9, charisma=16)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": nome, "srd_index": indice, "level": livello, "is_concentration": True,
+                                                             "duration": "1 minuto", "casting_time": "1 azione bonus"})
+    assert r.status_code == 201, r.text
+    spell = r.json()["id"]
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": livello})
+    assert r.status_code == 200, r.text
+    colpo = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 15})).json()
+    assert ("radiant" in str(colpo.get("option_result"))) is vale, colpo.get("option_result")
+
+
+@pytest.mark.caccia(id="CB-4609", fonte="decisione D-030 (tests/caccia/decisioni.md): nel 2014 il colpo senz'armi è un attacco con arma; 2014 · Paladino · Punizione Divina · pag. 98, Chierico · Colpo Divino · pag. 60-63",
+                    zona="regola:2014/paladin", voce="regola",
+                    copre=["carta:2014/classes/paladin.md#Punizione Divina / Divine Smite (Paladino 2, pag. 98)",
+                           "carta:2014/classes/cleric.md#Colpo Divino / Divine Strike (Guerra 8, pag. 60)",
+                           "GET /characters/{char_id}/roll-options"])
+async def test_punizione_divina_e_colpo_divino_2014_valgono_col_colpo_senz_armi(client):
+    for classe, sottoclasse, chiavi in (("paladin", "devotion", {"paladin.divine_smite", "paladin.divine_smite_fiend"}),
+                                        ("cleric", "war", {"cleric.divine_strike_war"})):
+        cid = await _pg(client, "2014", classe, 11, sottoclasse)
+        offerte = {o["key"] for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}
+        assert chiavi <= offerte, offerte
+    # nel 2024 i Colpi Benedetti restano agli attacchi con un'arma
+    cid = await _pg(client, "2024", "cleric", 8, "war")
+    scelta = next(c for c in (await _scheda(client, cid))["pending_choices"] if c.get("group") == "blessed_strikes")
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": ["divine_strike"]})
+    assert r.status_code == 200, r.text
+    offerte = {o["key"] for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}
+    assert not any("divine_strike" in k for k in offerte), offerte

@@ -68,6 +68,11 @@ def _melee_weapon(ctx: RuleContext) -> bool:
     return _weapon_in_hand(ctx) and ctx.attack_mode in ("melee", "offhand")
 
 
+def _melee_weapon_attack(ctx: RuleContext) -> bool:
+    """Come ``_melee_weapon``, più il colpo senz'armi: nel 2014 è un attacco con arma da mischia (D-030)."""
+    return ctx.spell is None and ctx.attack_mode in ("melee", "offhand")
+
+
 def _metres(feet: int) -> str:
     value = feet * 0.3
     return f"{value:.1f}".replace(".", ",").removesuffix(",0")
@@ -149,12 +154,12 @@ def _smite_dice(_ctx: RuleContext, inputs: dict) -> str:
 
 def _fiend_available(ctx: RuleContext) -> bool:
     from core.rules.roll_options import slot_choices  # import locale: roll_options usa il catalogo
-    return _melee_weapon(ctx) and (SMITE in ctx.confirmed or bool(slot_choices(ctx.char, 1)))
+    return _melee_weapon_attack(ctx) and (SMITE in ctx.confirmed or bool(slot_choices(ctx.char, 1)))
 
 
 DIVINE_SMITE = RollOptionSpec(
     key=SMITE, phase="after_hit", rolls=("attack",), requires_input="slot", cost=Cost(spell_slot_min=1),
-    extra_damage_type="radiant", extra_dice=_smite_dice, available=_melee_weapon,
+    extra_damage_type="radiant", extra_dice=_smite_dice, available=_melee_weapon_attack,
     label={"it": "Punizione Divina: spendi uno slot per danni radiosi in più (2d8, +1d8 per livello oltre il 1°, massimo 5d8)",
            "en": "Divine Smite: spend a slot for extra radiant damage (2d8, +1d8 per level above 1st, up to 5d8)"},
     effect=_say("I dadi in più sono danni radiosi.", "The extra dice are radiant damage."))

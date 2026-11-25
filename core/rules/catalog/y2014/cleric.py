@@ -230,7 +230,8 @@ def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 
 def _weapon_hit(ctx: RuleContext) -> bool:
-    return ctx.item is not None and ctx.spell is None
+    """Un attacco con arma; nel 2014 lo è anche il colpo senz'armi (D-030). Vale pure per i Colpi Benedetti 2024."""
+    return ctx.spell is None and (ctx.item is not None or (ctx.edition == "2014" and ctx.attack_mode == "melee"))
 
 
 def _divine_strike(domain: str, type_it: str, type_en: str, damage_type: str | None = None, *, group: str | None = None,
