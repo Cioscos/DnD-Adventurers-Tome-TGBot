@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.rules.edition import character_edition
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, _hp_max
 from core.rules.types import StateSpec
 
 
@@ -47,10 +47,22 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
     return state
 
 
+def _spell_hp_max(char: Any, key: str, data: dict) -> int:
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il catalogo importa questo modulo
+    effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
+    variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
+    return _hp_max(variant, data) if variant else 0
+
+
 def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Come ``begin_state`` per uno stato ``spell:*``: uno stato per coppia (incantesimo, lanciatore). Quello di un altro lanciatore
-    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano."""
+    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano. Lo stesso lanciatore che lo
+    rilancia più debole non toglie il più potente (2014 pag. 205, 2024 pag. 238: vale il bonus più alto, non l'ultimo)."""
     caster = spec.data.get("caster_id")
+    mine = next((s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") == caster), None)
+    if mine and _spell_hp_max(char, spec.key, mine.get("data") or {}) > _spell_hp_max(char, spec.key, spec.data):
+        # shortcut: un orologio per lanciatore, il più potente dura quanto il nuovo lancio; servirebbero due orologi se le durate differiscono
+        return mine
     others = [s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") != caster]
     state = begin_state(char, spec, feature_key, name)
     if others:
