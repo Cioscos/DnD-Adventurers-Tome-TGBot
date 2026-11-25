@@ -116,7 +116,6 @@ async def test_un_monaco_incapacitato_non_usa_azioni_ne_azioni_bonus(client, sot
                            "PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/features/{feature_key}/use"])
 @pytest.mark.parametrize("sottoclasse, livello, chiave, stato", [
     (None, 18, "monk.superior_defense", "superior_defense"), ("elements", 3, "monk.elemental_attunement", "elemental_attunement")])
-@pytest.mark.xfail(strict=True, reason="CB-2414: difforme dal manuale, confermato")
 async def test_un_effetto_che_finisce_da_incapacitato_non_parte_da_incapacitato(client, sottoclasse, livello, chiave, stato):
     # Lo stato finisce quando il monaco diventa incapacitato: avviato mentre lo è già, non deve restare attivo
     cid = await _monaco(client, sottoclasse, livello)
