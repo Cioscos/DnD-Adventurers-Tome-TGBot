@@ -164,3 +164,20 @@ async def test_un_mostro_privo_di_sensi_cade_prono(client, test_session_factory)
     # risvegliandosi resta prono, e il master può rialzarlo
     r = await client.patch(f"{base}/{due['id']}", json={"conditions": {"unconscious": True, "prone": False}})
     assert next(c for c in r.json()["combatants"] if c["id"] == due["id"])["conditions"]["prone"] is False
+
+
+@pytest.mark.caccia(id="CB-4710", fonte="2024 · Glossario · Nascondersi (il tiro per colpire fa finire l'Invisibilità) · pag. 368; Druido · Arciere · pag. 89",
+                    zona="regola:2024/druid", voce="interazione",
+                    copre=["carta:2024/general.md#Hide [Action] (Nascondersi) (pag. 368)", "carta:2024/classes/druid.md#Arciere / Archer (Circolo delle Stelle 3, pag. 89)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_l_attacco_dell_arciere_fa_finire_il_nascondiglio(client):
+    cid = await _circle(client, "stars", 3, wisdom=16)
+    assert (await _use(client, cid, "druid.starry_form", params={"constellation": "archer"})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    assert (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"dice": [20]})).status_code == 200
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 200 and r.json()["conditions"].get("invisible") is True, r.text
+    r = await _use(client, cid, "druid.archer")
+    assert r.status_code == 200, r.text
+    j = await _scheda(client, cid)
+    assert (bool(j["conditions"].get("invisible")), j["hiding_dc"]) == (False, None)

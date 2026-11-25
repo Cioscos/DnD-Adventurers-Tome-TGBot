@@ -538,6 +538,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     dice = parse_dice(formula) if formula else None
     if on_use.spell_attack:  # il d20 prima dei dadi: un mancato non fa danno, un critico li raddoppia
         result.attack = _feature_attack(char, on_use.spell_attack)
+        from api.services.effects import end_hide  # import locale: effects richiama on_conditions
+        end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio (2024 p.368)
         end_on_feature_attack(char, result.attack)
         if dice:
             dice = (0 if result.attack["is_fumble"] else dice[0] * (2 if result.attack["is_critical"] else 1), dice[1])
