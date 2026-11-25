@@ -25,6 +25,12 @@ def _on(condition: str):
     return lambda ctx: bool((ctx.char.conditions or {}).get(condition)) and condition not in immune_conditions(ctx.char)
 
 
+def _has_blindsight(char: Any) -> bool:
+    """Vista Cieca data da un privilegio (Combattere alla Cieca, Sensi Ferini 2024, Furtivo)."""
+    from core.rules.modifiers import modifiers_for  # import locale: modifiers usa il catalogo
+    return bool(modifiers_for(char, None).senses.get("blindsight"))
+
+
 def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     ctx.char.heroic_inspiration = False
     settings = ctx.char.settings or {}
@@ -176,6 +182,13 @@ _CONDITION_OPTIONS = (
         key="condition:invisible", phase="before", rolls=("attack",), cancels=("condition:invisible",),
         label={"it": "Invisibile: un nemico ti vede?", "en": "Invisible: can an enemy see you?"},
         available=lambda ctx: ctx.edition == "2024" and _on("invisible")(ctx),
+    ),
+    RollOptionSpec(  # D-029: lo svantaggio di Accecato è quello del bersaglio che non vedi, la Vista Cieca lo vede (2024 pag. 361)
+        key="condition:blinded_blindsight", phase="before", rolls=("attack",), cancels=("condition:blinded",),
+        label={"it": "Accecato: il bersaglio è entro la tua Vista Cieca e non dietro Copertura Totale?",
+               "en": "Blinded: is the target within your Blindsight and not behind Total Cover?"},
+        available=lambda ctx: (ctx.edition == "2024" and ctx.attack_mode not in ("beast", "companion") and _on("blinded")(ctx)
+                               and _has_blindsight(ctx.char)),
     ),
     RollOptionSpec(
         key="condition:blinded", phase="before", rolls=("skill",), auto_fail=True,

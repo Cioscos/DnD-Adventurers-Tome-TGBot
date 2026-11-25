@@ -117,3 +117,35 @@ async def test_le_suppliche_dei_trucchetti_non_valgono_per_quelli_del_tomo_o_di_
     offerte = await _offered(client, cid)
     assert "eldritch_spear__eldritch_blast" in offerte  # Deflagrazione Agonizzante l'ha già scelta l'helper
     assert not {"agonizing_blast__toll_the_dead", "agonizing_blast__chill_touch"} & offerte
+
+
+@pytest.mark.caccia(id="CB-4607", fonte="decisione D-029 (tests/caccia/decisioni.md): la Vista Cieca di un privilegio 2024 toglie lo svantaggio di Accecato; 2024 · Glossario · Vista Cieca e Accecato · pag. 361",
+                    zona="regola:2024/generali", voce="interazione",
+                    copre=["carta:2024/general.md#Blindsight (Vista Cieca) (pag. 361)", "carta:2024/general.md#Blinded [Condition] (Accecato) (pag. 361)",
+                           "carta:2024/feats.md#Combattere alla cieca / Blind Fighting (pag. 209)",
+                           "carta:2024/feats.md#Furtivo / Skulker (pag. 208) - Generale (livello 4+, Destrezza 13+)",
+                           "carta:2024/classes/ranger.md#Sensi Ferini / Feral Senses (Ranger 18, pag. 121)"])
+async def test_la_vista_cieca_2024_toglie_lo_svantaggio_di_accecato(client):
+    from tests.integration.rules.test_2014_ranger import _attack, _conditions, _sword
+    from tests.integration.rules.test_2024_fighter import _styled
+    chiave = "condition:blinded_blindsight"
+
+    async def opzioni(cid):
+        return [o["key"] for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()]
+
+    stile = await _styled(client, "blind_fighting")
+    assert chiave not in await opzioni(stile)  # non è Accecato
+    ranger = await _pg(client, "2024", "ranger", 18)
+    furtivo = await _pg(client, "2024", "rogue", 4, dexterity=16)
+    r = await client.post(f"/characters/{furtivo}/feats", json={"feat_key": "2024_skulker", "ability": "dexterity"})
+    assert r.status_code == 201, r.text
+    for cid in (stile, ranger, furtivo):
+        await _conditions(client, cid, blinded=True)
+        assert chiave in await opzioni(cid)
+    nessuno = await _pg(client, "2024", "fighter", 5)
+    await _conditions(client, nessuno, blinded=True)
+    assert chiave not in await opzioni(nessuno)
+    spada = await _sword(client, stile, equip="main_hand")
+    assert (await _attack(client, stile, spada, dice=[3, 17]))["mode_applied"] == "disadvantage"
+    visto = await _attack(client, stile, spada, options=[chiave])
+    assert visto["mode_applied"] == "normal" and "condition:blinded" not in visto["notes"]
