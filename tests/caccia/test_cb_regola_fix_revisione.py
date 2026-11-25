@@ -42,3 +42,19 @@ async def test_previsione_rilanciata_su_un_png_finisce_sul_bersaglio_di_prima(cl
     # «Termina se lanciato di nuovo»: anche se il nuovo bersaglio non ha una scheda
     assert not _ha(await _sheet(client, eroe), "spell:foresight")
     assert not _ha(await _sheet(client, mago, GM_ID), "spell_cast:foresight")
+
+
+@pytest.mark.caccia(id="CB-4762", fonte="2014 · Incantesimi · Santuario · pag. 272", zona="regola:2014/incantesimi-S-Z", voce="regola",
+                    copre=["carta:2014/spells.md#Santuario", "POST /characters/{char_id}/items/{item_id}/attack"])
+async def test_santuario_2014_finisce_quando_il_protetto_attacca(client, test_session_factory):
+    eroe, chierico, santuario = await _table(client, test_session_factory, "Santuario", "sanctuary", 1, hero_edition="2014", caster_edition="2014")
+    await _cast(client, chierico, santuario, [eroe], level=1)
+    assert _ha(await _sheet(client, eroe), "spell:sanctuary")
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{eroe}/items", json={"name": "Spada", "item_type": "weapon", "item_metadata": {
+        "damage_dice": "1d8", "damage_type": "slashing", "weapon_type": "melee"}})
+    arma = max(i["id"] for i in r.json()["items"])
+    r = await client.post(f"/characters/{eroe}/items/{arma}/attack", json={})
+    assert r.status_code == 200, r.text
+    # «Termina se la creatura protetta attacca o lancia un incantesimo su un nemico»
+    assert not _ha(await _sheet(client, eroe), "spell:sanctuary")

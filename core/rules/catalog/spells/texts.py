@@ -86,8 +86,10 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("wind_walk", ("wind-walk",), ("Camminare nel Vento", "Wind Walk"), SpellTarget("allies", lambda slot: 11), _WIND_WALK),
     SpellEffect("mirror_image", ("mirror-image",), ("Immagine Speculare", "Mirror Image"), _SELF, {"2014": _MIRROR_2014, "2024": _MIRROR_2024}),
     SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
-        "2014": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia un incantesimo su un nemico.",
-                      "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts a spell at an enemy.", MIN1),
+        # 2014 p.272: finisce quando il protetto attacca (il lancio su un nemico lo chiude il giocatore: il server non sa chi è il bersaglio)
+        "2014": replace(_text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia un incantesimo su un nemico.",
+                              "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts a spell at an enemy.", MIN1),
+                        ends_on=("attack", "manual")),
         # 2024 p.313: finisce a ogni tiro per colpire o lancio del protetto (il danno senza tiro lo chiude il giocatore)
         "2024": replace(_text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
                               "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1),
