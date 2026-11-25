@@ -43,8 +43,8 @@ def hit_points_for_level(hit_die: int, con_mod: int, level: int) -> int:
     Level 1: ``hit_die + con_mod`` (PHB max die value).
     Level 2+: ``(hit_die // 2 + 1) + con_mod`` (fixed method).
 
-    The result is always clamped to a minimum of 1 (PHB rule:
-    a level gives at least 1 HP even with very negative CON).
+    The result is always clamped to a minimum of 1: the 2024 PHB rule,
+    kept for 2014 too (decision D-027), whose cards do not state it.
     """
     if level < 1:
         raise ValueError(f"level must be >= 1, got {level}")
