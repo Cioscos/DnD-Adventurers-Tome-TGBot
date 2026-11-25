@@ -54,9 +54,10 @@ function armorTrained(char: CharacterFull, kind: string): boolean {
 /** Sottoclassi che lanciano incantesimi su una classe che non li lancia (specchio di `THIRD_SUBCLASSES` del server). */
 const THIRD_SUBCLASSES = new Set(['eldritch_knight', 'arcane_trickster'])
 
-/** Come `caster_ability` del server: il terzo incantatore scelto dal catalogo non salva la caratteristica; con
- *  `pact_magic_counts === false` il warlock (solo Magia del Patto) non conta. */
+/** Come il server: lo dice la scheda (2014: anche razza, talenti, privilegi; un server vecchio non lo manda). Con
+ *  `pact_magic_counts === false` contano le classi, `caster_ability`, senza il warlock (solo Magia del Patto). */
 function castsSpells(f: Feat2024, char: CharacterFull): boolean {
+  if (f.pact_magic_counts !== false && char.computed?.casts_spells !== undefined) return char.computed.casts_spells
   return char.classes.some((c) => (!!c.spellcasting_ability || THIRD_SUBCLASSES.has(c.subclass_key ?? ''))
     && (f.pact_magic_counts !== false || c.class_name !== 'warlock'))
 }

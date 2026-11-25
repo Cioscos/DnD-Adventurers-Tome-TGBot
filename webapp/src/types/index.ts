@@ -464,6 +464,7 @@ export interface ComputedStats {
   long_jump_bonus_ft?: number | null
   /** Sintonie ammesse: 3, o 4 con Usare Dispositivi Magici (Furfante 2024). */
   attunement_limit?: number
+  casts_spells?: boolean
   /** Può lanciare dalle pergamene (Usare Dispositivi Magici). */
   scroll_casting?: boolean
 }

@@ -62,6 +62,7 @@ class ComputedStats(BaseModel):
     swim_speed: Optional[int] = None  # nuotare concesso da un privilegio, pari alla velocità a terra (Salmone)
     senses: list[dict[str, Any]] = []  # sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi
     attunement_limit: int = 3  # sintonie ammesse: 4 con Usare Dispositivi Magici (Furfante 2024)
+    casts_spells: bool = False  # sa lanciare un incantesimo: prerequisito dei talenti da incantatore
     scroll_casting: bool = False  # può lanciare dalle pergamene (Usare Dispositivi Magici)
     long_jump_bonus_ft: Optional[int] = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio
     bloodied: bool = False  # Sanguinante (solo 2024): a metà dei PF massimi o meno, anche a 0 (non da morto né con PF massimi a 0)

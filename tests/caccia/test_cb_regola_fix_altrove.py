@@ -257,3 +257,15 @@ async def test_due_lanci_gratuiti_insieme_dello_stesso_incantesimo_ne_spendono_u
         with pytest.raises(HTTPException) as errore:
             await _charge_pact_use(primo, riga)
         assert errore.value.detail["code"] == "no_uses"
+
+
+@pytest.mark.caccia(id="CB-4713", fonte="2014 · Talenti · Incantatore da Guerra (capacità di lanciare almeno un incantesimo) · pag. 168", zona="regola:2014/talenti",
+                    voce="contratto", copre=["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)", "GET /characters/{char_id}"])
+async def test_la_scheda_dice_chi_sa_lanciare_incantesimi_da_qualsiasi_fonte(client):
+    async def sa_lanciare(razza, edizione="2014", classe="fighter"):
+        cid = await _pg(client, classe, 4, edizione=edizione)
+        assert (await client.patch(f"/characters/{cid}", json={"race": razza})).status_code == 200
+        return (await _scheda(client, cid))["computed"].get("casts_spells", False)
+
+    assert [await sa_lanciare("Elfo alto"), await sa_lanciare("Umano"), await sa_lanciare("Umano", classe="wizard")] == [True, False, True]
+    assert await sa_lanciare("Elfo alto", "2024") is False  # 2024: il privilegio Incantesimi o Magia del Patto

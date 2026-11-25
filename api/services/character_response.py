@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
-from api.services.choices import choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
+from api.services.choices import _casts_spells, choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_armor_class, form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
@@ -276,6 +276,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         senses=[{"type": k, "range_ft": v} for k, v in sorted(rule_damage.senses.items())],
         long_jump_bonus_ft=rule_damage.jump_bonus_ft,
         attunement_limit=attunement_limit(char),
+        casts_spells=_casts_spells(char),
         scroll_casting=has_use_magic_device(char),
     )
     hp_max = response.computed.hp_max_effective

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CompanionCard from '@/pages/extras/CompanionCard'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
+import { featByKey, meetsPrerequisites } from '@/lib/feats'
 import type { CharacterFull, Companion, Spell } from '@/types'
 
 const { attack, lancia, toastSuccess } = vi.hoisted(() => ({ attack: vi.fn(), lancia: vi.fn(), toastSuccess: vi.fn() }))
@@ -65,5 +66,15 @@ describe('caccia: revisioni delle correzioni regole', () => {
     await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByLabelText('character.extras.beast.reaction_attack Colpo della Bestia'))
     await waitFor(() => expect(attack).toHaveBeenCalled())
     expect(attack.mock.calls[0][6]).toBe(true)
+  })
+
+  // caccia: {"id": "CB-4717", "fonte": "2014 · Talenti · Incantatore da Guerra (capacità di lanciare almeno un incantesimo, da qualsiasi fonte) · pag. 168", "zona": "regola:2014/talenti", "voce": "interazione", "copre": ["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)", "route:/char/:id/abilities"]}
+  it('i talenti da incantatore seguono il server: un elfo alto guerriero può, un umano no', () => {
+    const guerriero = (casts_spells: boolean) => ({
+      rules_edition: '2014', total_level: 4, ability_scores: [], abilities: [], settings: {}, computed: { casts_spells },
+      classes: [{ id: 1, class_name: 'fighter', level: 4, spellcasting_ability: null }],
+    }) as unknown as CharacterFull
+    const talento = featByKey('war_caster')!
+    expect([true, false].map((sa) => meetsPrerequisites(talento, guerriero(sa)))).toEqual([true, false])
   })
 })
