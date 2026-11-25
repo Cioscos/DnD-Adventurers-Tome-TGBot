@@ -263,3 +263,17 @@ async def test_il_rilancio_non_prende_i_dadi_di_un_altro_tiro_salvezza(client):
     r = await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"with_inspiration": True, "die": 9})
     assert r.status_code == 200, r.text
     assert (r.json()["mode"], r.json()["die"]) == ("normal", 9), r.json()  # non il 18 col vantaggio del TS su Costituzione
+
+
+@pytest.mark.caccia(id="CB-4242", fonte="invariante: ogni d20 tirato entra nelle statistiche una volta; 2024 · Ispirazione Eroica · pag. 13 (si rilancia un solo d20)", zona="regola:2024/generali",
+                    voce="interazione", copre=["carta:2024/general.md#Vantaggio e Svantaggio / Advantage/Disadvantage (pag. 12-13)",
+                                               "POST /characters/{char_id}/skills/{skill_name}/roll", "GET /characters/{char_id}/dice/stats"])
+async def test_il_rilancio_conta_nelle_statistiche_solo_il_d20_nuovo(client):
+    cid = await _pg(client)
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    r = await client.post(f"/characters/{cid}/skills/stealth/roll", json={"mode": "advantage", "dice": [3, 15]})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/skills/stealth/roll", json={"with_inspiration": True, "die": 18})
+    assert r.status_code == 200 and sorted(r.json()["dice"]) == [15, 18], r.text
+    stats = (await client.get(f"/characters/{cid}/dice/stats")).json()["stats"]["d20"]
+    assert stats == {"3": 1, "15": 1, "18": 1}, stats  # il 15 non rilanciato non si conta due volte

@@ -17,6 +17,7 @@ class D20Outcome:
     dice: list[int]
     kept: int
     mode: RollMode
+    rolled: list[int] | None = None  # i d20 tirati adesso, se non sono tutti ``dice`` (il rilancio ne tocca uno)
 
 
 def spend_inspiration_reroll(char) -> None:
@@ -103,8 +104,10 @@ def resolve_body(body, applied: Applied | None = None) -> D20Outcome:
         return resolve_applied("normal", body.dice, body.die, applied, True)
     # 2024 pag. 12-13: con vantaggio o svantaggio il rilancio tocca un solo d20 e il modo resta. Si rilancia il più basso,
     # che in entrambi i modi è la scelta migliore per chi tira.
-    dice[dice.index(min(dice))] = resolve_d20("normal", (body.dice or [])[:1] or None, body.die).kept
+    new = resolve_d20("normal", (body.dice or [])[:1] or None, body.die).kept
+    dice[dice.index(min(dice))] = new
     outcome = resolve_d20(mode, dice, None)
+    outcome.rolled = [new]  # l'altro d20 è già nelle statistiche
     if applied.min_d20 is not None:
         outcome.kept = max(outcome.kept, applied.min_d20)
     return outcome
@@ -118,4 +121,4 @@ def d20_history_label(o: D20Outcome) -> str:
 
 
 def d20_records(o: D20Outcome) -> list[tuple[str, int]]:
-    return [("d20", d) for d in o.dice]
+    return [("d20", d) for d in (o.dice if o.rolled is None else o.rolled)]
