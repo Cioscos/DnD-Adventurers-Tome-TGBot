@@ -154,7 +154,7 @@ def test_saltare_concesso_nel_2024_si_lancia_con_un_azione_bonus():
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 async def test_tentacoli_neri_concessi_allo_stregone_aberrante_non_dimezzano_al_ts_superato(client):
     cid = await _pg(client, "sorcerer", 7, "Stregoneria Aberrante")
-    riga = await _concesso(client, cid, "evards-black-tentacles")
+    riga = await _concesso(client, cid, "black-tentacles")
     corpo = await _danno(client, cid, riga["id"], 4)
     assert (corpo["scaled_dice"], corpo["damage_type"]) == ("3d6", "bludgeoning")
     assert corpo["save_halves"] is False  # il danno arriva solo a chi fallisce il TS di Forza

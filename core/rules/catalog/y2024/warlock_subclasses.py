@@ -407,7 +407,7 @@ def _hurl(is_fiend: bool) -> RollOptionSpec:
 
 OLD_ONE = "Patrono Grande Antico"
 MIND, PSYCHIC, CLAIR, HEX, SHIELD = (f"{P}{k}" for k in ("awakened_mind", "psychic_spells", "clairvoyant_combatant", "eldritch_hex", "thought_shield"))
-OLD_ONE_SPELLS = (("detect-thoughts", "dissonant-whispers", "phantasmal-force", "tashas-hideous-laughter"), ("clairvoyance", "hunger-of-hadar"),
+OLD_ONE_SPELLS = (("detect-thoughts", "dissonant-whispers", "phantasmal-force", "hideous-laughter"), ("clairvoyance", "hunger-of-hadar"),
                   ("confusion", "summon-aberration"), ("modify-memory", "telekinesis"))
 oldone = _sub(OLD_ONE, "great_old_one")
 MIND_USE = OnUse(

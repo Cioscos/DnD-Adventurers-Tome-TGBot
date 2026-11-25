@@ -539,12 +539,12 @@ for _spell, _comp in (
         (GrantedSpell("hunger-of-hadar", {"it": "Fame di Hadar", "en": "Hunger of Hadar"}, 3, "1 azione", "45 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
         (GrantedSpell("sending", {"it": "Messaggio a distanza", "en": "Sending"}, 3, "1 azione", "Illimitata", "1 round"), "V, S, M"),
-        (GrantedSpell("evards-black-tentacles", {"it": "Tentacoli neri di Evard", "en": "Evard's Black Tentacles"}, 4, "1 azione", "27 m",
+        (GrantedSpell("black-tentacles", {"it": "Tentacoli neri di Evard", "en": "Evard's Black Tentacles"}, 4, "1 azione", "27 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="3d6",
                       damage_type="bludgeoning"), "V, S, M"),
         (GrantedSpell("summon-aberration", {"it": "Evocare aberrazione", "en": "Summon Aberration"}, 4, "1 azione", "27 m",
                       "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
-        (GrantedSpell("rarys-telepathic-bond", {"it": "Legame telepatico di Rary", "en": "Rary's Telepathic Bond"}, 5, "1 azione", "9 m",
+        (GrantedSpell("telepathic-bond", {"it": "Legame telepatico di Rary", "en": "Rary's Telepathic Bond"}, 5, "1 azione", "9 m",
                       "1 ora", is_ritual=True), "V, S, M"),
         (GrantedSpell("alarm", {"it": "Allarme", "en": "Alarm"}, 1, "1 minuto", "9 m", "8 ore", is_ritual=True), "V, S, M"),
         (GrantedSpell("summon-construct", {"it": "Evocare costrutto", "en": "Summon Construct"}, 4, "1 azione", "3 m",
@@ -578,7 +578,7 @@ for _spell, _comp in (
         (GrantedSpell("geas", {"it": "Geas", "en": "Geas"}, 5, "1 minuto", "18 m", "30 giorni", attack_save="SAVE"), "V"),
         (GrantedSpell("clairvoyance", {"it": "Chiaroveggenza", "en": "Clairvoyance"}, 3, "10 minuti", "1,5 km",
                       "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S, M"),
-        (GrantedSpell("tashas-hideous-laughter", {"it": "Risata orribile di Tasha", "en": "Tasha's Hideous Laughter"}, 1, "1 azione", "9 m",
+        (GrantedSpell("hideous-laughter", {"it": "Risata orribile di Tasha", "en": "Tasha's Hideous Laughter"}, 1, "1 azione", "9 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M"),
         (GrantedSpell("hex", {"it": "Malia", "en": "Hex"}, 1, "1 azione bonus", "27 m", "Concentrazione, fino a 1 ora",
                       is_concentration=True), "V, S, M")):
@@ -621,7 +621,7 @@ _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "
             "fear": "illusion", "telekinesis": "transmutation",
             # Patrono Grande Antico (Incantesimi Psichici legge Ammaliamento e Illusione)
             "detect-thoughts": "divination", "dissonant-whispers": "enchantment", "phantasmal-force": "illusion",
-            "tashas-hideous-laughter": "enchantment", "clairvoyance": "divination", "hunger-of-hadar": "conjuration",
+            "hideous-laughter": "enchantment", "clairvoyance": "divination", "hunger-of-hadar": "conjuration",
             "confusion": "enchantment", "summon-aberration": "conjuration", "modify-memory": "enchantment", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 # Tutti gli altri concessi (dati SRD 2014; quelli senza SRD dal manuale): i privilegi che guardano la scuola valgono
 # anche per gli incantesimi concessi (Magia Stregata dell'Arcifata con Sonno)
@@ -643,7 +643,7 @@ _SCHOOLS |= {k: v for k, v in {
     "divine-favor": "evocation", "dominate-beast": "enchantment", "dominate-person": "enchantment",
     "dragons-breath": "transmutation", "dream": "illusion", "druidcraft": "transmutation",
     "elementalism": "transmutation", "enhance-ability": "transmutation", "ensnaring-strike": "evocation",
-    "evards-black-tentacles": "conjuration", "faerie-fire": "evocation", "false-life": "necromancy",
+    "black-tentacles": "conjuration", "faerie-fire": "evocation", "false-life": "necromancy",
     "find-familiar": "conjuration", "fire-bolt": "evocation", "fire-shield": "evocation", "fireball": "evocation",
     "flame-strike": "evocation", "flaming-sphere": "conjuration", "fly": "transmutation", "fog-cloud": "conjuration",
     "fount-of-moonlight": "evocation", "freedom-of-movement": "abjuration", "gaseous-form": "transmutation",
@@ -662,7 +662,7 @@ _SCHOOLS |= {k: v for k, v in {
     "misty-step": "conjuration", "moonbeam": "evocation", "nondetection": "abjuration",
     "pass-without-trace": "abjuration", "passwall": "transmutation", "plant-growth": "transmutation",
     "poison-spray": "conjuration", "prestidigitation": "transmutation", "protection-from-energy": "abjuration",
-    "protection-from-evil-and-good": "abjuration", "rarys-telepathic-bond": "divination",
+    "protection-from-evil-and-good": "abjuration", "telepathic-bond": "divination",
     "ray-of-enfeeblement": "necromancy", "ray-of-frost": "evocation", "ray-of-sickness": "necromancy",
     "revivify": "necromancy", "sacred-flame": "evocation", "sanctuary": "abjuration", "scorching-ray": "evocation",
     "scrying": "divination", "sending": "evocation", "shatter": "evocation", "shield-of-faith": "abjuration",
@@ -707,6 +707,11 @@ _SCHOOLS_2024 = {
 }
 for _key, _school in _SCHOOLS_2024.items():
     GRANTED_SPELLS_2024[_key] = replace(GRANTED_SPELLS_2024.get(_key) or GRANTED_SPELLS[_key], school=_school)
+
+
+# Chiavi di prima, diverse dall'indice del catalogo: il sync riallinea le righe già salvate
+RENAMED_SPELLS = {"evards-black-tentacles": "black-tentacles", "rarys-telepathic-bond": "telepathic-bond",
+                  "tashas-hideous-laughter": "hideous-laughter"}
 
 
 def granted_spell(key: str, edition: str) -> GrantedSpell:

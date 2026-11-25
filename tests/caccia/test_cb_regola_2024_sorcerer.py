@@ -134,7 +134,7 @@ async def test_stregoneria_psionica_non_lancia_un_incantesimo_psionico_non_ancor
                     copre=["carta:2024/classes/sorcerer.md#Incantesimo Raddoppiato / Twinned Spell (Metamagia, pag. 142)",
                            "carta:2024/spells.md#Arrampicarsi come un Ragno", "carta:2024/spells.md#Risata Incontenibile di Tasha",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.parametrize("srd_index,level", [("spider-climb", 2), ("tashas-hideous-laughter", 1)])
+@pytest.mark.parametrize("srd_index,level", [("spider-climb", 2), ("hideous-laughter", 1)])
 async def test_incantesimo_raddoppiato_vale_per_gli_incantesimi_con_un_bersaglio_in_piu_per_slot(client, srd_index, level):
     cid = await _caster24(client, 6, "twinned")
     spell = await _spell(client, cid, "Prova", level, srd_index=srd_index)

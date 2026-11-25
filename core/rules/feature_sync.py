@@ -7,14 +7,14 @@ non si perdono: una riga tolta lascia il suo stato in ``settings["archived_featu
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
 from core.game.stats import con_hp_delta, effective_ability_mod, stored_rolls, sync_base_ac
-from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
+from core.db.models import Ability, Character, CharacterClass, ConditionEffect, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
-from core.rules.catalog.granted_spells import GRANTED_SPELLS, granted_spell
+from core.rules.catalog.granted_spells import GRANTED_SPELLS, RENAMED_SPELLS, granted_spell
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
@@ -214,6 +214,30 @@ def _concentrates(data: object, edition: str) -> bool:
     return bool(data.is_concentration or (edition == "2024" and data.concentration_2024))  # type: ignore[attr-defined]
 
 
+async def _realign_renamed(session: AsyncSession, char: Character, rows: list[Spell]) -> list[Spell]:
+    """Le righe con una chiave di prima (``RENAMED_SPELLS``) passano all'indice del catalogo. Se il giocatore ha già quella del
+    catalogo resta la sua, che eredita concentrazione ed effetti in corso, e la copia concessa si toglie."""
+    old = [r for r in rows if r.srd_index in RENAMED_SPELLS]
+    for row in old:
+        twin = next((r for r in rows if r.srd_index == RENAMED_SPELLS[row.srd_index]), None)
+        if twin is None:
+            row.srd_index = RENAMED_SPELLS[row.srd_index]
+            continue
+        twin.is_pinned = twin.is_pinned or row.is_pinned
+        if char.concentrating_spell_id == row.id:
+            char.concentrating_spell_id = twin.id
+        await session.execute(update(ConditionEffect).where(ConditionEffect.source_spell_id == row.id).values(source_spell_id=twin.id))
+        if "spells" in char.__dict__ and row in char.spells:  # relazione già caricata: la riga tolta non torna nella risposta
+            char.spells.remove(row)
+        await session.delete(row)
+        rows = [r for r in rows if r is not row]
+    for setting in (GRANTED_SPELL_KEYS, GRANTED_CREATED):
+        keys = (char.settings or {}).get(setting) or []
+        if any(k in RENAMED_SPELLS for k in keys):
+            char.settings = {**char.settings, setting: list(dict.fromkeys(RENAMED_SPELLS.get(k, k) for k in keys))}
+    return rows
+
+
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
     """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
     edizione, livello) l'incantesimo resta e torna a contare come gli altri. Si toglie solo il segno messo da un
@@ -222,7 +246,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         return
     granted = {key: row for spec, row in active_features(char) for key in spec.granted_spells}
     # Query e non `char.spells`: non tutti i chiamanti caricano la relazione.
-    rows = (await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars().all()
+    rows = list((await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars())
+    rows = await _realign_renamed(session, char, rows)
     live = {(st.get("data") or {}).get("stolen_spell") for st in char.active_states or []}
     for row in rows:  # un incantesimo rubato il cui stato non c'è più (chiuso dove le relazioni non erano caricate)
         if (row.srd_index or "").startswith(STOLEN_SPELL) and row.srd_index not in live:

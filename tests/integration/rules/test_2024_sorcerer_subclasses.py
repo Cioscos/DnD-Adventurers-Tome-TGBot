@@ -77,7 +77,7 @@ async def test_rows_follow_the_subclass_and_the_level(client, sub):
 
 
 @pytest.mark.parametrize("sub,level,expect", [
-    ("aberrant", 3, {"arms-of-hadar", "mind-sliver"}), ("aberrant", 9, {"telekinesis", "rarys-telepathic-bond"}),
+    ("aberrant", 3, {"arms-of-hadar", "mind-sliver"}), ("aberrant", 9, {"telekinesis", "telepathic-bond"}),
     ("clockwork", 5, {"aid", "dispel-magic"}), ("clockwork", 9, {"wall-of-force", "greater-restoration"}),
     ("draconic", 3, {"chromatic-orb", "dragons-breath"}), ("draconic", 9, {"summon-dragon", "legend-lore"})])
 async def test_subclass_spells_are_always_prepared_from_their_level(client, sub, level, expect):

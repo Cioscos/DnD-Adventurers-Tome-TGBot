@@ -149,10 +149,10 @@ async def test_individuazione_dei_pensieri_concessa_dichiara_il_tiro_salvezza(cl
                     copre=["carta:2024/spells.md#Legame Telepatico di Rary",
                            "carta:2024/classes/sorcerer.md#Incantesimi Psionici / Psionic Spells (Stregoneria Aberrante 3, pag. 145)",
                            "POST /characters/{char_id}/spells", "POST /characters"])
-@pytest.mark.xfail(strict=True, reason="CB-3767: difforme dal manuale, confermato")
 async def test_legame_telepatico_concesso_non_duplica_quello_gia_preso_dal_catalogo(client):
     cid = await _pg(client, "sorcerer", 8, "Stregoneria Aberrante")
-    await _impara(client, cid, "telepathic-bond")
+    r = await client.post(f"/characters/{cid}/spells", json={**_dal_catalogo("telepathic-bond"), "is_prepared": False})  # all'8° non c'è lo slot
+    assert r.status_code == 201, r.text
     r = await client.patch(f"/characters/{cid}/classes/{(await _scheda(client, cid))['classes'][0]['id']}", json={"level": 9})
     assert r.status_code == 200, r.text
     righe = [s for s in (await client.get(f"/characters/{cid}/spells")).json() if "Rary" in s["name"]]

@@ -1,7 +1,9 @@
 """Controlli scritti dalla correzione del gruppo catalogo-incantesimi per i dubbi «Q-…» risolti come difetti."""
 import pytest
 
-from core.db.models import Character
+from sqlalchemy import select
+
+from core.db.models import Character, Spell
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 
 HAIL = "spell:hail_of_thorns:hit"
@@ -133,3 +135,36 @@ async def test_preghiera_di_guarigione_2024_non_vale_di_nuovo_prima_del_riposo_l
     assert (await client.post(f"/characters/{eroe}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
     as_user(GM_ID)
     assert (await lancia()).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4563", fonte="2024 · Stregone · Incantesimi Psionici · pag. 145; Incantesimi · Legame Telepatico di Rary · pag. 311",
+                    zona="regola:2024/incantesimi-G-L", voce="persistenza",
+                    copre=["carta:2024/spells.md#Legame Telepatico di Rary", "GET /characters/{char_id}/spells", "PATCH /characters/{char_id}"])
+async def test_le_righe_salvate_con_la_chiave_di_prima_passano_a_quella_del_catalogo_senza_doppioni(client, test_session_factory):
+    r = await client.post("/characters", json={"name": "Aberrante", "rules_edition": "2024", "initial_class": {
+        "class_name": "sorcerer", "level": 9, "subclass": "Stregoneria Aberrante"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    vecchie = {"black-tentacles": "evards-black-tentacles", "telepathic-bond": "rarys-telepathic-bond"}
+    async with test_session_factory() as s:  # come l'ha salvato una versione precedente, più la riga presa dal catalogo
+        char = await s.get(Character, cid)
+        for riga in (await s.execute(select(Spell).where(Spell.character_id == cid, Spell.srd_index.in_(vecchie)))).scalars():
+            riga.srd_index = vecchie[riga.srd_index]
+            if riga.srd_index == "evards-black-tentacles":
+                char.concentrating_spell_id = riga.id
+        char.settings = {**char.settings, **{k: [vecchie.get(x, x) for x in char.settings[k]] for k in ("granted_spell_keys", "granted_created")}}
+        s.add(Spell(character_id=cid, name="I miei Tentacoli", level=4, srd_index="black-tentacles", description="mia"))
+        await s.commit()
+    for _ in range(2):  # il secondo sync non cambia più nulla
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
+        r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+        assert r.status_code == 200, r.text
+        righe = {}
+        for x in r.json()["spells"]:
+            righe.setdefault(x["srd_index"], []).append(x)
+        assert not set(vecchie.values()) & set(righe)
+        assert [len(righe[k]) for k in vecchie] == [1, 1]
+        tentacoli, legame = righe["black-tentacles"][0], righe["telepathic-bond"][0]
+        assert (tentacoli["description"], tentacoli["always_prepared"], legame["always_prepared"]) == ("mia", True, True)
+        assert not set(vecchie.values()) & {*r.json()["settings"]["granted_spell_keys"], *r.json()["settings"]["granted_created"]}
+        assert r.json()["concentrating_spell_id"] in (tentacoli["id"], None)  # mai la riga tolta

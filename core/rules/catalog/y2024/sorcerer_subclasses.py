@@ -77,9 +77,9 @@ def _restorable(key: str, points: int, **kw: Any) -> OnUse:
 
 ABERRANT = "Stregoneria Aberrante"
 PSIONIC_SPELLS = (("arms-of-hadar", "calm-emotions", "detect-thoughts", "dissonant-whispers", "mind-sliver"), ("hunger-of-hadar", "sending"),
-                  ("evards-black-tentacles", "summon-aberration"), ("rarys-telepathic-bond", "telekinesis"))
+                  ("black-tentacles", "summon-aberration"), ("telepathic-bond", "telekinesis"))
 PSIONIC_LEVELS = {"arms-of-hadar": 1, "dissonant-whispers": 1, "calm-emotions": 2, "detect-thoughts": 2, "hunger-of-hadar": 3, "sending": 3,
-                  "evards-black-tentacles": 4, "summon-aberration": 4, "rarys-telepathic-bond": 5, "telekinesis": 5}
+                  "black-tentacles": 4, "summon-aberration": 4, "telepathic-bond": 5, "telekinesis": 5}
 PSIONIC_FROM = {s: lv for lv, tier in zip((3, 5, 7, 9), PSIONIC_SPELLS) for s in tier}  # livello da cui la lista lo dà (pag. 145)
 PSYCHIC_SAVE = RollOptionSpec(
     key=f"{P}psychic_defenses", phase="before", rolls=("save",), mode="advantage",
