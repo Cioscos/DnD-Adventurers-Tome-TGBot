@@ -11247,7 +11247,7 @@
     "it": "Cura Ferite di Massa"
    },
    "level": 5,
-   "school": "conjuration",
+   "school": "evocation",
    "casting_time": {
     "en": "1 action",
     "it": "1 azione"
@@ -13994,7 +13994,7 @@
     "it": "Rinascita"
    },
    "level": 3,
-   "school": "conjuration",
+   "school": "necromancy",
    "casting_time": {
     "en": "1 action",
     "it": "1 azione"

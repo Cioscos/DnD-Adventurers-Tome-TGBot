@@ -1,6 +1,7 @@
 """Controlli scritti dalla correzione del gruppo dati-incantesimi-fe (dubbi risolti come difetti)."""
 import pytest
 
+from core.rules.catalog.granted_spells import granted_spell
 from tests.caccia.test_cb_regola_2014_incantesimi_a_c import _dal_catalogo as _dal_catalogo_2014, _pg as _pg_2014
 from tests.caccia.test_cb_regola_2024_incantesimi_m_r import _dal_catalogo, _pg
 
@@ -54,3 +55,20 @@ async def test_porta_dimensionale_2014_dal_catalogo_non_tira_danni_al_lancio(cli
     voce = next(s for s in r.json() if s["srd_index"] == "dimension-door")
     # la carta descrive solo il teletrasporto: i 4d6 forza del manuale toccano chi viaggia solo se l'arrivo fallisce, mai al lancio
     assert not (voce["damage_dice"] and not (voce["effect"] or {}).get("hit_damage"))
+
+
+@pytest.mark.caccia(id="CB-4035", fonte="2014 · Incantesimi · Cura Ferite di Massa (Invocazione di 5° livello) · pag. 228", zona="regola:2014/incantesimi-A-C",
+                    voce="regola", copre=["carta:2014/spells.md#Cura Ferite di Massa", "POST /characters/{char_id}/spells"])
+async def test_cura_ferite_di_massa_2014_e_di_invocazione(client):
+    cid = await _pg_2014(client, "cleric", 9)
+    # Invocazione = evocation (Evocazione = conjuration): conta per la Trasposizione Benevola solo se fosse conjuration
+    assert (await _dal_catalogo_2014(client, cid, "mass-cure-wounds"))["school"] == "evocation"
+    assert granted_spell("mass-cure-wounds", "2014").school == "evocation"  # incantesimo di dominio della Vita
+
+
+@pytest.mark.caccia(id="CB-4036", fonte="2014 · Incantesimi · Rinascita (Necromanzia di 3° livello) · pag. 271", zona="regola:2014/incantesimi-M-R",
+                    voce="regola", copre=["carta:2014/spells.md#Rinascita", "POST /characters/{char_id}/spells"])
+async def test_rinascita_2014_e_di_necromanzia(client):
+    cid = await _pg_2014(client, "cleric", 5)
+    assert (await _dal_catalogo_2014(client, cid, "revivify"))["school"] == "necromancy"
+    assert granted_spell("revivify", "2014").school == "necromancy"  # incantesimo di dominio della Vita
