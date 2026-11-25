@@ -120,7 +120,7 @@ _STEP_MODES = {"dash": {"it": "Scatto", "en": "Dash"}, "disengage": {"it": "Disi
 
 
 def _step_state(_ctx: RuleContext, params: dict) -> StateSpec:
-    return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "manual"),
+    return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "turn_end", "manual"),
                      data={"mode": params["mode"], "jump_doubled": True})
 
 

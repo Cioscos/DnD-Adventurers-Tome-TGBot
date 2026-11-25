@@ -396,7 +396,7 @@ def _maneuver_rows() -> list:
                                    "Bonus action and a die: advantage on your next attack against a creature within 5 ft, +die to damage on a hit."),
                   "bonus_action", roll_options=(FEINT_STRIKE,),
                   on_use=OnUse(slot="bonus", spends=SD, state=StateSpec(
-                      "feinting_attack", rounds=1, ends_on=("new_turn", "manual")))),
+                      "feinting_attack", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
         _maneuver("maneuvering", ("Dopo un colpo con arma, +dado al danno; un alleato usa la reazione per muoversi di metà velocità senza provocare.",
                                       "After a weapon hit, +die to damage; an ally uses their reaction to move half speed without provoking."),
                   roll_options=(MANEUVERING,)),

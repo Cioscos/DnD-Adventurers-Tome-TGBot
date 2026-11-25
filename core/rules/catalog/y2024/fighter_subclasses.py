@@ -81,7 +81,7 @@ SD_COST = Cost(feature_key=SD, amount_by=_sd_cost)
 
 def _stamped_state(key: str) -> Any:
     """Lo stato di Finta/Affondo ricorda se l'Usa è stato pagato con Implacabile: il colpo successivo tira allora 1d8."""
-    return lambda ctx, _p: StateSpec(key, rounds=1, ends_on=("new_turn", "manual"), data={"relentless": _armed(ctx)})
+    return lambda ctx, _p: StateSpec(key, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"relentless": _armed(ctx)})
 
 
 def _strike_dice(key: str) -> Any:

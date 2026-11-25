@@ -674,3 +674,30 @@ async def test_le_punizioni_2024_valgono_con_un_arma_da_mischia_lanciata(client,
     assert ("spell:searing_smite:hit" in await offerte(accetta, "thrown")) is (edizione == "2024"), "lanciata prima (stato sul paladino)"
     assert "spell:searing_smite:hit" in await offerte(accetta, "melee")
     assert "spell:searing_smite:hit" not in await offerte(dardo, "thrown")
+
+
+@pytest.mark.caccia(id="CB-4835", fonte="2014 · Guerriero · Attacco con Finta · pag. 74, Monaco · Passo del Vento · pag. 91; 2024 · Guerriero · Attacco con Finta e Attacco con Affondo · pag. 95: valgono in questo turno",
+                    zona="regola:2024/fighter", voce="regola",
+                    copre=["carta:2024/classes/fighter.md#Attacco con Finta / Feinting Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "carta:2024/classes/fighter.md#Attacco con Affondo / Lunging Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "carta:2014/classes/fighter.md#Attacco con Finta / Feinting Attack (Manovra, Maestro di Battaglia 3, pag. 74)",
+                           "carta:2014/classes/monk.md#Passo del Vento / Step of the Wind (Monaco 2, pag. 91)",
+                           "POST /sessions/{session_id}/encounter/next-turn"])
+@pytest.mark.parametrize("edizione, privilegio, stato", [
+    ("2014", "fighter.maneuver_feinting", "feinting_attack"), ("2024", "fighter.maneuver_feinting", "feinting_attack"),
+    ("2024", "fighter.maneuver_lunging", "lunging_attack"), ("2014", "monk.step_of_the_wind", "step_of_the_wind")])
+async def test_finta_affondo_e_passo_del_vento_finiscono_col_turno(client, test_session_factory, monkeypatch, edizione, privilegio, stato):
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edizione})).status_code == 200
+    monaco = privilegio.startswith("monk")
+    corpo = {"class_name": "monk" if monaco else "fighter", "level": 3, **({} if monaco else {"subclass": "Maestro di Battaglia"})}
+    assert (await client.post(f"/characters/{cid}/classes", json=corpo)).status_code == 201
+    if not monaco:
+        await _manovre(client, cid, "feinting", "lunging", "parry")
+    r = await _usa(client, cid, privilegio, **({"params": {"mode": "dash"}} if monaco else {}))
+    assert r.status_code == 200, r.text
+    assert _ha(await _scheda(client, cid), stato)
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # tocca al goblin
+    as_user(PLAYER_ID)
+    assert not _ha(await _scheda(client, cid), stato)
