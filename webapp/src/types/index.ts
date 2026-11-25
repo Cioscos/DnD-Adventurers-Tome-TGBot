@@ -285,7 +285,7 @@ export interface Spell {
   is_healing?: boolean
   /** Formula della cura per livello di slot, con modificatore e privilegi (`{ 2: "4d8+7" }`). */
   healing_preview?: Record<number, string> | null
-  /** Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°): assente se il tiro è uno solo. */
+  /** Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°, Raggio Rovente): assente se il tiro è uno solo. */
   rays?: number | null
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */

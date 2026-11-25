@@ -246,15 +246,16 @@ export const upcastBoth = (srdIndex: string | null | undefined, edition: '2014' 
  * (mirror of roll_damage in api/routers/spells.py: same sides only).
  */
 export function upcastExtraDice(
-  spell: { level: number; srd_index?: string | null; higher_levels_dice?: string | null },
+  spell: { level: number; srd_index?: string | null; higher_levels_dice?: string | null; rays?: number | null },
   castingLevel: number,
   baseSides: number,
   edition: '2014' | '2024' = '2014',
 ): number {
   const rule = UPCAST_RULES[spell.srd_index ?? '']?.[edition] ?? {}
+  // Con più raggi (Raggio Rovente) lo slot più alto dà raggi, non dadi.
   // Il bonus opzionale (Dardo incantato: 1d4+1) non cambia il numero di dadi.
   const m = /^(\d+)d(\d+)([+-]\d+)?$/.exec((rule.dice ?? spell.higher_levels_dice)?.trim() ?? '')
-  if (!m || spell.level < 1 || Number(m[2]) !== baseSides) return 0
+  if (!m || spell.level < 1 || spell.rays || Number(m[2]) !== baseSides) return 0
   const gained = Number(m[1]) * Math.floor(Math.max(0, castingLevel - spell.level) / (rule.step ?? 1))
   return Math.min(gained, rule.maxExtra ?? gained)
 }

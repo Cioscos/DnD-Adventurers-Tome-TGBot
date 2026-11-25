@@ -64,7 +64,7 @@ class SpellRead(BaseModel):
     effect: Optional[dict] = None
     # Formula della cura per livello di slot (`{"2": "4d8+7"}`), da mostrare prima del tiro (U22); `None` se non cura
     healing_preview: Optional[dict[int, str]] = None
-    # Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°, D-037); `None` se il tiro è uno solo
+    # Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°, Raggio Rovente; D-037, D-045); `None` se il tiro è uno solo
     rays: Optional[int] = None
 
     model_config = {"from_attributes": True}
@@ -179,7 +179,7 @@ class SpellUseRequest(RollOptionsBody):
 
 class SpellAttackRequest(RollOptionsBody):
     """``options``: ``roll="attack"``; ``cast_options``: ``roll="cast"``. ``ray``: il raggio seguente del lancio già fatto
-    (Deflagrazione Occulta, D-037), senza un nuovo lancio."""
+    (Deflagrazione Occulta, Raggio Rovente; D-037, D-045), senza un nuovo lancio."""
     ray: bool = False
     slot_id: int | None = None
     slot_level: int | None = None

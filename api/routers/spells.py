@@ -688,7 +688,7 @@ async def spell_attack(
         _end_cast(char, cast_opts)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
-        rays = attack_rays(char, spell)
+        rays = attack_rays(char, spell, spell.level if body.ritual else fx_level)
         cast_rays = {"spell_id": spell.id, "ray": 1, "rays": rays} if rays > 1 else {}
     await release_concentration_effects(session, char)
 
@@ -952,7 +952,7 @@ async def roll_spell_damage(
     rule = _UPCAST.get((spell.srd_index or "", edition), _Upcast())
     per_level = rule.dice or spell.higher_levels_dice
     # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo incantesimi di livello >= 1, stessi lati).
-    if spell.level > 0 and per_level:
+    if spell.level > 0 and per_level and attack_rays(char, spell) == 1:  # Raggio Rovente: lo slot più alto dà raggi, non dadi
         um = DICE_RE.match(per_level.strip())
         if um and int(um.group(2)) == sides:
             steps = (casting_level - spell.level) // rule.step

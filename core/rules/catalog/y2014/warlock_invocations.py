@@ -21,6 +21,7 @@ INVOCATIONS = "invocations"
 BOON_GROUP = "pact_boon"
 BLAST = "eldritch-blast"
 BLAST_NAMES = ("deflagrazione occulta", "esplosione occulta", "eldritch blast")
+SCORCHING_RAY_NAMES = ("raggio rovente", "scorching ray")
 PACT_WEAPON = "pact_weapon"  # item_metadata: l'arma creata dal Patto della Lama
 INVISIBLE_UNTIL_ACT = "one_with_shadows"
 
@@ -31,11 +32,17 @@ def is_blast(spell: Any) -> bool:
                                   or (getattr(spell, "name", None) or "").strip().lower() in BLAST_NAMES)
 
 
-def attack_rays(char: Any, spell: Any) -> int:
-    """I raggi dell'incantesimo, ciascuno con il suo tiro per colpire e il suo danno (2014 pag. 229, 2024 pag. 267; D-037)."""
+def attack_rays(char: Any, spell: Any, level: int | None = None) -> int:
+    """I raggi dell'incantesimo lanciato a ``level``, ciascuno con il suo tiro per colpire e il suo danno: Deflagrazione Occulta
+    (2014 pag. 229, 2024 pag. 267; D-037) e Raggio Rovente (2014 pag. 267, 2024 pag. 313; D-045)."""
     from core.game.stats import cantrip_dice_multiplier  # import locale: stats usa il catalogo
-    attack = (getattr(spell, "attack_save", None) or "").strip().upper() == "ATK"
-    return cantrip_dice_multiplier(char.total_level) if attack and spell.level == 0 and is_blast(spell) else 1
+    if (getattr(spell, "attack_save", None) or "").strip().upper() != "ATK":
+        return 1
+    if spell.level == 0:
+        return cantrip_dice_multiplier(char.total_level) if is_blast(spell) else 1
+    if spell.srd_index == "scorching-ray" or (spell.name or "").strip().lower() in SCORCHING_RAY_NAMES:
+        return 1 + max(level or 0, spell.level)  # tre raggi, uno in più per slot oltre il 2°
+    return 1
 
 
 def _mod(ctx: RuleContext, ability: str) -> int:

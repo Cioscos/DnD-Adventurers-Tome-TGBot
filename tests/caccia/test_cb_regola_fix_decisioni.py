@@ -1,4 +1,4 @@
-"""Controlli delle decisioni dell'utente D-021…D-044 (tests/caccia/decisioni.md), scritti nel giro che le applica."""
+"""Controlli delle decisioni dell'utente D-021…D-052 (tests/caccia/decisioni.md), scritti nel giro che le applica."""
 import pytest
 
 from tests.integration._encounter_helpers import PLAYER_ID, as_user
@@ -654,3 +654,43 @@ async def test_atleta_straordinario_dopo_il_critico_di_un_incantesimo(client):
     assert (await client.post(danni, json={"hit_options": [chiave]})).status_code == 409
     assert (await _raggio(client, cid, sid, die=20)).status_code == 200
     assert "metà" in (await _danno(client, cid, sid, is_critical=True, hit_options=[chiave]))["option_result"]["effects"][0]["it"]
+
+
+# ---------------------------------------------------------------------------
+# D-045…D-052
+# ---------------------------------------------------------------------------
+
+async def _slot(client, cid, livello) -> dict:
+    s = next(s for s in (await _scheda(client, cid))["spell_slots"] if s["level"] == livello)
+    return {"slot_id": s["id"], "slot_level": livello}
+
+
+@pytest.mark.caccia(id="CB-4871", fonte="decisione D-045 (tests/caccia/decisioni.md): un tiro per colpire e 2d6 per raggio, +1 raggio per slot oltre il 2°; 2014 · Raggio Rovente · pag. 267; 2024 · pag. 313",
+                    zona="regola:2024/incantesimi-M-R", voce="regola",
+                    copre=["carta:2014/spells.md#Raggio Rovente", "carta:2024/spells.md#Raggio Rovente", "POST /characters/{char_id}/spells/{spell_id}/attack",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+@pytest.mark.parametrize("indice", ["scorching-ray", None])
+async def test_raggio_rovente_tira_per_colpire_e_fa_2d6_raggio_per_raggio(client, edizione, indice):
+    cid = await _pg(client, edizione, "sorcerer", 9)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Raggio Rovente", "level": 2, "srd_index": indice, "attack_save": "ATK", "is_prepared": True,
+                                                             "damage_dice": "2d6", "damage_type": "fire", "casting_time": "1 azione", "higher_levels_dice": "2d6"})
+    assert r.status_code == 201, r.text
+    sid = r.json()["id"]
+    assert next(s for s in (await _scheda(client, cid))["spells"] if s["id"] == sid)["rays"] == 3
+    slot = await _slot(client, cid, 4)
+    disponibili = lambda scheda: next(s for s in scheda["spell_slots"] if s["id"] == slot["slot_id"])["available"]  # noqa: E731
+    prima = disponibili(await _scheda(client, cid))
+    r = await _raggio(client, cid, sid, die=20, **slot)
+    assert r.status_code == 200 and (r.json()["ray"], r.json()["rays"]) == (1, 5), r.text
+    # il critico è del solo primo raggio, e lo slot più alto dà raggi, non dadi
+    assert len((await _danno(client, cid, sid, casting_level=4, is_critical=True))["main_rolls"]) == 4
+    for n in range(2, 6):
+        r = await _raggio(client, cid, sid, die=12, ray=True)
+        assert r.status_code == 200 and r.json()["ray"] == n, r.text
+        assert len((await _danno(client, cid, sid, casting_level=4))["main_rolls"]) == 2
+    r = await _raggio(client, cid, sid, die=12, ray=True)
+    assert (r.status_code, r.json()["detail"]["code"]) == (409, "no_ray_left")
+    assert disponibili(await _scheda(client, cid)) == prima - 1  # un lancio solo
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _raggio(client, cid, sid, die=12, **await _slot(client, cid, 2))).json()["rays"] == 3
