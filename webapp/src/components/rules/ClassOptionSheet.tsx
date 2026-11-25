@@ -6,7 +6,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, serverErrorKey } from '@/lib/mutationError'
 import { useNavigate } from 'react-router-dom'
 import { choiceTitle } from '@/lib/levelChoice'
 import type { CharacterFull, ClassOptionEntry, PendingChoice } from '@/types'
@@ -151,7 +151,7 @@ export function ReplaceOptionSheet({ char, classId, group, open, onClose }: Repl
         <p className="text-xs font-body text-dnd-text-muted">{t('character.level_choice.replace_new')}</p>
         {list(state.data?.available ?? [], newKey, setNewKey)}
         {mutation.isError && (
-          <p className="text-xs font-body text-dnd-crimson-bright">{t('character.level_choice.error')}</p>
+          <p className="text-xs font-body text-dnd-crimson-bright">{t(serverErrorKey(mutation.error) ?? 'character.level_choice.error')}</p>
         )}
         <Pressable
           onClick={() => mutation.mutate()}

@@ -128,7 +128,6 @@ async def test_indomito_ripete_un_tiro_salvezza_contro_la_morte_fallito(client, 
 
 @pytest.mark.caccia(id="CB-1765", fonte="2014 · Guerriero · Superiorità in Combattimento · pag. 73", zona="regola:2014/fighter", voce="regola",
                     copre=["carta:2014/classes/fighter.md#Superiorità in Combattimento / Combat Superiority (Maestro di Battaglia 3, pag. 73)", "POST /characters/{char_id}/classes/{class_id}/options/replace"])
-@pytest.mark.xfail(strict=True, reason="CB-1765: difforme dal manuale, confermato")
 async def test_una_manovra_si_sostituisce_solo_quando_se_ne_imparano_di_nuove(client):
     cid = await _guerriero(client, 5, "battle_master")  # al 5° livello non si imparano manovre
     await _manovre(client, cid, "trip", "rally", "parry")

@@ -4,13 +4,17 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import { ReplaceOptionSheet } from '@/components/rules/ClassOptionSheet'
+import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 const { resolve } = vi.hoisted(() => ({ resolve: vi.fn() }))
 const { classOptions, replaceOption } = vi.hoisted(() => ({ classOptions: vi.fn(), replaceOption: vi.fn() }))
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
 vi.mock('react-router-dom', async (orig) => ({ ...((await orig()) as Record<string, unknown>), useNavigate: () => navigate }))
-vi.mock('@/api/client', () => ({ api: { choices: { resolve, classOptions, replaceOption } } }))
+vi.mock('@/api/client', () => ({
+  api: { choices: { resolve, classOptions, replaceOption } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
+}))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
@@ -119,5 +123,15 @@ describe('ClassOptionSheet', () => {
     await userEvent.click(screen.getByText('Nome z'))
     await userEvent.click(confirm)
     await waitFor(() => expect(replaceOption).toHaveBeenCalledWith(7, 3, { group: 'metamagic', old_key: 'a', new_key: 'z' }))
+  })
+
+  it('says why the server refused a replacement out of its level', async () => {
+    classOptions.mockResolvedValue({ replaceable: true, chosen: [opt('a')], available: [opt('z')] })
+    replaceOption.mockRejectedValue(new ApiError(409, { code: 'replace_on_level_up' }))
+    renderWithProviders(<ReplaceOptionSheet char={char} classId={3} group="maneuvers" open onClose={() => {}} />)
+    await userEvent.click(await screen.findByText('Nome a'))
+    await userEvent.click(screen.getByText('Nome z'))
+    await userEvent.click(screen.getByText('character.level_choice.confirm'))
+    expect(await screen.findByText('common.server_errors.replace_on_level_up')).toBeInTheDocument()
   })
 })

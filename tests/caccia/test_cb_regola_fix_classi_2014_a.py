@@ -27,7 +27,6 @@ async def test_ispirazione_superiore_scatta_da_sola_al_tiro_di_iniziativa(client
 @pytest.mark.caccia(id="CB-4392", fonte="2014 · Guerriero · Superiorità in Combattimento · pag. 73", zona="regola:2014/fighter", voce="regola",
                     copre=["carta:2014/classes/fighter.md#Superiorità in Combattimento / Combat Superiority (Maestro di Battaglia 3, pag. 73)",
                            "POST /characters/{char_id}/classes/{class_id}/options/replace"])
-@pytest.mark.xfail(strict=True, reason="CB-4392: difforme dal manuale, confermato (Q-2014-fighter-2, rinviato: serve un segno salvato e un cambio di UX)")
 async def test_al_7_livello_si_sostituisce_una_sola_manovra(client):
     r = await client.post("/characters", json={"name": "Maestro", "rules_edition": "2014", "initial_class": {
         "class_name": "fighter", "level": 3, "subclass": "Maestro di Battaglia"}})

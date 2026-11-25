@@ -607,7 +607,7 @@ FEATURES = (
             ("Dadi per le manovre: 4 (5 al 7°, 6 al 15°), d8 (d10 al 10°, d12 al 18°). Tre manovre, più due ai livelli 7, 10 e 15. CD 8 + competenza + Forza o Destrezza.",
              "Dice for maneuvers: 4 (5 at 7th, 6 at 15th), d8 (d10 at 10th, d12 at 18th). Three maneuvers, plus two at 7th, 10th and 15th. DC 8 + proficiency + Strength or Dexterity."),
             subclass="battle_master", uses=Uses(table={3: 4, 7: 5, 15: 6}), restoration="short_rest",
-            choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True,
+            choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True, replace_per_level="new_picks",
                                 options=lambda _ctx: [k for k, _it, _en in MANEUVERS]),)),
     feature("student_of_war", CK, ED, 3, "Studioso di Guerra / Student of War (Maestro di Battaglia 3, pag. 73)",
             ("Studioso di Guerra", "Student of War"),
