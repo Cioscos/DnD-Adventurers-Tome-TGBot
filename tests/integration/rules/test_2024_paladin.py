@@ -423,7 +423,7 @@ async def test_a_slot_smite_is_not_offered_after_another_slot_spell_this_turn_bu
     assert SMITE not in keys and FREE in keys
 
 
-async def test_smite_is_for_melee_weapons_and_unarmed_strikes_not_ranged_or_thrown(client):
+async def test_smite_is_for_melee_weapons_even_thrown_and_unarmed_strikes_not_ranged_weapons(client):
     cid = await _paladin24(client, 5)
     wid = await _sword(client, cid)
     bow = await _item(client, cid, "Arco", damage_dice="1d8", weapon_type="ranged", properties=["ammunition"])
@@ -431,7 +431,8 @@ async def test_smite_is_for_melee_weapons_and_unarmed_strikes_not_ranged_or_thro
     assert {SMITE, FREE} <= set(await _melee_keys(client, cid, wid, attack_mode="melee", grip="one"))
     assert {SMITE, FREE} <= set(await _melee_keys(client, cid))
     assert not {SMITE, FREE} & set(await _melee_keys(client, cid, bow))
-    assert not {SMITE, FREE} & set(await _melee_keys(client, cid, axe, attack_mode="thrown", grip="one"))
+    # 2024: Punizione Divina pag. 265 vuole un'arma da mischia, e lanciata resta tale (Lancio, pag. 214): CB-4475
+    assert {SMITE, FREE} <= set(await _melee_keys(client, cid, axe, attack_mode="thrown", grip="one"))
 
 
 async def test_smite_on_an_unarmed_strike_and_the_critical_doubles_the_dice(client):

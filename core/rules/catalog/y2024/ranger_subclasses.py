@@ -16,9 +16,8 @@ from core.rules.catalog.y2014.ranger import (
     COLOSSUS_SLAYER, HORDE_BREAKER, SHARE_SPELLS_EXTEND, _permanent_note, _say, _weapon_attack,
 )
 from core.rules.catalog.y2014.rogue import _lacks_wisdom_save_proficiency
-from core.rules.catalog.y2024.barbarian import _owl_range
 from core.rules.catalog.y2024.druid import _free_slot_levels, _level_label
-from core.rules.catalog.y2024.ranger import CK, ED, _mark_dice, _wis_mod, hunters_mark_active
+from core.rules.catalog.y2024.ranger import CK, ED, _mark_dice, _rangers_own_attack, _wis_mod, hunters_mark_active
 from core.rules.companions import PRIMAL_COMPANION
 from core.rules.states import begin_state, has_state
 from core.rules.types import (
@@ -31,6 +30,14 @@ def _both(it: str, en: str) -> dict[str, str]:
 
 
 def _spell_dc(ctx: RuleContext) -> int:
+    """La tua CD degli incantesimi da ranger, quella della scheda: con i bonus degli oggetti (Paura di Massa, Svolta Ammaliante)."""
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
+    mine = next((s.save_dc for s in caster_stats(ctx.char) if ctx.class_row is not None and s.class_id == ctx.class_row.id), None)
+    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + _wis_mod(ctx)
+
+
+def _beast_dc(ctx: RuleContext) -> int:
+    # shortcut: senza i bonus degli oggetti finché l'utente non decide Q-2024-ranger-3 (attacco e CD del Colpo della Bestia)
     return 8 + ctx.char.proficiency_bonus + _wis_mod(ctx)
 
 
@@ -152,8 +159,8 @@ BEAST_GRAPPLE = RollOptionSpec(
     key=f"{CK}.beast_grapple", phase="before", rolls=("attack",), available=_has_beast("sea"),
     label=_both("Bestia del Mare: il bersaglio è Afferrato (CD per sfuggire pari alla tua CD degli incantesimi)",
                 "Beast of the Sea: the target is Grappled (escape DC equal to your spell save DC)"),
-    effect=lambda c, _i: _both(f"Il bersaglio è Afferrato: per sfuggire serve CD {_spell_dc(c)}.",
-                               f"The target is Grappled: escaping takes DC {_spell_dc(c)}."))
+    effect=lambda c, _i: _both(f"Il bersaglio è Afferrato: per sfuggire serve CD {_beast_dc(c)}.",
+                               f"The target is Grappled: escaping takes DC {_beast_dc(c)}."))
 
 BEAST_FORCE = RollOptionSpec(
     key=f"{CK}.beast_force", phase="before", rolls=("attack",), available=_beast_attack,
@@ -162,7 +169,7 @@ BEAST_FORCE = RollOptionSpec(
     effect=_say("Il Colpo della Bestia infligge danni da forza.", "The Beast's Strike deals force damage."))
 
 BESTIAL_FURY_DAMAGE = RollOptionSpec(
-    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     pay_if_success=True,  # «la prima volta che colpisce»: su un mancato l'uso torna
     available=lambda c: _beast_attack(c) and hunters_mark_active(c),
     label=_both("Furia Bestiale: il bersaglio è la creatura marcata da Hunter's Mark? Danni da forza in più (una volta per turno)",
@@ -183,7 +190,8 @@ def _free_use(state_key: str, spell: str, slot: str, toggle: bool = False) -> On
         return (409, "feature_unavailable") if has_state(ctx.char, state_key) else None
 
     def effect(ctx: RuleContext, params: dict) -> None:
-        data = {"free_cast": spell, "free_cast_slot": slot, "spell": spell, **({"no_concentration": True} if params.get("no_concentration") else {})}
+        data = {"free_cast": spell, "free_cast_slot": slot, "spell": spell, "refund": f"{CK}.{state_key.removesuffix('_free')}",  # senza lancio l'uso torna
+                **({"no_concentration": True} if params.get("no_concentration") else {})}
         begin_state(ctx.char, StateSpec(state_key, ends_on=("manual", "rest_short", "rest_long"), data=data), f"{CK}.{state_key}", None)
 
     return OnUse(
@@ -196,12 +204,23 @@ def _free_use(state_key: str, spell: str, slot: str, toggle: bool = False) -> On
 # Viandante Fatato
 # ---------------------------------------------------------------------------
 
+FEY_NO_CONCENTRATION_KEY = f"{CK}.fey_reinforcements_no_concentration"  # lo legge il router degli incantesimi
+
+# «Prima di lanciarlo»: la rinuncia vale per ogni lancio di Summon Fey, con lo slot o senza
+FEY_NO_CONCENTRATION = RollOptionSpec(
+    key=FEY_NO_CONCENTRATION_KEY, phase="before", rolls=("cast",),
+    available=lambda c: c.spell is not None and c.spell.srd_index == "summon-fey",
+    label=_both("Rinforzi Fatati: senza Concentrazione, per 1 minuto", "Fey Reinforcements: no Concentration, for 1 minute"),
+    effect=_say("L'incantesimo non richiede Concentrazione e dura 1 minuto; senza componente materiale.",
+                "The spell needs no Concentration and lasts 1 minute; no material component."))
+
 def _strikes_dice(ctx: RuleContext, _inputs: dict) -> str:
     return "1d6" if ctx.class_level >= 11 else "1d4"
 
 
 DREADFUL_STRIKES = RollOptionSpec(
-    key=f"{CK}.dreadful_strikes", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_strikes_dice, available=_weapon_attack,
+    key=f"{CK}.dreadful_strikes", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_strikes_dice, extra_damage_type="psychic",
+    available=_weapon_attack,
     label=_both("Colpi Terribili: +1d4 danni psichici (1d6 dal 11°), una volta per turno", "Dreadful Strikes: +1d4 psychic damage (1d6 from 11th), once per turn"))
 
 _CHARISMA_SKILLS = ("deception", "performance", "persuasion")
@@ -244,7 +263,7 @@ def _dread_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 DREADFUL_STRIKE = RollOptionSpec(
     key=DREAD_KEY, phase="after_hit", rolls=("attack",), once_per_turn=True, cost=Cost(feature_key=f"{CK}.dread_ambusher"),
-    extra_dice=_dread_dice, available=_weapon_attack,
+    extra_dice=_dread_dice, extra_damage_type="psychic", available=_weapon_attack,
     label=_both("Colpo Terribile: +2d6 danni psichici (2d8 dal 11°), una volta per turno, spende un uso",
                 "Dreadful Strike: +2d6 psychic damage (2d8 from 11th), once per turn, spends a use"))
 
@@ -308,9 +327,9 @@ MULTIATTACK_DEFENSE = RollOptionSpec(
                 "That creature's other attacks against you this turn have Disadvantage."))
 
 SUPERIOR_PREY = RollOptionSpec(
-    key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     separate_damage=True, crit_doubles=False,  # il dado è di una seconda creatura: fuori dal totale e senza raddoppio al critico
-    available=lambda c: _weapon_attack(c) and hunters_mark_active(c),
+    available=_rangers_own_attack,  # «quando danneggi la creatura marcata»: ogni attacco del ranger, anche senz'armi o con un incantesimo
     label=_both("Preda del Cacciatore Superiore: una seconda creatura entro 9 m dalla marcata subisce i danni di Hunter's Mark (una volta per turno)",
                 "Superior Hunter's Prey: a second creature within 30 ft of the marked one takes Hunter's Mark's damage (once per turn)"))
 
@@ -343,7 +362,7 @@ def _tactic(key: str, title: str, name: tuple[str, str], summary: tuple[str, str
 
 def _choice_row(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], options: tuple[str, ...]):
     return _sub("hunter", key, level, title, name, summary, no_row=True,
-                choices=(ChoiceSpec(group=key, levels={level: 1}, options=lambda _c: list(options), replaceable=True),),
+                choices=(ChoiceSpec(group=key, levels={level: 1}, options=lambda _c: list(options), replaceable=True, replace_per_rest=True),),
                 covered_by=f"ChoiceSpec {key} di questa riga e le righe delle opzioni; test_hunters_prey_is_chosen_at_level_3_and_only_the_chosen_one_works")
 
 
@@ -416,7 +435,8 @@ SUBCLASS_ROWS = (
     _sub(FW, "fey_reinforcements", 11, "Rinforzi Fatati / Fey Reinforcements (Viandante Fatato 11, pag. 125)", ("Rinforzi Fatati", "Fey Reinforcements"),
          ("Summon Fey gratis una volta per riposo lungo, senza materiali; puoi rinunciare alla Concentrazione (dura 1 minuto).",
           "Summon Fey free once per long rest, no materials; you can give up Concentration (it lasts 1 minute)."),
-         "action", uses=Uses(table={11: 1}), restoration="long_rest", on_use=_free_use("fey_reinforcements_free", "summon-fey", "action", toggle=True)),
+         "action", uses=Uses(table={11: 1}), restoration="long_rest", on_use=_free_use("fey_reinforcements_free", "summon-fey", "action", toggle=True),
+         roll_options=(FEY_NO_CONCENTRATION,)),
     _sub(FW, "misty_wanderer", 15, "Vagabondo Nebbioso / Misty Wanderer (Viandante Fatato 15, pag. 125)", ("Vagabondo Nebbioso", "Misty Wanderer"),
          ("Misty Step gratis (azione bonus), usi pari a Saggezza (minimo 1), riposo lungo; porti con te una creatura consenziente entro 1,5 m.",
           "Misty Step free (bonus action), uses equal to Wisdom (minimum 1), long rest; bring a willing creature within 5 ft."),
@@ -434,7 +454,7 @@ SUBCLASS_ROWS = (
     _sub(GS, "umbral_sight", 3, "Vista Ombrale / Umbral Sight (Stalker delle Tenebre 3, pag. 126)", ("Vista Ombrale", "Umbral Sight"),
          ("Scurovisione 18 m (o +18 m se l'hai già); nell'oscurità totale sei invisibile a chi si affida alla Scurovisione (lo applica il DM).",
           "Darkvision 60 ft (or +60 ft if you have it); in total darkness you are invisible to creatures relying on Darkvision (the GM applies it)."),
-         modifiers=(Modifier("sense:darkvision", _owl_range, source=f"feature:{CK}.umbral_sight"),), passive=True),
+         modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.umbral_sight"),), passive=True),
     _sub(GS, "iron_mind", 7, "Mente di Ferro / Iron Mind (Stalker delle Tenebre 7, pag. 126)", ("Mente di Ferro", "Iron Mind"),
          ("Competenza nei tiri salvezza su Saggezza.", "Proficiency in Wisdom saving throws."),
          modifiers=(Modifier("save", lambda c: c.char.proficiency_bonus, when=_lacks_wisdom_save_proficiency, source=f"feature:{CK}.iron_mind"),),

@@ -43,7 +43,6 @@ async def _strike(client, cid, comp, **body):
                     zona="regola:2024/ranger", voce="interazione",
                     copre=["carta:2024/classes/ranger.md#Vista Ombrale / Umbral Sight (Stalker delle Tenebre 3, pag. 126)",
                            "carta:2024/races.md#Nano / Dwarf (pag. 188)", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2511: difforme dal manuale, confermato")
 async def test_vista_ombrale_allunga_la_scurovisione_della_specie(client, test_session_factory):
     cid = await _sub(client, 3, "gloom_stalker")
     await _sync(test_session_factory, cid, species_key="2024_dwarf", species_options={})  # 36 m di Scurovisione dalla specie
@@ -55,7 +54,6 @@ async def test_vista_ombrale_allunga_la_scurovisione_della_specie(client, test_s
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Paura di Massa / Mass Fear (Stalker delle Tenebre 11, pag. 126)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2512: difforme dal manuale, confermato")
 async def test_paura_di_massa_usa_la_cd_degli_incantesimi_della_scheda(client):
     cid = await _sub(client, 11, "gloom_stalker", wisdom=16)
     await _item(client, cid, "Pietra della mente", item_type="generic", bonuses=[{"target": "spell_dc", "value": 1}])
@@ -70,7 +68,6 @@ async def test_paura_di_massa_usa_la_cd_degli_incantesimi_della_scheda(client):
                     copre=["carta:2024/classes/ranger.md#Preda del Cacciatore Superiore / Superior Hunter's Prey (Cacciatore 11, pag. 127)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("way", ["unarmed", "spell"])
-@pytest.mark.xfail(strict=True, reason="CB-2513: difforme dal manuale, confermato")
 async def test_preda_superiore_vale_anche_senza_arma_sulla_creatura_marcata(client, way):
     cid = await _sub(client, 11, "hunter")
     await _cast_mark(client, cid)
@@ -92,7 +89,6 @@ async def test_preda_superiore_vale_anche_senza_arma_sulla_creatura_marcata(clie
                            "POST /characters/{char_id}/classes/{class_id}/options/replace"])
 @pytest.mark.parametrize("level,group,first,second", [(3, "hunters_prey", "colossus_slayer", "horde_breaker"),
                                                       (7, "defensive_tactics", "escape_the_horde", "multiattack_defense")])
-@pytest.mark.xfail(strict=True, reason="CB-2514: difforme dal manuale, confermato")
 async def test_l_opzione_del_cacciatore_non_si_cambia_due_volte_senza_riposo(client, level, group, first, second):
     cid = await _sub(client, level, "hunter")
     assert (await _resolve(client, cid, group, [first])).status_code == 200
@@ -144,7 +140,6 @@ async def test_la_bestia_primordiale_spende_i_suoi_dadi_vita(client, dadi):
                            "carta:2024/classes/ranger.md#Preda del Cacciatore Superiore / Superior Hunter's Prey (Cacciatore 11, pag. 127)"])
 @pytest.mark.parametrize("key,kind", [("ranger.dreadful_strikes", "psychic"), ("ranger.dreadful_strike", "psychic"),
                                       ("ranger.bestial_fury_damage", "force"), ("ranger.superior_hunters_prey", "force")])
-@pytest.mark.xfail(strict=True, reason="CB-2517: difforme dal manuale, confermato")
 def test_i_dadi_extra_dei_privilegi_hanno_il_tipo_di_danno_della_carta(key, kind):
     assert _option(key).extra_damage_type == kind
 

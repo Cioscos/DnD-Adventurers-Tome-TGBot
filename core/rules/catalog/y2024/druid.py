@@ -514,8 +514,10 @@ FREE_ARCHER = "free_archer"  # nel turno: il colpo dell'attivazione non costa un
 
 
 def _starry_effect(ctx: RuleContext, params: dict) -> None:
-    if params["constellation"] == "archer":
-        ctx.char.turn_state = {**(ctx.char.turn_state or {}), FREE_ARCHER: True}
+    turn = ctx.char.turn_state or {}
+    # Costellazioni Scintillanti cambia costellazione all'inizio dei turni seguenti in Forma Stellare, non in quello in cui la assumi (pag. 89)
+    turn = {**turn, "once_per_turn": [*(turn.get("once_per_turn") or []), f"{CK}.twinkling_constellations"]}
+    ctx.char.turn_state = {**turn, FREE_ARCHER: True} if params["constellation"] == "archer" else turn
 
 
 def _starry_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
@@ -561,11 +563,11 @@ def _chalice_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 # Il Calice cura te (i PF li applica il server) oppure un'altra creatura (esito testuale: da qui nessun campo altrui è scrivibile)
 CHALICE = RollOptionSpec(
-    key=f"{CK}.chalice", phase="before", rolls=("spell_healing",), self_heal=lambda c, _i: _chalice_heal(c),
+    key=f"{CK}.chalice", phase="before", rolls=("spell_healing",), group="chalice", self_heal=lambda c, _i: _chalice_heal(c),
     available=lambda c: _constellation(c) == "chalice" and (c.casting_level or 0) >= 1,
     label={"it": "Calice: ti curi dei dadi del Calice più Saggezza", "en": "Chalice: you regain the Chalice dice plus Wisdom"})
 CHALICE_OTHER = RollOptionSpec(
-    key=f"{CK}.chalice_other", phase="before", rolls=("spell_healing",), effect=_chalice_effect,
+    key=f"{CK}.chalice_other", phase="before", rolls=("spell_healing",), group="chalice", effect=_chalice_effect,
     available=lambda c: _constellation(c) == "chalice" and (c.casting_level or 0) >= 1,
     label={"it": "Calice: un'altra creatura entro 9 m recupera i dadi del Calice più Saggezza",
            "en": "Chalice: another creature within 30 ft regains the Chalice dice plus Wisdom"})

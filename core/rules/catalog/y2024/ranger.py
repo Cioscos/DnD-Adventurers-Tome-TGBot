@@ -57,9 +57,10 @@ def _free_check(ctx: RuleContext, _params: dict) -> tuple[int, str] | None:
 
 
 def _free_effect(ctx: RuleContext, _params: dict) -> None:
-    """Autorizza un lancio gratuito (R43) di Hunter's Mark: azione bonus, Concentrazione normale; il lancio chiude lo stato."""
+    """Autorizza un lancio gratuito (R43) di Hunter's Mark: azione bonus, Concentrazione normale; il lancio chiude lo stato,
+    che chiuso senza lancio (a mano o col riposo) rende l'uso."""
     begin_state(ctx.char, StateSpec(FREE_STATE, ends_on=("manual", "rest_short", "rest_long"), data={
-        "free_cast": MARK_SPELL, "free_cast_slot": "bonus", "spell": MARK_SPELL}), FAVORED_ENEMY, "Nemico Prescelto")
+        "free_cast": MARK_SPELL, "free_cast_slot": "bonus", "spell": MARK_SPELL, "refund": FAVORED_ENEMY}), FAVORED_ENEMY, "Nemico Prescelto")
 
 
 FREE_USE = OnUse(

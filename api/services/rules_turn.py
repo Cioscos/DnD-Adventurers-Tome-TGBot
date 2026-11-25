@@ -7,7 +7,7 @@ from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
 from core.rules.modifiers import is_incapacitated
 from core.rules.spell_effects import spell_instances
-from core.rules.types import FORGONE, TURN_FLAGS as _FLAGS
+from core.rules.types import FORGONE, OTHERS_TURN, TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
 
@@ -121,12 +121,18 @@ def mark_once(char, key: str) -> bool:
 
 
 def clear_once_per_turn(char) -> list[str]:
-    """Comincia il turno di un altro: tornano gli effetti «una volta per turno», reazione esclusa.
-    Restituisce la lista svuotata."""
+    """Comincia il turno di un altro: tornano gli effetti «una volta per turno», reazione esclusa, e il turno non è più il
+    suo (``OTHERS_TURN``: lo tolgono ``reset_turn`` e ``resume_own_turn``). Restituisce la lista svuotata."""
     used = get_turn(char)["once_per_turn"]
-    if used:
-        _save(char, {**get_turn(char), "once_per_turn": []})
+    if used or not get_turn(char).get(OTHERS_TURN):
+        _save(char, {**get_turn(char), "once_per_turn": [], OTHERS_TURN: True})
     return used
+
+
+def resume_own_turn(char) -> None:
+    """Il turno torna al personaggio senza ricominciare (il GM riporta indietro il turno): è di nuovo il suo."""
+    if get_turn(char).get(OTHERS_TURN):
+        _save(char, {k: v for k, v in get_turn(char).items() if k != OTHERS_TURN})
 
 
 def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:

@@ -173,14 +173,24 @@ def _di_effect(ctx: RuleContext, params: dict) -> None:
     """L'incantesimo scelto sta sulla scheda finché lo stato che autorizza il lancio gratuito dura; il lancio lo chiude
     (R43). Desiderio blocca il privilegio per 2d4 riposi lunghi (tiro e conteggio nello stato)."""
     from core.db.models import Spell  # import locale: i modelli non servono al resto del catalogo
+    from core.rules.catalog.spells import spell_effect
     wish = bool(params.get("wish"))
     tag = f"{STOLEN_SPELL}{uuid.uuid4().hex[:12]}"
     name = "Desiderio / Wish" if wish else str(params["spell"]).strip()
+    level = 9 if wish else int(params["spell_level"])
+    # Intervento Divino toglie slot e componenti materiali, non la Concentrazione (2024 pag. 71): un incantesimo del catalogo la chiede
+    known = spell_effect("2024", None, name)
+    concentration = bool(known and known[1].concentration)
+    rounds = known[1].duration(level) if concentration else None
     ctx.char.spells.append(Spell(
-        character_id=ctx.char.id, name=name, level=9 if wish else int(params["spell_level"]), srd_index=tag,
-        class_id=ctx.class_row.id, is_prepared=True, always_prepared=True))
-    begin_state(ctx.char, StateSpec("divine_intervention_free", ends_on=("manual", "rest_long"),
-                                    data={"stolen_spell": tag, "free_cast": tag}), DIVINE_INTERVENTION, "Intervento Divino")
+        character_id=ctx.char.id, name=name, level=level, srd_index=tag, class_id=ctx.class_row.id, is_prepared=True,
+        always_prepared=True, is_concentration=concentration, duration=f"{rounds} round" if rounds else None))
+    data: dict = {"stolen_spell": tag, "free_cast": tag}
+    if concentration:  # lanciato, resta sulla scheda per la sua durata (la concentrazione lo indica) ma non si rilancia gratis
+        data |= {"free_cast_keep": True, "then": {"key": "divine_intervention_free", "rounds": rounds, "ends_on": ["manual", "rest_long"],
+                                                  "data": {"stolen_spell": tag}}}
+    begin_state(ctx.char, StateSpec("divine_intervention_free", ends_on=("manual", "rest_long"), data=data), DIVINE_INTERVENTION,
+                "Intervento Divino")
     if wish:
         dice = [random.randint(1, 4), random.randint(1, 4)]
         begin_state(ctx.char, StateSpec(WISH_LOCK, ends_on=("manual",), data={"roll": dice, "rests_left": sum(dice), "locked": True}),

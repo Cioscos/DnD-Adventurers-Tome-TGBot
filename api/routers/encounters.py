@@ -49,7 +49,7 @@ from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
     pc_char as _pc_char, set_condition as _set_condition,
 )
-from api.services.rules_turn import clear_turn, reset_turn, set_surprised
+from api.services.rules_turn import clear_turn, reset_turn, resume_own_turn, set_surprised
 from api.services.thiefs_reflexes import add_second_turns
 from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block, pc_initiative_mod
@@ -505,6 +505,9 @@ async def _turn_endpoint(
     if backward:
         await undo_last_advance(db, enc)
         moved = _advance_turn(enc, list(enc.combatants), backward=True)
+        owner = moved.character_id or moved.extra_turn_of if moved is not None and moved.kind == "pc" else None
+        if owner and (pc := await db.get(Character, owner)) is not None:
+            resume_own_turn(pc)
         await db.flush()
         if moved is not None:
             await _notify_turn(enc, moved)

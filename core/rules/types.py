@@ -45,6 +45,11 @@ class ChoiceSpec:
     replaceable: bool = False
     # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
     replace_per_long_rest: int = 0  # quanti cambi per riposo lungo (True = 1)
+    # Con ``replace_per_long_rest``: i cambi si contano a parte, non con gli altri gruppi della classe (Aspetto della Natura
+    # Selvaggia accanto alla Padronanza delle Armi del barbaro); senza, la classe ha un solo contatore (Maestria negli Incantesimi)
+    replace_own_count: bool = False
+    # Con ``replaceable``: un cambio, poi serve un riposo breve o lungo (Preda del Cacciatore 2024, «dopo un riposo breve o lungo»)
+    replace_per_rest: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
@@ -400,7 +405,8 @@ class Modifier:
 
     ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
-    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``jump_bonus`` (piedi in più al
+    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``sense_plus:<tipo>`` (piedi che si
+    sommano alla portata migliore già posseduta, anche scritta nella scheda: Gufo, Vista Ombrale); ``jump_bonus`` (piedi in più al
     salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
@@ -415,6 +421,7 @@ class Modifier:
 
 
 FORGONE = -1  # ``action_weapons``: attacco dell'azione ceduto (bestia, trucchetto, incantesimo), senza arma
+OTHERS_TURN = "others_turn"  # ``Character.turn_state``: è cominciato il turno di un altro (i privilegi «nel tuo turno» tacciono)
 # slot di turno -> chiave booleana in ``Character.turn_state``
 TURN_FLAGS = {
     "action": "action_used",
@@ -438,6 +445,9 @@ class Cost:
     pact_only: bool = False
     # Costo che dipende dal lancio (Incantesimo Raddoppiato: il livello dell'incantesimo): sostituisce ``amount``
     amount_by: "Callable[[RuleContext], int] | None" = None
+    # Con ``feature_key``: la riga senza usi è ricaricata prima del pagamento da un'opzione automatica dello stesso tiro
+    # (Ispirazione Superiore ridà gli usi che Passo a Due spende alla stessa Iniziativa)
+    refilled: "Callable[[RuleContext], bool] | None" = None
 
 
 @dataclass(frozen=True)

@@ -34,7 +34,6 @@ async def _monaco(client, sottoclasse, livello, **punteggi) -> int:
                            "carta:2024/general.md#Dodge [Action] (Schivata) (pag. 366)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2411: difforme dal manuale, confermato")
 async def test_difesa_paziente_a_punto_da_vantaggio_ai_ts_su_destrezza(client, dadi):
     # La versione a 1 punto fa Disimpegno e Schivata: fino al prossimo turno i TS su Destrezza hanno vantaggio
     cid = await _monk24(client, 2)
@@ -53,7 +52,6 @@ async def test_difesa_paziente_a_punto_da_vantaggio_ai_ts_su_destrezza(client, d
                            "carta:2024/classes/monk.md#Epitome Elementale / Elemental Epitome (Guerriero degli Elementi 17, pag. 106)",
                            "POST /sessions/{session_id}/encounter/next-turn", "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("caso", ["raffica", "passo_dell_ombra", "colpo_del_passo_migliorato", "passo_distruttivo"])
-@pytest.mark.xfail(strict=True, reason="CB-2412: difforme dal manuale, confermato")
 async def test_gli_effetti_del_turno_finiscono_col_turno_del_monaco(client, test_session_factory, monkeypatch, caso):
     # I colpi dell'azione bonus, il vantaggio «prima della fine del turno», il colpo «subito dopo il teletrasporto» e i +6 m
     # «fino a fine turno»: nel turno del goblin non valgono più
@@ -129,7 +127,6 @@ async def test_un_effetto_che_finisce_da_incapacitato_non_parte_da_incapacitato(
 @pytest.mark.caccia(id="CB-2415", fonte="2024 · Monaco · Difesa Superiore · pag. 103", zona="regola:2024/monk", voce="ripetizione",
                     copre=["carta:2024/classes/monk.md#Difesa Superiore / Superior Defense (Monaco 18, pag. 103)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2415: difforme dal manuale, confermato")
 async def test_difesa_superiore_ripetuta_non_spende_altri_tre_punti(client):
     # Si attiva a inizio turno per 1 minuto: un secondo invio con lo stato già attivo non costa altri 3 punti
     cid = await _monk24(client, 18)

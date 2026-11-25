@@ -330,7 +330,8 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
     if spec.slot and not _slot_free(char, spec.slot):
         return False
     cost = spec.cost
-    if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None:
+    if (cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None
+            and not (cost.refilled and ctx is not None and cost.refilled(ctx))):
         return False
     if cost and cost.state_key and not any(s.get("key") == cost.state_key for s in char.active_states or []):
         return False
@@ -509,6 +510,8 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     if cost and cost.feature_key:
         amount = cost_amount(cost, option.ctx)
         row = _ability_row(char, cost.feature_key, amount)
+        if row is None:  # ``refilled``: la ricarica attesa non c'è stata
+            raise OptionUnavailable(spec.key)
         if row.max_uses is not None:
             row.uses = (row.uses or 0) - amount
         spent.append(f"feature:{row.feature_key}:{amount}")

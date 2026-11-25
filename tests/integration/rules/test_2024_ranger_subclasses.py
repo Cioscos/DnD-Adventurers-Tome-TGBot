@@ -440,6 +440,19 @@ async def test_hunters_prey_is_replaceable_after_a_rest(client):
     assert "ranger.colossus_slayer" not in [o["key"] for o in await _listed(client, cid, await _weapon(client, cid))]
 
 
+async def test_a_short_rest_gives_the_hunters_prey_swap_back(client):
+    cid = await _sub(client, 3, "hunter")
+    await _resolve(client, cid, "hunters_prey", ["colossus_slayer"])
+    url = f"/characters/{cid}/classes/{(await _full(client, cid))['classes'][0]['id']}/options/replace"
+    swap = {"group": "hunters_prey", "old_key": "colossus_slayer", "new_key": "horde_breaker"}
+    back = {"group": "hunters_prey", "old_key": "horde_breaker", "new_key": "colossus_slayer"}
+    assert (await client.post(url, json=swap)).status_code == 200
+    again = await client.post(url, json=back)
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "replace_after_rest"
+    await _rest(client, cid, "short")
+    assert (await client.post(url, json=back)).status_code == 200
+
+
 async def test_defensive_tactics_are_chosen_at_level_7(client):
     assert _choice(await _full(client, await _sub(client, 6, "hunter")), "defensive_tactics") is None
     cid = await _sub(client, 7, "hunter")

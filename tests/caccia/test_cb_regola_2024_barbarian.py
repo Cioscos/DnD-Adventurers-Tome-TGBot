@@ -61,7 +61,6 @@ async def _turno_del_goblin(client, sid, cid) -> None:
                     zona="regola:2024/barbarian", voce="regola",
                     copre=["carta:2024/classes/barbarian.md#Aspetto della Natura Selvaggia / Aspect of the Wilds (Cammino del Cuore Selvaggio 6, pag. 55)",
                            "POST /characters/{char_id}/classes/{class_id}/options/replace", "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2161: difforme dal manuale, confermato")
 async def test_aspetto_della_natura_selvaggia_si_cambia_una_volta_per_riposo_lungo(client):
     cid = await _barbarian(client, 6, WILD)
     await _pick(client, cid, "aspect_of_the_wilds", "owl")
@@ -77,7 +76,6 @@ async def test_aspetto_della_natura_selvaggia_si_cambia_una_volta_per_riposo_lun
                     zona="regola:2024/barbarian", voce="interazione",
                     copre=["carta:2024/classes/barbarian.md#Gufo / Owl (Aspetto della Natura Selvaggia, Cammino del Cuore Selvaggio 6, pag. 55)",
                            "PUT /characters/{char_id}/species"])
-@pytest.mark.xfail(strict=True, reason="CB-2162: difforme dal manuale, confermato")
 async def test_gufo_aggiunge_60_piedi_alla_scurovisione_della_specie_2024(client):
     cid = await _barbarian(client, 6, WILD)
     r = await client.put(f"/characters/{cid}/species", json={"key": "2024_dwarf", "options": {}})
@@ -119,7 +117,6 @@ async def test_forza_vivificante_solo_all_inizio_del_proprio_turno(client, test_
                     zona="regola:2024/barbarian", voce="regola",
                     copre=["carta:2024/classes/barbarian.md#Furia Divina / Divine Fury (Cammino dello Zelota 3, pag. 57)",
                            "POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/{attack_id}/damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2165: difforme dal manuale, confermato")
 async def test_furia_divina_solo_nel_proprio_turno(client, test_session_factory, monkeypatch):
     sid, cid = await _barbaro_in_scontro(client, test_session_factory, monkeypatch, ZEALOT)
     assert (await client.patch(f"/characters/{cid}/ability_scores/strength", json={"value": 16})).status_code == 200
