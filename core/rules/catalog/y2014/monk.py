@@ -582,7 +582,8 @@ FEATURES = (
             ("Conosci Sintonia Elementale e una disciplina; una in più ai livelli 6, 11 e 17, e puoi sostituirne una. Costi in ki, con tetto per livello.",
              "You know Elemental Attunement and one discipline; one more at levels 6, 11 and 17, and you may swap one. Ki costs, capped by level."),
             subclass="four_elements", no_row=True,
-            choices=(ChoiceSpec(group=GROUP, levels={3: 1, 6: 2, 11: 3, 17: 4}, options=_discipline_options, replaceable=True),),
+            choices=(ChoiceSpec(group=GROUP, levels={3: 1, 6: 2, 11: 3, 17: 4}, options=_discipline_options, replaceable=True,
+                                replace_per_level="new_picks"),),
             covered_by="ChoiceSpec elemental_disciplines di questa riga, le righe delle discipline e i lanci col ki (KiSpell); "
                        "test_2014_monk_elements.py"),
     feature("elemental_attunement", CK, ED, 3, "Sintonia Elementale / Elemental Attunement (Monaco 3, Via dei Quattro Elementi, pag. 94)",

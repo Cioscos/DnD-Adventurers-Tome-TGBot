@@ -36,7 +36,6 @@ async def _serata(client, *seduti: tuple[int, int]) -> tuple[int, str]:
 @pytest.mark.caccia(id="CB-4431", fonte="2014 · Monaco · Discepolo degli Elementi · pag. 93", zona="regola:2014/monk", voce="regola",
                     copre=["carta:2014/classes/monk.md#Discepolo degli Elementi / Disciple of the Elements (Monaco 3, pag. 93)",
                            "POST /characters/{char_id}/classes/{class_id}/options/replace"])
-@pytest.mark.xfail(strict=True, reason="CB-4431: Q-2014-monk-1 rinviato, serve un legame fra sostituzione e disciplina nuova (scelta dell'utente)")
 async def test_una_disciplina_si_sostituisce_solo_quando_se_ne_impara_una_nuova(client):
     # «Ogni volta che ne impara una, può sostituirne una già conosciuta»: al 3° non se ne impara un'altra, niente cambio
     cid = await _pg(client, {"class_name": "monk", "level": 3, "subclass": "Via dei Quattro Elementi"})
