@@ -152,7 +152,6 @@ async def test_controfascino_finisce_con_la_fine_del_turno_successivo_del_bardo(
 @pytest.mark.caccia(id="CB-1615", fonte="2014 · Bardo · Ispirazione Superiore · pag. 54", zona="regola:2014/bard", voce="interazione",
                     copre=["carta:2014/classes/bard.md#Ispirazione Superiore / Superior Inspiration (Bardo 20, pag. 54)",
                            "POST /sessions/{session_id}/encounter/start", "PATCH /characters/{char_id}/abilities/{ability_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1615: difforme dal manuale, confermato")
 async def test_ispirazione_superiore_anche_con_l_iniziativa_tirata_dal_master(client, test_session_factory, monkeypatch, come_utente):
     install_fake_telegram(monkeypatch)
     sid, cid = await seed_session(test_session_factory)

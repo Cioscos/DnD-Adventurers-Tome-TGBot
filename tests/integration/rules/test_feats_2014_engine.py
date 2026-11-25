@@ -87,6 +87,19 @@ async def test_lucky_extra_d20_uses_the_best_of_all_dice(client):
     assert r.json()["mode"] == "normal"  # si sceglie fra tre d20: non è più uno svantaggio, ma nemmeno un vantaggio
 
 
+async def test_indomitable_after_lucky_rerolls_the_lowest_and_keeps_the_best(client):
+    """Dopo Fortunato i d20 sono tre: il ritiro di Indomito ne cambia uno solo (pag. 173) e il migliore resta scelto."""
+    body = await _l4(client)
+    cid = body["id"]
+    await _take(client, body, "lucky")
+    await client.patch(f"/characters/{cid}/xp", json={"set": 48000})
+    tiro = await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"mode": "disadvantage", "dice": [15, 4]})
+    await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["feat.lucky"], "dice": [9]})
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["fighter.indomitable"], "dice": [2]})
+    assert r.status_code == 200, r.text
+    assert (r.json()["die"], r.json()["total"]) == (15, tiro.json()["total"] + 11)
+
+
 async def test_migration_drops_feat_rules_once(client, test_session_factory):
     body = await _l4(client)
     cid = body["id"]
