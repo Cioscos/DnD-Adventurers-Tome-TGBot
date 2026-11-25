@@ -11,13 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
-    attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
+    action_taken, attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.modifiers import INCAPACITATING, is_incapacitated, surprise_exit_features
 from core.rules.roll_options import keep_target_effect, refund_spent
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.states import begin_state, has_state, item_spell_held, settle_closed
@@ -374,6 +375,20 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.panel:
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     params = dict(params or {})
+    # Incapacitato: niente azioni, azioni bonus né reazioni (2014 p.189-190 e 291, 2024 p.369); passano le uscite dichiarate (Istinto Ferino, Vendetta Ardente)
+    turn_slot = on_use.slot_by(RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level),
+                               params) if on_use.slot_by else on_use.slot
+    if turn_slot and is_incapacitated(char) and feature_key not in surprise_exit_features(char):
+        raise _err(status.HTTP_409_CONFLICT, "incapacitated")
+    # 2024: l'azione in più (Azione Impetuosa pag. 91, Velocità) non può essere l'azione Magia, come per i lanci (spells.py).
+    # shortcut: l'azione Magia si riconosce dal riassunto della carta («Magic action...»); un campo di OnUse se il testo non basta
+    if (turn_slot == "action" and spec.edition == "2024" and spec.summary["en"].startswith("Magic action")
+            and action_taken(turn := get_turn(char)) and turn["extra_actions"] > 0):
+        raise _err(status.HTTP_409_CONFLICT, "surge_no_magic")
+    # uno stato che finisce con l'incapacità non parte da incapacitato (2024 Difesa Superiore p.103, Sintonia Elementale p.106)
+    if (isinstance(on_use.state, StateSpec) and "incapacitated" in on_use.state.ends_on
+            and any((char.conditions or {}).get(c) for c in INCAPACITATING)):
+        raise _err(status.HTTP_409_CONFLICT, "incapacitated")
     removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
     if on_use.removal is not None:
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
@@ -480,7 +495,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]), on_use.spends_slot_pact_only)
     if on_use.once_per_turn:
-        mark_once(char, feature_key)
+        mark_once(char, feature_key, own_turn=on_use.own_turn)
     if on_use.forgoes_attack:
         forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:

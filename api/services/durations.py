@@ -17,7 +17,7 @@ from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
 from core.rules.states import SPELL_GIVEN, SUSPENDED_EFFECTS, SUSPENDED_ON, exhaustion_level
-from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
+from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_others_turn, set_surprised
 
 
 def is_concentrating(char: Character) -> bool:
@@ -139,6 +139,15 @@ async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     return expired
 
 
+async def mark_turn_owner(db: AsyncSession, enc: Encounter) -> None:
+    """Dopo ogni spostamento del turno: ogni PG dello scontro sa se è il turno di un altro (``set_others_turn``)."""
+    active = next((c for c in enc.combatants if c.id == enc.active_combatant_id), None)
+    owner = (active.character_id or active.extra_turn_of) if active is not None else None  # i Riflessi da Furfante: turno del PG
+    for cid in {c.character_id for c in enc.combatants if c.character_id is not None}:
+        if (pc := await db.get(Character, cid)) is not None:
+            set_others_turn(pc, pc.id != owner)
+
+
 async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
                        edge: Literal["start", "end"], undo: UndoLog) -> list[str]:
     """One turn edge (spec §2): expiries anchored on ``combatant`` first, then the
@@ -233,7 +242,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "end":
         st = get_turn(char)
-        if not st["attacks_made"] and not st["damaged"]:
+        if not st["attacks_made"] and not st.get("attacked_before") and not st["damaged"]:
             end_states(char, "turn_end_inactive")
         end_unextended(char)  # Ira 2024: finisce se nel turno non è stata prolungata
         end_counted_at_turn_end(char)  # Colpo Mistico: finisce con il turno che segue il colpo

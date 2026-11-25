@@ -57,7 +57,6 @@ async def test_ispirazione_superiore_paga_il_passo_a_due_della_stessa_iniziativa
     (None, "bard.bardic_inspiration"), (None, "bard.countercharm"), (LORE, "bard.cutting_words"),
     (GLAMOUR, "bard.mantle_of_inspiration"), (GLAMOUR, "bard.mantle_of_majesty"), (GLAMOUR, "bard.unbreakable_majesty"),
     (DANCE, "bard.inspiring_movement")])
-@pytest.mark.xfail(strict=True, reason="CB-2213: difforme dal manuale, confermato")
 async def test_un_bardo_incapacitato_non_usa_azioni_bonus_ne_reazioni(client, college, key):
     cid = await _bard24(client, 14, college, charisma=16)
     r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"incapacitated": True}})

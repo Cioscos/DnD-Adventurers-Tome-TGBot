@@ -85,7 +85,6 @@ async def test_con_la_variante_dell_ingombro_l_armatura_pesante_non_toglie_veloc
                            "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)",
                            "POST /sessions/{session_id}/encounter/combatants/{combatant_id}/initiative",
                            "POST /characters/{char_id}/dice/initiative"])
-@pytest.mark.xfail(strict=True, reason="CB-2762: difforme dal manuale, confermato")
 async def test_iniziativa_dello_scontro_in_forma_selvatica_usa_la_destrezza_della_bestia(client, come_utente, test_session_factory):
     come_utente(GIOCATORE)
     cid = await _pg(client, "druid", 2, dexterity=10)

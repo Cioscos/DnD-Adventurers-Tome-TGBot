@@ -89,7 +89,6 @@ async def test_gufo_aggiunge_60_piedi_alla_scurovisione_della_specie_2024(client
                     copre=["carta:2024/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 51)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("condizione", ["incapacitated", "stunned", "paralyzed", "unconscious"])
-@pytest.mark.xfail(strict=True, reason="CB-2163: difforme dal manuale, confermato")
 async def test_da_incapacitato_non_si_entra_in_ira(client, condizione):
     cid = await _barbarian(client, 5)
     r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {condizione: True}})
@@ -103,7 +102,6 @@ async def test_da_incapacitato_non_si_entra_in_ira(client, condizione):
                     zona="regola:2024/barbarian", voce="regola",
                     copre=["carta:2024/classes/barbarian.md#Forza Vivificante / Life-Giving Force (Vitalità dell'Albero, Cammino dell'Albero del Mondo 3, pag. 56)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "POST /sessions/{session_id}/encounter/next-turn"])
-@pytest.mark.xfail(strict=True, reason="CB-2164: difforme dal manuale, confermato")
 async def test_forza_vivificante_solo_all_inizio_del_proprio_turno(client, test_session_factory, monkeypatch):
     sid, cid = await _barbaro_in_scontro(client, test_session_factory, monkeypatch, TREE)
     assert (await _rage(client, cid)).status_code == 200

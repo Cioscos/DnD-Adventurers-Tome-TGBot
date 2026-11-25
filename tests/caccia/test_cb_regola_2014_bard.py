@@ -114,7 +114,6 @@ async def test_magia_da_battaglia_solo_dopo_un_incantesimo_lanciato_con_l_azione
 @pytest.mark.parametrize("chiave, slot", [
     ("bard.bardic_inspiration", "bonus_used"), ("bard.countercharm", "action_used"), ("bard.cutting_words", "reaction_used"),
 ], ids=["ispirazione_azione_bonus", "controfascino_azione", "parole_taglienti_reazione"])
-@pytest.mark.xfail(strict=True, reason="CB-1613: difforme dal manuale, confermato")
 async def test_un_bardo_incapacitato_non_usa_privilegi_che_costano_azione_o_reazione(client, chiave, slot):
     cid = await _bardo(client, 6, LORE, charisma=16)
     r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})

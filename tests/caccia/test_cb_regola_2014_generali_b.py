@@ -111,7 +111,6 @@ async def test_chi_non_puo_agire_non_lancia_e_non_spende_lo_slot(client, condizi
 @pytest.mark.caccia(id="CB-2812", fonte="2014 · Condizioni · Regole generali · pag. 290 (ogni effetto ha la sua durata)", zona="regola:2014/generali",
                     voce="interazione", copre=["carta:2014/general.md#Regole generali / General (pag. 290)",
                                                "POST /characters/{char_id}/features/{feature_key}/use", "DELETE /characters/{char_id}/active-states/{key}"])
-@pytest.mark.xfail(strict=True, reason="CB-2812: difforme dal manuale, confermato")
 async def test_finiti_i_due_effetti_che_rendono_invisibili_la_condizione_cade(client):
     cid = await _pg(client, "monk", 18, "Via dell'Ombra")
     r = await client.post(f"/characters/{cid}/features/monk.cloak_of_shadows/use", json={"params": {"light": "dim_or_dark"}})
@@ -161,7 +160,6 @@ async def test_due_eroismi_sullo_stesso_bersaglio_vale_il_piu_potente(client, te
                     copre=["carta:2014/general.md#Durata / Duration (pag. 203)", "PATCH /characters/{char_id}/concentration",
                            "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/wild-magic/surge"])
 @pytest.mark.parametrize("classe,sottoclasse,incapacita", [("cleric", None, _finta_morte), ("sorcerer", "Magia Selvaggia", _pianta_in_vaso)])
-@pytest.mark.xfail(strict=True, reason="CB-2815: difforme dal manuale, confermato")
 async def test_uno_stato_che_incapacita_interrompe_la_concentrazione(client, classe, sottoclasse, incapacita):
     cid = await _pg(client, classe, 5, sottoclasse)
     volo = await _incantesimo(client, cid, "Volo", 1, concentrazione=True)

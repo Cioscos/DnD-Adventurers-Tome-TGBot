@@ -208,7 +208,8 @@ FERAL_SENSES = RollOptionSpec(
 
 
 def _slayer_ready(ctx: RuleContext) -> bool:
-    return _own_attack(ctx) and _wis_mod(ctx) > 0
+    # «a turno del ranger» (PHB 2014 p.105, «on each of your turns»): in uno scontro non nel turno di un altro
+    return _own_attack(ctx) and _wis_mod(ctx) > 0 and not (ctx.char.turn_state or {}).get("others_turn")
 
 
 def _slayer_bonus(ctx: RuleContext, _inputs: dict) -> int:

@@ -71,6 +71,12 @@ async def _turn(client, cid) -> dict:
     return (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]
 
 
+async def _new_turn_in_rage(client, cid) -> None:
+    """«Nuovo turno» che tiene l'ira: nel turno ha subito danni. Senza attacchi né danni l'Ira finisce (2014 pag. 48)."""
+    await _hit(client, cid, 1)
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+
+
 async def _ability(client, cid, key) -> dict | None:
     return next((a for a in (await _full(client, cid))["abilities"] if a["feature_key"] == key), None)
 
@@ -485,7 +491,7 @@ async def test_frenzy_is_chosen_when_entering_rage_and_costs_exhaustion_when_it_
     assert (await _rage(client, cid, frenzy=True)).json()["state"]["data"]["frenzy"] is True
     sword = await _weapon(client, cid)
     assert "barbarian.frenzy_attack" not in await _keys(client, cid, "attack", item_id=sword)  # l'ira ha speso il bonus
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     assert "barbarian.frenzy_attack" in await _keys(client, cid, "attack", item_id=sword)
     end = await client.delete(f"/characters/{cid}/active-states/rage")
     assert end.status_code == 200
@@ -505,7 +511,7 @@ async def test_frenzy_attack_spends_the_bonus_action(client):
     cid = await _barbarian(client, 3, BERSERKER, strength=16)
     sword = await _weapon(client, cid)
     await _rage(client, cid, frenzy=True)
-    await client.post(f"/characters/{cid}/turn/new")  # il bonus dell'ira è speso: nuovo turno
+    await _new_turn_in_rage(client, cid)  # il bonus dell'ira è speso: nuovo turno
     await _attack(client, cid, sword, options=["barbarian.frenzy_attack"])
     assert (await _turn(client, cid))["bonus_used"] is True
     assert "barbarian.frenzy_attack" not in await _keys(client, cid, "attack", item_id=sword)
@@ -636,10 +642,10 @@ async def test_eagle_dash_as_bonus_action_needs_rage_and_no_heavy_armor(client):
     out = await client.post(f"/characters/{cid}/features/{dash}/use", json={})
     assert out.status_code == 409 and out.json()["detail"]["code"] == "feature_unavailable"
     await _rage(client, cid)
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     ok = await client.post(f"/characters/{cid}/features/{dash}/use", json={})
     assert ok.status_code == 200 and (await _turn(client, cid))["bonus_used"] is True
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     await _armor(client, cid, "heavy")
     assert (await client.post(f"/characters/{cid}/features/{dash}/use", json={})).status_code == 409
 
@@ -717,7 +723,7 @@ async def test_wolf_attunement_offers_a_prone_effect_after_a_melee_hit_in_rage(c
     key = "barbarian.attunement_wolf_knock"
     assert key not in await _keys(client, cid, "attack", item_id=sword)
     await _rage(client, cid)
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     opts = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": sword})).json()
     assert [(o["key"], o["phase"], o["slot"]) for o in opts if o["key"] == key] == [(key, "after_hit", "bonus")]
 

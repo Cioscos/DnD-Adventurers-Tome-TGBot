@@ -69,7 +69,6 @@ async def test_fortuna_ritira_l_1_naturale_del_tiro_per_colpire_con_un_arma(clie
                     copre=["carta:2024/races.md#Halfling / Halfling (pag. 193)",
                            "carta:2024/general.md#Vantaggio e Svantaggio / Advantage/Disadvantage (pag. 12-13)",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3512: difforme dal manuale, confermato")
 async def test_fortuna_con_svantaggio_ritira_solo_l_1_e_lo_svantaggio_resta(client):
     cid = await _pg(client, "2024_halfling", {})
     r = await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"mode": "disadvantage", "dice": [1, 15]})

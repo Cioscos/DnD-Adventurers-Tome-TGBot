@@ -61,7 +61,6 @@ async def test_il_rilancio_con_ispirazione_tocca_un_solo_d20_e_lo_svantaggio_res
                     voce="regola", copre=["carta:2024/general.md#Ispirazione Eroica / Heroic Inspiration (pag. 13)",
                                           "POST /sessions/{session_id}/inspiration/grant", "POST /characters/{char_id}/rest"])
 @pytest.mark.parametrize("da_chi", ["master", "riposo_lungo_umano"])
-@pytest.mark.xfail(strict=True, reason="CB-2862: difforme dal manuale, confermato")
 async def test_un_ispirazione_ricevuta_avendone_gia_una_si_puo_cedere(client, test_session_factory, da_chi):
     if da_chi == "master":
         sid, cid = await seed_session(test_session_factory)
@@ -88,7 +87,6 @@ async def test_un_ispirazione_ricevuta_avendone_gia_una_si_puo_cedere(client, te
 @pytest.mark.caccia(id="CB-2863", fonte="2024 · Lancio di incantesimi · Combinare effetti · pag. 238", zona="regola:2024/generali",
                     voce="ripetizione", copre=["carta:2024/general.md#Combinare effetti / Combining Spell Effects (pag. 238)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2863: difforme dal manuale, confermato")
 async def test_lo_stesso_incantesimo_rilanciato_piu_debole_non_toglie_quello_piu_potente(client):
     cid = await _pg(client, "cleric", 5)
     aiuto = (await client.post(f"/characters/{cid}/spells", json={"name": "Aid", "srd_index": "aid", "level": 2, "is_prepared": True})).json()

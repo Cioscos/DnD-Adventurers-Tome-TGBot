@@ -1157,7 +1157,8 @@ async def grant_inspiration(
     if seat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character_not_in_session")
     char = await _load_char_full(db, body.character_id)
-    if bool(char.heroic_inspiration) == body.heroic_inspiration:
+    if bool(char.heroic_inspiration) == body.heroic_inspiration and not (
+            body.heroic_inspiration and character_edition(char) == "2024"):  # 2024: la seconda si può cedere (pag. 13)
         return None  # già così: niente riga doppia nel log
     set_inspiration(char, body.heroic_inspiration)
     text = ("Il master ha concesso l'Ispirazione Eroica a " if body.heroic_inspiration

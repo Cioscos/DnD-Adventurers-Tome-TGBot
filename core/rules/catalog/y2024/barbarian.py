@@ -708,7 +708,7 @@ FEATURES = (
             ("A inizio turno in Ira, un'altra creatura entro 3 m ottiene PF temporanei: d6 pari al bonus danni dell'Ira. Svaniscono con l'Ira.",
              "At the start of your turn while raging, another creature within 10 ft gains temporary HP: d6s equal to your Rage damage bonus. They vanish when the Rage ends."),
             "special", subclass="world_tree",
-            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, temp_hp_ally=True, temp_hp_ends_with="rage",
+            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, own_turn=True, temp_hp_ally=True, temp_hp_ends_with="rage",
                          available=lambda c: state_on(c, "rage"),
                          message=lambda _c, _p: _both("I PF temporanei dell'altra creatura svaniscono quando finisce la tua Ira.",
                                                       "The other creature's temporary HP vanish when your Rage ends."))),

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.rules.edition import character_edition
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, _hp_max
 from core.rules.types import StateSpec
 
 
@@ -33,19 +33,36 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
         previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
         wanted = (spec.condition, *spec.also_conditions)
         before = state_conditions(previous) if previous else {}
-        was = {c: before.get(c, bool((char.conditions or {}).get(c))) for c in wanted}
+        # accesa da un altro stato: c'era già solo se c'era già per quello (ogni effetto ha la sua durata, 2014 pag. 290)
+        imposed = {c: w for s in get_states(char) if s.get("key") != spec.key for c, w in state_conditions(s).items()}
+        was = {c: before.get(c, imposed.get(c, bool((char.conditions or {}).get(c)))) for c in wanted}
         state.update(condition=spec.condition, condition_was_on=was[spec.condition])
         if spec.also_conditions:
             state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
+        from core.rules.catalog._common import INCAPACITATING  # import locale: il catalogo importa questo modulo
+        if any(c in INCAPACITATING and not (char.conditions or {}).get(c) for c in wanted):
+            state["data"]["drops_concentration"] = True  # incapacitato: la concentrazione cade (2014 pag. 203), la chiude il flush
         char.conditions = {**(char.conditions or {}), **{c: True for c in wanted}}
     char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
     return state
 
 
+def _spell_hp_max(char: Any, key: str, data: dict) -> int:
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il catalogo importa questo modulo
+    effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
+    variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
+    return _hp_max(variant, data) if variant else 0
+
+
 def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Come ``begin_state`` per uno stato ``spell:*``: uno stato per coppia (incantesimo, lanciatore). Quello di un altro lanciatore
-    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano."""
+    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano. Lo stesso lanciatore che lo
+    rilancia più debole non toglie il più potente (2014 pag. 205, 2024 pag. 238: vale il bonus più alto, non l'ultimo)."""
     caster = spec.data.get("caster_id")
+    mine = next((s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") == caster), None)
+    if mine and _spell_hp_max(char, spec.key, mine.get("data") or {}) > _spell_hp_max(char, spec.key, spec.data):
+        # shortcut: un orologio per lanciatore, il più potente dura quanto il nuovo lancio; servirebbero due orologi se le durate differiscono
+        return mine
     others = [s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") != caster]
     state = begin_state(char, spec, feature_key, name)
     if others:
@@ -275,6 +292,9 @@ EXCLUSIVE_TARGETS = "exclusive_targets"  # settings: {chiave dell'effetto: ["com
 
 
 TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}
+# Effetti la cui immunità il riposo lungo non chiude: «se il TS riesce, non si può più usare contro quella creatura»
+# (Comandare Non Morti 2014, pag. 88)
+LASTING_IMMUNITY = frozenset({"wizard.command_undead"})
 
 
 def target_key(combatant: Any) -> str:
@@ -293,10 +313,12 @@ def add_target_immunity(char: Any, effect_key: str, target: str) -> None:
 
 
 def reset_target_immunity(char: Any) -> None:
-    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri."""
+    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri, non quelle per sempre (``LASTING_IMMUNITY``)."""
     settings = char.settings or {}
-    if settings.get(TARGET_IMMUNITY):
-        char.settings = {k: v for k, v in settings.items() if k != TARGET_IMMUNITY}
+    immune = settings.get(TARGET_IMMUNITY) or {}
+    kept = {k: v for k, v in immune.items() if k in LASTING_IMMUNITY}
+    if kept != immune:
+        char.settings = {**{k: v for k, v in settings.items() if k != TARGET_IMMUNITY}, **({TARGET_IMMUNITY: kept} if kept else {})}
 
 
 def reset_zero_hp_uses(char: Any) -> None:

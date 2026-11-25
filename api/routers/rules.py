@@ -26,13 +26,15 @@ from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied, resolve_d20
 from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
-from api.services.rules_states import end_unextended, remove_state, use_feature
+from api.services.rules_states import end_states, end_unextended, get_states, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import item_spell_held
 from api.services.turn_start import apply_turn_start
-from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
+from api.services.rules_turn import (
+    clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, set_damaged, spend,
+)
 from api.services.durations import end_concentration, is_concentrating
 from api.services.condition_effects import release_concentration_effects
 from core.db.models import Character, Combatant, Encounter, GameSession
@@ -131,8 +133,12 @@ async def turn_new(
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
-    if not in_encounter:
-        end_unextended(char)  # fuori da un incontro «Nuovo turno» chiude il turno che finisce (Ira 2024)
+    if not in_encounter:  # fuori da un incontro «Nuovo turno» chiude il turno che finisce, come la fine turno in scontro
+        if any("turn_end_inactive" in s["ends_on"] for s in get_states(char)):  # Ira 2014: né attacchi né danni dal turno precedente
+            if not (ended := get_turn(char))["attacks_made"] and not ended["damaged"]:
+                end_states(char, "turn_end_inactive")
+            set_damaged(char, False)  # il danno conta una sola valutazione (senza Ira resta: l'annullo dei PF lo confronta)
+        end_unextended(char)  # Ira 2024
     turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
         await apply_turn_start(db, char, in_encounter=False)
@@ -259,10 +265,20 @@ async def last_roll_options(
         # dopo uno svantaggio si sceglie fra tre d20: l'etichetta non dice «vantaggio» (svantaggio + Fortunato = scelta libera)
         die, dice, mode = best, [*(dice or [die]), added.kept], "normal" if mode == "disadvantage" else "advantage"
     elif opts.reroll:
-        outcome = resolve_applied(body.mode, body.dice, None, applied)
+        if opts.mode is None:  # lo stesso tiro, nello stesso modo: con vantaggio o svantaggio si ritira un d20 solo
+            # (2014 pag. 173, 2024 pag. 12-13), il più basso: è la scelta che conviene sempre (ed è l'1 di Fortuna)
+            new = body.dice[0] if body.dice else random.randint(1, 20)
+            # dopo Fortunato i d20 sono anche tre (e la scelta è libera, «normal»): dei due che restano vale il migliore
+            held = sorted(dice)[1:][-1:]
+            outcome = resolve_applied("advantage" if held and mode == "normal" else mode, [new, *held], None, applied, reroll=True)
+            outcome.mode = mode
+            rolled = [("d20", new)]
+        else:  # un ritiro con un modo suo è un tiro nuovo (Controfascino 2024: con vantaggio)
+            outcome = resolve_applied(body.mode, body.dice, None, applied)
+            rolled = d20_records(outcome)
         total += outcome.kept - die
         die, dice, mode = outcome.kept, outcome.dice, outcome.mode
-        record_dice(char, d20_records(outcome))
+        record_dice(char, rolled)
     rolls, extra = roll_option_dice(char, opts)
     bonus += opts.bonus
     total += opts.bonus + extra
