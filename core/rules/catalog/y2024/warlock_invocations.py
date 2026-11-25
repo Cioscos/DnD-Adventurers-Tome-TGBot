@@ -353,7 +353,7 @@ _ROWS: list = [
          passive=True,
          choices=(ChoiceSpec(group="tome_cantrips", levels={1: 3}, options=lambda _c: [], spell_pick="extra", spell_level=0),
                   ChoiceSpec(group="tome_rituals", levels={1: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
-                             spell_ritual=True))),
+                             spell_ritual=True, always_prepared=True))),  # «finché il libro è con sé sono preparati» (pag. 157)
     *_per_cantrip(
         "repelling_blast", "Deflagrazione Respingente", "Repelling Blast",
         f"{_P}, livello 2+, {_DAMAGE} con un tiro per colpire, pag. 157",

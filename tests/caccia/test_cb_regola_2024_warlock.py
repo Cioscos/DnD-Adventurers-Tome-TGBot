@@ -77,7 +77,6 @@ async def test_l_arma_magica_da_guerra_legata_al_patto_ha_la_competenza(client):
 @pytest.mark.caccia(id="CB-2664", fonte="2024 · Warlock · Patto del Tomo · pag. 157", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Patto del Tomo / Pact of the Tome (Suppliche Occulte, pag. 157)",
                            "POST /characters/{char_id}/spells", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2664: difforme dal manuale, confermato")
 async def test_il_rituale_del_libro_delle_ombre_e_preparato(client):
     cid = await _caster24(client, 3, TOME)
     rituali = _choice(await _full(client, cid), "tome_rituals")
