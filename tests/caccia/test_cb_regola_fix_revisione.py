@@ -411,3 +411,20 @@ async def test_un_arma_legata_ceduta_non_e_piu_l_arma_del_patto():
     await give_item(Db(), cede, riceve, 1, None)
     meta = json.loads(arma.item_metadata)
     assert "pact_weapon" not in meta and meta["damage_type"] == "slashing"
+
+
+@pytest.mark.caccia(id="CB-4790", fonte="2024 · Furfante · Usare Dispositivi Magici · pag. 131; Glossario · Addestramento nelle armature · pag. 361; 2024 · Barbaro · Ira · pag. 51",
+                    zona="regola:2024/rogue", voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/scroll"])
+async def test_la_pergamena_chiede_conferma_in_armatura_senza_addestramento(client):
+    cid = await _crea(client, "2024", ("rogue", 13, "Furfante"))
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Armatura a piastre", "item_type": "armor", "item_metadata": {
+        "armor_type": "heavy", "ac_value": 18}})
+    piastre = max(i["id"] for i in r.json()["items"])
+    assert (await client.patch(f"/characters/{cid}/items/{piastre}", json={"is_equipped": True, "equipment_slot": "body"})).status_code == 200
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Pergamena", "item_type": "consumable", "quantity": 1,
+                                                           "item_metadata": {"subtype": "scroll"}})
+    pergamena = max(i["id"] for i in r.json()["items"])
+    r = await client.post(f"/characters/{cid}/items/{pergamena}/scroll", json={"spell_level": 1})
+    assert r.status_code == 409 and r.json()["detail"] == {"code": "cast_confirm", "warnings": ["armor"]}, r.text
+    r = await client.post(f"/characters/{cid}/items/{pergamena}/scroll", json={"spell_level": 1, "confirm": ["armor"]})
+    assert r.status_code == 200, r.text

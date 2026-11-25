@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
-import { apiErrorCode, notifyCastError, notifyMutationError } from '@/lib/mutationError'
-import { askCastConfirm, CastCancelled } from '@/lib/rollOptions'
+import { notifyCastError, notifyMutationError } from '@/lib/mutationError'
+import { CastCancelled, castWithConfirm } from '@/lib/rollOptions'
 import { resolveItemCast, matchingSpell, type ResolvedItemCast } from '@/lib/itemCast'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import { needsEffectAsk } from '@/lib/spellChoice'
@@ -24,17 +24,8 @@ export function useItemCast(charId: number) {
   const [ask, setAsk] = useState<{ itemId: number; spellIndex: number; name: string; level: number; effect: SpellEffectInfo } | null>(null)
 
   const mutation = useMutation({
-    mutationFn: async ({ itemId, spellIndex, pick }: { itemId: number; spellIndex: number; name: string; pick?: SpellEffectPick }) => {
-      try {
-        return await api.items.cast(charId, itemId, spellIndex, pick)
-      } catch (err) {
-        // Come il lancio dalla scheda: armatura senza addestramento o Ira si confermano, il server non vede le eccezioni.
-        if (apiErrorCode(err) !== 'cast_confirm') throw err
-        const confirm = ((err as ApiError).detail as { warnings: string[] }).warnings
-        for (const code of confirm) if (!(await askCastConfirm(code))) throw new CastCancelled()
-        return api.items.cast(charId, itemId, spellIndex, { ...pick, confirm })
-      }
-    },
+    mutationFn: ({ itemId, spellIndex, pick }: { itemId: number; spellIndex: number; name: string; pick?: SpellEffectPick }) =>
+      castWithConfirm((confirm) => api.items.cast(charId, itemId, spellIndex, confirm ? { ...pick, confirm } : pick)),
     onSuccess: (updated, { itemId, spellIndex }) => {
       qc.setQueryData(['character', charId], updated)
       haptic.success()

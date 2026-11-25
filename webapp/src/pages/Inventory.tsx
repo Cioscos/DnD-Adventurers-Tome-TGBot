@@ -47,7 +47,7 @@ import GiveSheet from '@/pages/inventory/GiveSheet'
 import { useTradePartners } from '@/hooks/useTradePartners'
 import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
-import { canRerollInspiration } from '@/lib/rollOptions'
+import { canRerollInspiration, castWithConfirm, CastCancelled } from '@/lib/rollOptions'
 
 const COIN_KEYS = ['platinum', 'gold', 'electrum', 'silver', 'copper'] as const
 const COIN_ABBR = { platinum: 'pp', gold: 'gp', electrum: 'ep', silver: 'sp', copper: 'cp' } as const
@@ -351,12 +351,15 @@ export default function Inventory() {
   })
   const itemCast = useItemCast(charId)
   const scrollMutation = useMutation({
-    mutationFn: ({ itemId, level }: { itemId: number; level: number }) => api.items.scroll(charId, itemId, level),
+    mutationFn: ({ itemId, level }: { itemId: number; level: number }) =>
+      castWithConfirm((confirm) => api.items.scroll(charId, itemId, level, confirm)),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
     },
-    onError: (err) => notifyMutationError(err),
+    onError: (err) => {
+      if (!(err instanceof CastCancelled)) notifyMutationError(err)
+    },
   })
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))

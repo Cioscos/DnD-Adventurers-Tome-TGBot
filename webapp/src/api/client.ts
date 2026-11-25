@@ -1083,10 +1083,10 @@ export const api = {
     recoverAmmo: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/recover-ammo`, { method: 'POST' }),
     /** Lancio da pergamena (Usare Dispositivi Magici): l'esito arriva nelle notifiche della risposta. */
-    scroll: (charId: number, itemId: number, spellLevel: number) =>
+    scroll: (charId: number, itemId: number, spellLevel: number, confirm?: string[]) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/scroll`, {
         method: 'POST',
-        body: JSON.stringify({ spell_level: spellLevel }),
+        body: JSON.stringify({ spell_level: spellLevel, confirm }),
       }),
     cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string>; confirm?: string[] }) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {

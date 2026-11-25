@@ -1249,6 +1249,12 @@ async def adjust_item_charges(
     return response
 
 
+def _require_cast_confirm(char: Character, confirm: list[str] | None) -> None:
+    warnings = (["armor"] if _armor_block(char) else []) + (["state_blocks_casting"] if casting_blocked_by(char) else [])
+    if missing := [w for w in warnings if w not in (confirm or [])]:
+        raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
+
+
 @router.post("/{char_id}/items/{item_id}/cast", response_model=CharacterFull)
 async def cast_from_item(
     char_id: int,
@@ -1269,9 +1275,7 @@ async def cast_from_item(
         raise HTTPException(status_code=409, detail="attunement_required")
     # È un lancio come da /spells/{id}/use: l'armatura senza addestramento (2024 pag. 361) e l'Ira (2014 pag. 48) si
     # confermano. Il resto di cast_warnings non vale qui: niente slot, componenti né tempo di lancio dell'oggetto.
-    warnings = (["armor"] if _armor_block(char) else []) + (["state_blocks_casting"] if casting_blocked_by(char) else [])
-    if missing := [w for w in warnings if w not in (body.confirm or [])]:
-        raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
+    _require_cast_confirm(char, body.confirm)
     fx_spell = item_spell(spell)
     fx_level = max(fx_spell.level, int(spell.get("slot_level") or 0))  # l'oggetto può lanciarlo a un livello più alto
     resolved = await validate_spell_targets(session, char, fx_spell, fx_level, body.targets, body.choices)  # prima di spendere
@@ -1318,6 +1322,7 @@ async def cast_from_item(
 
 class ScrollCast(BaseModel):
     spell_level: int = Field(ge=0, le=9)
+    confirm: list[str] | None = Field(default=None, max_length=10)  # regole violate e confermate, come il lancio da un oggetto
 
 
 @router.post("/{char_id}/items/{item_id}/scroll", response_model=CharacterFull)
@@ -1338,6 +1343,7 @@ async def cast_from_scroll(
         raise HTTPException(status_code=409, detail="no_scroll_casting")
     if item.item_type != "consumable" or item_meta(item).get("subtype") != "scroll" or item.quantity <= 0:
         raise HTTPException(status_code=409, detail="not_a_scroll")
+    _require_cast_confirm(char, body.confirm)
     level = body.spell_level
     it = lang != "en"
     ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato." if it else f"{item.name}: level {level} spell cast."

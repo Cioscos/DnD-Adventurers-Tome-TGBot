@@ -2,8 +2,9 @@ import { uiLang } from '@/lib/lang'
 import type { QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { create } from 'zustand'
-import { api } from '@/api/client'
+import { api, type ApiError } from '@/api/client'
 import i18n from '@/i18n'
+import { apiErrorCode } from '@/lib/mutationError'
 import type { TFunction } from 'i18next'
 import type { LastRollResult, OptionResult, RollChoice, RollMode, RollOption, RollOptionPhase, RollOptionsQuery, SpellUseBody } from '@/api/client'
 import type { CharacterFull } from '@/types'
@@ -70,6 +71,18 @@ export function askCastConfirm(code: string): Promise<boolean> {
       request: { code, answer: (go) => { useCastConfirmStore.setState({ request: null }); resolve(go) } },
     })
   })
+}
+
+/** Lancio da un oggetto o una pergamena: armatura senza addestramento o Ira si confermano, il server non vede le eccezioni. */
+export async function castWithConfirm<T>(cast: (confirm?: string[]) => Promise<T>): Promise<T> {
+  try {
+    return await cast()
+  } catch (err) {
+    if (apiErrorCode(err) !== 'cast_confirm') throw err
+    const confirm = ((err as ApiError).detail as { warnings: string[] }).warnings
+    for (const code of confirm) if (!(await askCastConfirm(code))) throw new CastCancelled()
+    return cast(confirm)
+  }
 }
 
 async function castWarnings(charId: number, spellId: number, ritual: boolean, slotless?: boolean, quickened?: boolean): Promise<string[]> {
