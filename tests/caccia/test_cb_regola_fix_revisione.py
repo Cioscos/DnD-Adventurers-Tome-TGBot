@@ -597,3 +597,18 @@ async def test_metamagia_e_suppliche_si_sostituiscono_una_per_livello(client, ed
     assert (await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": 5})).status_code == 200
     r = await client.post(url, json={"group": gruppo, "old_key": scelte[1], "new_key": nuove[1]})
     assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-4832", fonte="2024 · Druido · Incantesimi del Circolo della Terra · pag. 84 (il terreno si sceglie a ogni riposo lungo)",
+                    zona="regola:2024/druid", voce="limiti",
+                    copre=["carta:2024/classes/druid.md#Incantesimi del Circolo della Terra / Circle of the Land Spells (Circolo della Terra 3, pag. 84)",
+                           "POST /characters/{char_id}/classes/{class_id}/options/replace"])
+async def test_il_terreno_del_circolo_si_cambia_una_volta_per_riposo_lungo(client):
+    cid = await _circle(client, "land", 5, "arid")
+    cls = (await _scheda(client, cid))["classes"][0]["id"]
+    url = f"/characters/{cid}/classes/{cls}/options/replace"
+    assert (await client.post(url, json={"group": "land_terrain", "old_key": "arid", "new_key": "polar"})).status_code == 200
+    r = await client.post(url, json={"group": "land_terrain", "old_key": "polar", "new_key": "tropical"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "replace_after_long_rest", r.text[:200]
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
+    assert (await client.post(url, json={"group": "land_terrain", "old_key": "polar", "new_key": "tropical"})).status_code == 200

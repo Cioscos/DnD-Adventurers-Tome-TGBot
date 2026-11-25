@@ -283,7 +283,7 @@ def _land_rows() -> list:
                     ("Dopo ogni riposo lungo scegli il terreno: i suoi incantesimi sono sempre preparati, fuori dal limite.",
                      "After each long rest you choose the terrain: its spells are always prepared, outside the limit."),
                     subclass="land", no_row=True,
-                    choices=(ChoiceSpec(group=LAND_TERRAIN, levels={3: 1}, options=lambda _c: list(TERRAINS), replaceable=True),),
+                    choices=(ChoiceSpec(group=LAND_TERRAIN, levels={3: 1}, options=lambda _c: list(TERRAINS), replaceable=True, replace_per_long_rest=1),),
                     covered_by="ChoiceSpec land_terrain di questa riga e le righe dei terreni; test_land_spells_follow_the_chosen_terrain")]
     for key, (it, en, _res, tiers) in TERRAINS.items():
         name = (f"{it} (terreno)", f"{en} (terrain)")
@@ -350,8 +350,8 @@ def _circle_cast_options(ctx: RuleContext) -> list[str]:
 def _recovery_cast(ctx: RuleContext, params: dict) -> None:
     """Autorizza un lancio gratuito (R43) di un incantesimo di circolo; il lancio chiude l'autorizzazione."""
     spell = str(params["spell"])
-    begin_state(ctx.char, StateSpec("natural_recovery_free", ends_on=("manual", "rest_long"), data={"free_cast": spell, "spell": spell}),
-                f"{CK}.natural_recovery_cast", "Recupero Naturale")
+    begin_state(ctx.char, StateSpec("natural_recovery_free", ends_on=("manual", "rest_long"), data={
+        "free_cast": spell, "spell": spell}), f"{CK}.natural_recovery_cast", "Recupero Naturale")
 
 
 NATURAL_RECOVERY_CAST = OnUse(
