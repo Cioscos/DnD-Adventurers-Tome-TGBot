@@ -66,21 +66,18 @@ def test_peso_delle_armi_del_catalogo_2024(indice):
                            "carta:2024/equipment.md#Equipaggiamento da avventura / Adventuring Gear (pag. 222-229)",
                            "carta:2024/equipment.md#Altri strumenti / Other Tools (pag. 221)", "POST /characters"])
 @pytest.mark.parametrize("classe, nomi, peso", [
-    # i pacchetti restano da pesare; gli oggetti singoli pesano già come la tabella (pag. 221-223)
-    pytest.param(*caso, marks=pytest.mark.xfail(strict=True, reason="CB-3612: difforme dal manuale, confermato"))
-    if caso[1][0].startswith("Dotazione") else caso for caso in [
-        ("barbarian", ("Dotazione da esploratore", "Explorer's pack"), 55),
-        ("fighter", ("Dotazione da avventuriero", "Dungeoneer's pack"), 55),
-        ("rogue", ("Dotazione da scassinatore", "Burglar's pack"), 42),
-        ("rogue", ("Arnesi da scasso", "Thieves' tools"), 1),
-        ("cleric", ("Dotazione da sacerdote", "Priest's pack"), 29),
-        ("wizard", ("Dotazione da studioso", "Scholar's pack"), 22),
-        ("wizard", ("Veste", "Robe"), 4),
-        ("bard", ("Dotazione da intrattenitore", "Entertainer's pack"), 58.5),
-        ("druid", ("Kit da erborista", "Herbalism kit"), 3),
-        ("ranger", ("Faretra", "Quiver"), 1),
-        ("ranger", ("Frecce", "Arrows"), 1),  # 20 frecce pesano 1 lb in tutto
-    ]])
+    ("barbarian", ("Dotazione da esploratore", "Explorer's pack"), 55),
+    ("fighter", ("Dotazione da avventuriero", "Dungeoneer's pack"), 55),
+    ("rogue", ("Dotazione da scassinatore", "Burglar's pack"), 42),
+    ("rogue", ("Arnesi da scasso", "Thieves' tools"), 1),
+    ("cleric", ("Dotazione da sacerdote", "Priest's pack"), 29),
+    ("wizard", ("Dotazione da studioso", "Scholar's pack"), 22),
+    ("wizard", ("Veste", "Robe"), 4),
+    ("bard", ("Dotazione da intrattenitore", "Entertainer's pack"), 58.5),
+    ("druid", ("Kit da erborista", "Herbalism kit"), 3),
+    ("ranger", ("Faretra", "Quiver"), 1),
+    ("ranger", ("Frecce", "Arrows"), 1),  # 20 frecce pesano 1 lb in tutto
+])
 async def test_l_equipaggiamento_di_partenza_2024_pesa_come_la_tabella(client, classe, nomi, peso):
     r = await client.post("/characters", json={"name": "Prova", "rules_edition": "2024", "initial_class": {"class_name": classe},
                                                "starting_equipment": [0]})
