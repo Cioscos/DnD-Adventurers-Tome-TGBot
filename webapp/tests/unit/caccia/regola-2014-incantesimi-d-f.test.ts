@@ -56,7 +56,7 @@ afterEach(() => { vi.clearAllMocks() })
 
 describe('caccia: regola 2014 incantesimi D-F', () => {
   // caccia: {"id": "CB-3264", "fonte": "2014 · Incantesimi · Dardo Stregato (solo il danno iniziale cresce con lo slot) · pag. 228", "zona": "regola:2014/incantesimi-D-F", "voce": "regola", "copre": ["carta:2014/spells.md#Dardo Stregato", "route:/char/:id/spells"]}
-  it.fails('il danno dei turni dopo di Dardo Stregato resta 1d12 anche lanciato con uno slot più alto', async () => {
+  it('il danno dei turni dopo di Dardo Stregato resta 1d12 anche lanciato con uno slot più alto', async () => {
     renderWithProviders(createElement(Banco), { client: new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }) })
     await userEvent.click(screen.getByText('danni-turno-dopo'))
     // solo il danno iniziale cresce con lo slot: il tiro del turno dopo si fa al livello dell'incantesimo

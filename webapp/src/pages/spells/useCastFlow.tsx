@@ -37,7 +37,9 @@ const STEP_VARIANTS = {
 }
 
 /** Dadi al lancio con le scelte appena fatte (Glifo: solo le rune esplosive aprono il foglio danni). */
-const damageOnCast = (spell: Spell) => rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
+/** Lo slot più alto aumenta solo il danno iniziale: nei turni dopo si tira al livello dell'incantesimo (Dardo stregato, 2014 pag. 228, 2024 pag. 343). */
+const INITIAL_UPCAST_ONLY = new Set(['witch-bolt'])
+const damageOnCast = (spell: Spell) =>rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
 
 type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
@@ -391,7 +393,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const rollActiveDamage = (spell: Spell) => {
     const level = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
     setPendingRitual(false)
-    setPendingSlotLevel(level ?? spell.level)
+    setPendingSlotLevel(INITIAL_UPCAST_ONLY.has(spell.srd_index ?? '') ? spell.level : level ?? spell.level)
     setPendingSlotId(undefined)
     setDamageAfterAttack({ critical: false })  // lo slot l'ha già speso il lancio
     setRollDamageSpell(spell)
