@@ -93,11 +93,17 @@ def carried_weight(items, purse_coins: dict, coin_weight: bool) -> float:
     return total
 
 
+def encumbrance_variant(char) -> bool:
+    """La Variante dell'ingombro è una regola 2014 (p.176): nel 2024 non ha effetto, anche se accesa (D-050)."""
+    from core.rules.edition import character_edition  # import locale: core.rules importa questo modulo
+    return bool((getattr(char, "settings", None) or {}).get("encumbrance_variant")) and character_edition(char) == "2014"
+
+
 def encumbrance_level(char) -> str:
     """Variante dell'ingombro (2014 p.176): «none», «encumbered» oltre For x5 lb, «heavily» oltre For x10; «none» a variante spenta."""
-    cfg = char.settings or {}
-    if not cfg.get("encumbrance_variant"):
+    if not encumbrance_variant(char):
         return "none"
+    cfg = char.settings or {}
     from core.game.stats import effective_ability_score
     from core.rules.modifiers import modifiers_for  # import locale: modifiers usa questo livello per lo svantaggio
 

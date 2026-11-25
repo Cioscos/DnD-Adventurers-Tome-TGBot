@@ -840,3 +840,28 @@ async def test_le_scelte_del_mezzelfo_sono_salvate_e_non_si_ripetono_nella_class
     scheda = await _scheda(client, r.json()["id"])
     assert {k for k, v in scheda["skills"].items() if v} == {"religion", "stealth", "medicine", "history"}
     assert scheda["languages"] == ["Comune", "Elfico", "Draconico"]
+
+
+@pytest.mark.caccia(id="CB-4883", fonte="decisione D-050 (tests/caccia/decisioni.md): la Variante dell'ingombro non ha effetto nel 2024; 2014 · Equipaggiamento · Variante: Ingombro · pag. 176",
+                    zona="regola:2024/generali", voce="edizioni",
+                    copre=["carta:2014/general.md#Forza / Strength (pag. 175-176)", "GET /characters/{char_id}",
+                           "POST /characters/{char_id}/skills/{skill_name}/roll"])
+@pytest.mark.parametrize("edizione, livello, velocita, modo", [("2014", "heavily", 10, "disadvantage"), ("2024", "none", 20, "normal")])
+async def test_la_variante_dell_ingombro_vale_solo_nel_2014(client, edizione, livello, velocita, modo):
+    cid = await _pg(client, edizione, "fighter", 1, strength=10)
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Sacco", "weight": 110, "quantity": 1})
+    assert r.status_code == 201, r.text
+    # armatura che chiede Forza 15: la variante ne ignora la colonna Forza (pag. 176), nel 2024 resta
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Corazza", "item_type": "armor", "weight": 0, "quantity": 1,
+                                                            "item_metadata": {"armor_type": "heavy", "ac_value": 18, "strength_req": 15}})
+    assert r.status_code == 201, r.text
+    corazza = next(i["id"] for i in (await _scheda(client, cid))["items"] if i["name"] == "Corazza")
+    r = await client.patch(f"/characters/{cid}/items/{corazza}", json={"is_equipped": True, "equipment_slot": "body"})
+    assert r.status_code == 200, r.text
+    settings = (await _scheda(client, cid))["settings"] or {}
+    assert (await client.patch(f"/characters/{cid}", json={"settings": {**settings, "encumbrance_variant": True}})).status_code == 200
+    scheda = await _scheda(client, cid)
+    assert (scheda["encumbrance_level"], scheda["computed"]["speed"]) == (livello, velocita)
+    r = await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 10})
+    assert r.json()["mode"] == modo, r.json()
+

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from core.data.damage_types import damage_multiplier
-from core.game.containers import encumbrance_level
+from core.game.containers import encumbrance_level, encumbrance_variant
 from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -202,7 +202,7 @@ _DWARF = re.compile(r"\b(dwarf|nan[oa])\b")
 def _ignores_armor_strength(ctx: RuleContext) -> bool:
     """La colonna Forza delle armature non vale con la variante dell'ingombro (2014 pag. 176: conta solo il peso) né per il
     nano 2014, non rallentato dall'armatura pesante (pag. 28; il nano 2024 sì)."""
-    return bool((getattr(ctx.char, "settings", None) or {}).get("encumbrance_variant")) or (
+    return encumbrance_variant(ctx.char) or (
         ctx.edition == "2014" and bool(_DWARF.search((getattr(ctx.char, "race", None) or "").lower())))
 
 

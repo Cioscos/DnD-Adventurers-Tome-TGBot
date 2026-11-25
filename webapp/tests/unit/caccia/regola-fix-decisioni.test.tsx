@@ -7,6 +7,7 @@ import SaveRollSheet from '@/components/SaveRollSheet'
 import Extras from '@/pages/Extras'
 import Spells from '@/pages/Spells'
 import CharacterSelect from '@/pages/CharacterSelect'
+import Settings from '@/pages/Settings'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
 import type { Spell } from '@/types'
@@ -18,7 +19,7 @@ const { getChar, updateXP, rollSave, createComp, useSpell, rollHealing, updateSp
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave }, sessionAllies: vi.fn(async () => [{ id: 9, name: 'Brann' }]), list: vi.fn(async () => []) },
-    sessions: { me: vi.fn(async () => null) },
+    sessions: { me: vi.fn(async () => null) }, history: { retentionPreview: vi.fn(async () => ({ total: 0, would_purge_events: 0, would_purge_days: 0 })) },
     companions: { list: vi.fn(async () => []), create: createComp }, spells: { use: useSpell, rollHealing, update: updateSpell },
   },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
@@ -30,6 +31,8 @@ vi.mock('react-i18next', async (orig) => ({
   ...(await orig<typeof import('react-i18next')>()), useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),
 }))
 vi.mock('@/components/Layout', () => ({ default: (p: { children?: React.ReactNode }) => <div>{p.children}</div> }))
+vi.mock('@/dice/packs/dicePackContext', () => ({ useDicePack: () => ({ loading: false, error: null }) }))
+vi.mock('@/dice/packs/manifest', () => ({ loadManifest: async () => ({ name: 'x' }) }))
 vi.mock('@/pages/multiclass/LevelUpModal', () => ({ default: () => null }))
 vi.mock('@/pages/extras/CompanionForm', () => ({ default: (p: { onSubmit: (b: object) => void }) => <button onClick={() => p.onSubmit({ name: 'Orso' })}>invia</button> }))
 
@@ -132,5 +135,13 @@ describe('caccia: decisioni', () => {
     await user.click(await screen.findByTitle('character.spells.not_prepared'))
     await user.click(await screen.findByText('character.spells.off_rest_confirm'))
     await waitFor(() => expect(updateSpell).toHaveBeenLastCalledWith(5, 101, { is_prepared: true }, true))
+  })
+
+  // caccia: {"id": "CB-4884", "fonte": "decisione D-050 (tests/caccia/decisioni.md): la Variante dell'ingombro non ha effetto nel 2024, l'interruttore non si mostra; 2014 · Variante: Ingombro · pag. 176", "zona": "regola:2024/generali", "voce": "edizioni", "copre": ["carta:2014/general.md#Forza / Strength (pag. 175-176)", "route:/char/:id/settings"]}
+  it.each([['2014', true], ['2024', false]])('interruttore della Variante dell\'ingombro nel %s: %s', async (rules_edition, visibile) => {
+    getChar.mockResolvedValue({ id: 5, name: 'Lia', settings: {}, spellcasting: null, rules_edition })
+    renderWithProviders(<Settings />)
+    await screen.findByText('character.settings.coin_weight_label')
+    expect(screen.queryByText('character.settings.encumbrance_variant_label') !== null).toBe(visibile)
   })
 })
