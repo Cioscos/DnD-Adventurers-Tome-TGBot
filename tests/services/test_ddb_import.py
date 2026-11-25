@@ -25,7 +25,7 @@ def test_fixture_core_values():
     scores = {a.name: a.value for a in exp.ability_scores}
     assert scores == {"strength": 29, "dexterity": 11, "constitution": 20,
                       "intelligence": 10, "wisdom": 21, "charisma": 12}
-    assert exp.character.hit_points == 212
+    assert exp.character.hit_points == 212 - 19  # Robustezza Nanica la conta il motore
     assert exp.character.current_hit_points == 212 - 42
     assert [(c.class_name, c.level, c.subclass, c.hit_die) for c in exp.classes] == [
         ("Chierico", 19, "Tempest Domain", 8)]

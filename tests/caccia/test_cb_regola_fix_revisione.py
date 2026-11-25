@@ -1,4 +1,4 @@
-"""Controlli della revisione indipendente dei gruppi lancio-core, dati-incantesimi-fe e catalogo-incantesimi."""
+"""Controlli della revisione indipendente dei gruppi lancio-core, dati-incantesimi-fe, catalogo-incantesimi, scelte, stati-turno, oggetti e pf-personaggio."""
 import json
 from pathlib import Path
 
@@ -8,11 +8,23 @@ from sqlalchemy import select
 
 from core.db.models import Character, SpellSlot
 from core.rules.catalog.granted_spells import granted_spell
+from tests.caccia.test_cb_regola_2024_fighter import _guerriero, _manovre, _scheda, _usa
 from tests.caccia.test_cb_regola_fix_lancio_core import _pg
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
+from tests.integration._telegram_stub import install_fake_telegram
+from tests.integration.rules.test_2014_bard import _roll_keys, _sword
+from tests.integration.rules.test_2014_fighter_battle_master import _damage, _hit, _key
+from tests.integration.rules.test_2014_sorcerer_origins import PRESENCE, _draconic
+from tests.integration.rules.test_2014_warlock import _warlock
+from tests.integration.rules.test_2014_warlock_patrons import FEY
+from tests.integration.rules.test_2014_wizard_enchantment import GAZE, _effect, _wizard
+from tests.integration.rules.test_2024_warlock_review2 import _chain
+from tests.integration.rules.test_feats_take_complete import _complete, _feat_rows, _spell, _take
 from tests.integration.rules.test_spell_effects_defenses import _cast, _sheet, _table
 
 SRD = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd"
+NANO = Path(__file__).resolve().parents[1] / "fixtures" / "ddb" / "cleric19.json"  # chierico 19, nano delle colline 2014, 212 PF
+SCORES = {"strength": 14, "dexterity": 14, "constitution": 12, "intelligence": 14, "wisdom": 14, "charisma": 16}
 
 
 def _voce(edizione: str, indice: str) -> dict:
@@ -22,6 +34,45 @@ def _voce(edizione: str, indice: str) -> dict:
 
 def _ha(scheda: dict, chiave: str) -> bool:
     return any(s["key"] == chiave for s in scheda["active_states"] or [])
+
+
+async def _amuleto(client, cid) -> None:
+    """+1 alla CD e all'attacco degli incantesimi."""
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory", "item_metadata": {
+        "bonuses": [{"target": "spell_dc", "value": 1}, {"target": "spell_attack", "value": 1}]}})
+    assert r.status_code == 201, r.text
+    iid = max(i["id"] for i in r.json()["items"])
+    assert (await client.patch(f"/characters/{cid}/items/{iid}", json={"is_equipped": True, "equipment_slot": "neck"})).status_code == 200
+
+
+async def _crea(client, edizione: str, *classi: tuple[str, int, str | None]) -> int:
+    (nome, livello, sub), *altre = classi
+    r = await client.post("/characters", json={"name": "PG", "rules_edition": edizione, "ability_scores": SCORES,
+                                               "initial_class": {"class_name": nome, "level": livello, "subclass": sub}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    for nome, livello, sub in altre:
+        r = await client.post(f"/characters/{cid}/classes", json={"class_name": nome, "level": livello, "subclass": sub})
+        assert r.status_code == 201, r.text
+    return cid
+
+
+async def _importa(client, monkeypatch, edizione: str, talento: str | None = None, forzati: int | None = None) -> dict:
+    import api.routers.transfer as transfer
+    dati = json.loads(NANO.read_text(encoding="utf-8"))
+    if talento:
+        dati["data"]["feats"] = [*(dati["data"].get("feats") or []), {"definition": {"name": talento, "description": ""}}]
+        dati["data"]["modifiers"]["feat"].append({"type": "bonus", "subType": "hit-points-per-level", "value": 2})
+    if forzati:
+        dati["data"]["overrideHitPoints"] = forzati
+    dati["data"]["removedHitPoints"] = 10
+
+    async def finto(_id: int) -> dict:
+        return dati
+    monkeypatch.setattr(transfer, "fetch_ddb", finto)
+    r = await client.post("/characters/import/ddb", json={"url": "https://www.dndbeyond.com/characters/1", "rules_edition": edizione})
+    assert r.status_code == 201, r.text
+    return r.json()["character"]
 
 
 @pytest.mark.caccia(id="CB-4761", fonte="2014 · Incantesimi · Previsione · pag. 264; 2024 · Incantesimi · Preveggenza · pag. 276",
@@ -163,3 +214,15 @@ async def test_vita_falsata_2014_rilanciata_con_un_tiro_piu_basso_svanisce_lo_st
         await s.commit()
     assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
     assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 0
+
+
+@pytest.mark.caccia(id="CB-4781", fonte="2014 · Razze · Nano delle Colline, Robustezza Nanica · pag. 28; Talenti · Robusto · pag. 170",
+                    zona="regola:2014/razze", voce="persistenza",
+                    copre=["carta:2014/races.md#Nano delle Colline / Hill Dwarf (pag. 28)", "POST /characters/import/ddb"])
+@pytest.mark.parametrize("edizione, talento, forzati, massimo", [
+    ("2014", None, None, 212), ("2014", "Tough", None, 212 + 38), ("2014", None, 200, 200),
+    ("2024", None, None, 212), ("2024", "Tough", None, 212 + 38)])
+async def test_l_import_da_beyond_non_conta_due_volte_i_pf_per_livello(client, monkeypatch, edizione, talento, forzati, massimo):
+    scheda = await _importa(client, monkeypatch, edizione, talento, forzati)
+    assert scheda["computed"]["hp_max_effective"] == massimo
+    assert scheda["current_hit_points"] == massimo - 10  # i danni segnati su Beyond restano

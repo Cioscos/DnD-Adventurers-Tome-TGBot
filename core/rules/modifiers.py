@@ -249,7 +249,7 @@ def _heavy_weapon(ctx: RuleContext) -> list[Modifier]:
     return [Modifier("disadvantage", 1, source="weapon:heavy")] if weak else []
 
 
-_DWARVEN_TOUGHNESS = {"robustezza nanica", "dwarven toughness"}  # nome del tratto in races.json (it/en)
+DWARVEN_TOUGHNESS = {"robustezza nanica", "dwarven toughness"}  # nome del tratto in races.json (it/en)
 
 
 def _race_2014(ctx: RuleContext) -> list[Modifier]:
@@ -257,7 +257,7 @@ def _race_2014(ctx: RuleContext) -> list[Modifier]:
     if ctx.edition != "2014" or ctx.roll != "hp_max":
         return []
     from core.rules.catalog.feats import _abilities  # righe solo se caricate: niente lazy load asincrono
-    if not any(not a.feature_key and (a.name or "").strip().lower() in _DWARVEN_TOUGHNESS for a in _abilities(ctx.char)):
+    if not any(not a.feature_key and (a.name or "").strip().lower() in DWARVEN_TOUGHNESS for a in _abilities(ctx.char)):
         return []
     return [Modifier("hp_max", sum(c.level or 0 for c in ctx.char.classes or []), source="race:dwarven_toughness")]
 
