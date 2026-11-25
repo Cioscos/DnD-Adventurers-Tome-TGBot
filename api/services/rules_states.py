@@ -566,7 +566,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             out = grant_temp_hp(session, receiver, result.given)
             result.temp_received.append({"name": receiver.name, "given": result.given, "temp_hp": out["new"], "applied": out["applied"]})
             if on_use.temp_hp_ends_with and out["applied"]:  # svanisce con lo stato di chi lo dà (l'Ira): il server se ne ricorda
-                from core.rules.states import TEMP_GIVEN  # import locale, come sopra
+                from core.rules.states import TEMP_GIVEN, TEMP_MANUAL  # import locale, come sopra
+                receiver.settings = {k: v for k, v in (receiver.settings or {}).items() if k != TEMP_MANUAL}
                 given = dict((char.settings or {}).get(TEMP_GIVEN) or {})
                 given[on_use.temp_hp_ends_with] = [*(e for e in given.get(on_use.temp_hp_ends_with, []) if e["id"] != tid),
                                                    {"id": tid, "amount": result.given}]

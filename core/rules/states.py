@@ -177,6 +177,14 @@ def note_spell_temp_hp(char: Any, state_key: str, amount: int, caster_id: int | 
                          for s in char.active_states or []]
 
 
+def keep_manual_temp_hp(char: Any) -> None:
+    """I PF temporanei sono ora quelli impostati a mano: nessun effetto in corso li toglie più quando finisce (D-039)."""
+    char.active_states = [{**s, "data": {k: v for k, v in s["data"].items() if k != "temp_given"}}
+                          if (s.get("data") or {}).get("temp_given") else s for s in char.active_states or []]
+    settings = {k: v for k, v in (char.settings or {}).items() if k != TEMP_MANUAL}
+    char.settings = {**settings, TEMP_MANUAL: char.temp_hp} if char.temp_hp else settings
+
+
 def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
     """Alla fine di un incantesimo i PF temporanei che aveva dato svaniscono, ma solo se non superano quanto diede: se ora ne ha di più
     alti da un'altra fonte restano. shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo."""
@@ -267,6 +275,7 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+TEMP_MANUAL = "temp_hp_manual"  # settings del ricevente: PF temporanei impostati a mano, che la fine degli effetti non toglie (D-039)
 # PF temporanei tolti al ricevente dalla fine di un incantesimo: {chiave dello stato: {caster_id, amount, name, logged}}, per ridarli con l'annullo.
 SPELL_TEMP_DROPPED = "spell_temp_dropped"
 # Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in

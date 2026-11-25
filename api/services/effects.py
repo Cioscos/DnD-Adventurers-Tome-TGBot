@@ -24,7 +24,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_MANUAL, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
@@ -410,7 +410,8 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         char.settings = {k: v for k, v in char.settings.items() if k != TEMP_RELEASE}
         for entry in pending:
             receiver = session.get(Character, entry["id"])
-            if receiver is not None and 0 < (receiver.temp_hp or 0) <= entry["amount"]:
+            manual = (receiver.settings or {}).get(TEMP_MANUAL, 0) if receiver is not None else 0  # impostati a mano dopo: restano (D-039)
+            if receiver is not None and manual < (receiver.temp_hp or 0) <= entry["amount"]:
                 add_history(session, receiver.id, "hp_change", f"PF temporanei svaniti: l'Ira di {char.name} è finita ({receiver.temp_hp} → 0)",
                              meta={"op": "TEMP_HP", "amount": 0, "released": True})
                 receiver.temp_hp = 0

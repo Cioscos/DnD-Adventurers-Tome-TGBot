@@ -82,7 +82,7 @@ from core.game.item_bonuses import item_meta
 from api.schemas.common import ConcentrationSaveResult, OptionResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, keep_manual_temp_hp, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext, StateSpec
 from api.services.character_response import build_character_response
@@ -522,6 +522,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
+        keep_manual_temp_hp(char)
 
     if (
         body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT)

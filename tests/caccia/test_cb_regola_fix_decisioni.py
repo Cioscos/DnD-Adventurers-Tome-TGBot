@@ -281,3 +281,45 @@ async def test_le_righe_concesse_gia_create_riempiono_solo_i_campi_vuoti(client,
     assert (await client.patch(f"/characters/{cid}/xp", json={"set": 14000})).status_code == 200  # la salita di livello risincronizza
     assert await riga("spirit-guardians") == ("SAVE", "3d8", None, "1d8")
     assert (await riga("spiritual-weapon"))[:3] == ("ATK", "9d9", "force")
+
+
+@pytest.mark.caccia(id="CB-4614", fonte="decisione D-039 (tests/caccia/decisioni.md): i PF temporanei impostati a mano sopravvivono alla fine degli effetti che ne danno; 2014 · pag. 198, 2024 · pag. 29",
+                    zona="regola:2014/generali", voce="interazione",
+                    copre=["carta:2014/general.md#Punti Ferita Temporanei / Temporary Hit Points (pag. 198)", "PATCH /characters/{char_id}/hp"])
+@pytest.mark.parametrize("a_mano, dopo, resta", [(None, None, 0), (2, None, 2), (None, 2, 0)])
+async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_di_eroismo(client, test_session_factory, a_mano, dopo, resta):
+    from tests.integration.rules.test_spell_effects_hp import _end_spell, _heroism_with_temp
+    eroe, lanciatore = await _heroism_with_temp(client, test_session_factory)  # Eroismo 2014: 3 PF temporanei
+    as_user(PLAYER_ID)
+    if a_mano:
+        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": "set_temp", "value": a_mano})).status_code == 200
+    if dopo:  # scesi per un danno, non a mano: svaniscono
+        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": "damage", "value": 3 - dopo})).status_code == 200
+    await _end_spell(client, eroe, lanciatore, "heroism", "manual")
+    as_user(PLAYER_ID)
+    assert (await _scheda(client, eroe))["temp_hp"] == resta
+
+
+@pytest.mark.caccia(id="CB-4615", fonte="decisione D-039 (tests/caccia/decisioni.md): i PF temporanei impostati a mano sopravvivono alla fine degli effetti che ne danno; 2024 · pag. 29",
+                    zona="regola:2024/barbarian", voce="interazione",
+                    copre=["carta:2024/general.md#Punti Ferita Temporanei / Temporary Hit Points (pag. 29)", "PATCH /characters/{char_id}/hp"])
+@pytest.mark.parametrize("a_mano, resta", [(None, 0), (2, 2)])
+async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_dell_ira_di_un_compagno(client, test_session_factory, a_mano, resta):
+    from tests.integration._encounter_helpers import GM_ID, seed_session
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    from tests.integration.rules.test_task46_temp_hp_ally import LIFE, _life
+    _sid, eroe = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    barbaro = await _life(client)
+    await _seat(test_session_factory, barbaro)
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{barbaro}/features/{LIFE}/use", json={"params": {"target_character_ids": [eroe], "target_character_id": eroe}})
+    assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    assert (await _scheda(client, eroe))["temp_hp"] > 2
+    if a_mano:
+        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": "set_temp", "value": a_mano})).status_code == 200
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{barbaro}/active-states/rage")).status_code == 200
+    as_user(PLAYER_ID)
+    assert (await _scheda(client, eroe))["temp_hp"] == resta
