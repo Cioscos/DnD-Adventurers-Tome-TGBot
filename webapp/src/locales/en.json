@@ -153,6 +153,7 @@
       "damage_type_hint_one": "Pick a damage type",
       "damage_type_hint_other": "Pick {{count}} damage types",
       "weapon": "Weapon whose mastery you use",
+      "weapon_not_proficient": "You are not proficient with this weapon: pick another one.",
       "touched_hint": "Pick the 1st-level spell",
       "rituals_hint": "Pick the 1st-level rituals ({{n}} left)",
       "rituals_more_hint": "Your proficiency bonus went up: you can pick more 1st-level rituals ({{n}} left).",

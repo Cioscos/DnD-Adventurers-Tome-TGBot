@@ -336,7 +336,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
         )}
 
         {mutation.isError && (
-          <p className="text-xs font-body text-dnd-crimson-bright">{t('character.level_choice.error')}</p>
+          <p className="text-xs font-body text-dnd-crimson-bright">{t((mutation.error as { detail?: unknown }).detail === 'feat_weapon_not_proficient' ? 'character.feats.weapon_not_proficient' : 'character.level_choice.error')}</p>
         )}
         <Pressable
           onClick={() => mutation.mutate()}

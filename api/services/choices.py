@@ -699,9 +699,10 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         saved["weapons"] = list(weapons)
     if "weapon_mastery" in needs:  # Maestro d'armi: un'arma semplice o da guerra in cui si è competenti (2024 pag. 209)
         weapons = options.get("weapon_mastery")
-        if (not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS
-                or not proficient_with(char, weapons[0])):
+        if not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS:
             raise _bad("feat_options_invalid")
+        if not proficient_with(char, weapons[0]):
+            raise _bad("feat_weapon_not_proficient")
         saved["weapon_mastery"] = list(weapons)
     if "list" in needs and not key.startswith("feat.2024_"):  # talenti 2014 con una lista di classe
         chosen = options.get("list")

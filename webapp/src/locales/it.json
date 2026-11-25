@@ -153,6 +153,7 @@
       "damage_type_hint_one": "Scegli un tipo di danno",
       "damage_type_hint_other": "Scegli {{count}} tipi di danno",
       "weapon": "Arma di cui usi la padronanza",
+      "weapon_not_proficient": "Non sei competente in quest'arma: scegline un'altra.",
       "touched_hint": "Scegli l'incantesimo di 1º livello",
       "rituals_hint": "Scegli i rituali di 1º livello (ne mancano {{n}})",
       "rituals_more_hint": "La competenza è salita: puoi scegliere altri rituali di 1º livello (ne mancano {{n}}).",

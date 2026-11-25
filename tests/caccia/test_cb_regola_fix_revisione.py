@@ -428,3 +428,12 @@ async def test_la_pergamena_chiede_conferma_in_armatura_senza_addestramento(clie
     assert r.status_code == 409 and r.json()["detail"] == {"code": "cast_confirm", "warnings": ["armor"]}, r.text
     r = await client.post(f"/characters/{cid}/items/{pergamena}/scroll", json={"spell_level": 1, "confirm": ["armor"]})
     assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-4792", fonte="2024 · Talenti · Maestro d'Armi / Weapon Master · pag. 209 (un'arma in cui si è competenti)", zona="regola:2024/talenti", voce="input",
+                    copre=["PUT /characters/{char_id}/feats/{ability_id}/options"])
+async def test_maestro_d_armi_dice_che_manca_la_competenza(client):
+    cid = await _crea(client, "2024", ("wizard", 4, None))
+    riga = _feat_rows((await _take(client, cid, "2024_weapon_master", "strength")).json(), "2024_weapon_master")[0]
+    r = await _complete(client, cid, riga["id"], {"weapon_mastery": ["greatsword"]})
+    assert r.status_code == 422 and r.json()["detail"] == "feat_weapon_not_proficient", r.text
