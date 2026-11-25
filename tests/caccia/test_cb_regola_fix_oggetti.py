@@ -42,6 +42,17 @@ async def test_armi_possenti_ritira_anche_il_dado_di_superiorita(client, dadi):
     assert r.json()["option_result"]["extra_rolls"] == [5]
 
 
+@pytest.mark.caccia(id="CB-4274", fonte="2014 · Chierico · Equipaggiamento / Equipment · pag. 57",
+                    zona="regola:2014/cleric", voce="regola",
+                    copre=["carta:2014/classes/cleric.md#Equipaggiamento / Equipment (Chierico 1, pag. 57)",
+                           "GET /rules/starting-equipment"])
+async def test_martello_e_cotta_di_maglia_del_chierico_dicono_solo_se_competente(client):
+    gruppi = (await client.get("/rules/starting-equipment?edition=2014&class_key=cleric")).json()["groups"]
+    # «mazza, oppure martello da guerra (solo se competente)»; «... oppure cotta di maglia (solo se competente)»
+    assert gruppi[0] == ["Mazza", "Martello da guerra (solo se competente)"]
+    assert gruppi[1][2] == "Cotta di maglia (solo se competente)" and "competente" not in gruppi[1][0] + gruppi[1][1]
+
+
 @pytest.mark.caccia(id="CB-4275", fonte="2014 · Equipaggiamento · Tabella pag. 150, Strumenti pag. 154, Armature pag. 145",
                     zona="regola:2014/equipaggiamento", voce="regola",
                     copre=["carta:2014/equipment.md#Tabella (pag. 150)", "carta:2014/equipment.md#Strumenti (tabella, pag. 154)",

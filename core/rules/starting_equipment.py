@@ -85,6 +85,10 @@ _WEIGHT_LB: dict[str, float] = {
     "rope": 5,  # solo nei background 2024: la corda del 2024 (la canapa 2014 pesa 10)
 }
 
+# 2014, Chierico (pag. 57): martello da guerra e cotta di maglia «solo se competente». La competenza dipende da dominio,
+# specie e talento: l'etichetta lo dice e la scelta resta al giocatore.
+_IF_PROFICIENT: dict[tuple[str, str], tuple[str, ...]] = {("2014", "cleric"): ("warhammer", "chain-mail")}
+
 _E, _D = "explorer-pack", "dungeoneer-pack"
 _S, _SM, _M, _MM = "simple-weapon", "simple-melee", "martial-weapon", "martial-melee"
 _WEAPON_CHOICES = (_S, _SM, _M, _MM)
@@ -207,6 +211,7 @@ def starting_groups(edition: str, class_key: str) -> Groups:
 def describe(edition: str, class_key: str, lang: str) -> list[list[str]]:
     """Etichette delle alternative di ogni gruppo, nella lingua richiesta."""
     out: list[list[str]] = []
+    conditional = _IF_PROFICIENT.get(("2024" if edition == "2024" else "2014", class_key), ())
     for group in starting_groups(edition, class_key):
         labels = []
         for alt in group:
@@ -215,7 +220,10 @@ def describe(edition: str, class_key: str, lang: str) -> list[list[str]]:
                      for r in (_item(k, q, lang) for k, q in items)]
             if gold:
                 parts.append(f"{gold} mo" if lang == "it" else f"{gold} gp")
-            labels.append(", ".join(parts))
+            label = ", ".join(parts)
+            if alt in conditional:
+                label += " (solo se competente)" if lang == "it" else " (only if proficient)"
+            labels.append(label)
         out.append(labels)
     return out
 
