@@ -156,9 +156,9 @@ def _cast_options_used(ctx: RuleContext) -> int:
 
 
 def _quicken(session: Any, ctx: RuleContext, inputs: dict) -> None:
-    """Il lancio vale come azione bonus: non più come incantesimo dell'azione."""
+    """Il lancio vale come azione bonus, non più come incantesimo dell'azione, e in questo turno non se ne lancia un altro di livello 1+."""
     turn = dict(ctx.char.turn_state or {})
-    turn["bonus_spell_cast"] = True
+    turn["bonus_spell_cast"] = turn["quickened_cast"] = True
     turn.pop("action_spell_level", None)
     turn["action_spell_class"] = None
     ctx.char.turn_state = turn

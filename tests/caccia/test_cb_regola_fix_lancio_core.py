@@ -3,6 +3,10 @@ import pytest
 
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard_inspiration import _seat
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_sorcerer import _slots
+from tests.integration.rules.test_2024_sorcerer import QUICKENED, _cast, _caster24
+from tests.integration.rules.test_2024_sorcerer_subclasses import _spells
 
 
 async def _pg(client, classe, livello, edizione="2014", sottoclasse=None, **punteggi) -> tuple[int, int]:
@@ -118,3 +122,30 @@ async def test_rinascita_e_rianimare_morti_non_curano_un_alleato_vivo(client, te
     await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={"casting_level": livello, "target_character_ids": [eroe]})
     as_user(PLAYER_ID)
     assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 5
+
+
+@pytest.mark.caccia(id="CB-4561", fonte="2024 · Stregone · Incantesimo Rapido · pag. 142; Stregoneria Psionica · pag. 146", zona="regola:2024/sorcerer",
+                    voce="interazione",
+                    copre=["carta:2024/classes/sorcerer.md#Incantesimo Rapido / Quickened Spell (Metamagia, pag. 142)",
+                           "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_dopo_rapido_senza_slot_un_incantesimo_di_livello_va_confermato_e_un_trucchetto_no(client):
+    cid = await _caster24(client, 6, "quickened")
+    classe = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    r = await client.patch(f"/characters/{cid}/classes/{classe}", json={"subclass": "Stregoneria Aberrante"})
+    assert r.status_code == 200, r.text
+    psionico = (await _spells(client, cid))["arms-of-hadar"]["id"]
+    r = await client.post(f"/characters/{cid}/spells/{psionico}/use", json={"ki": True, "options": [QUICKENED], "option_inputs": {}})
+    assert r.status_code == 200, r.text
+    charme = await _spell(client, cid, "Charme", 1)
+    prima = (await _slots(client, cid))[1]
+    # Q-2024-sorcerer-1, opzione A: un avviso da confermare, come le altre regole del turno, anche senza slot già spesi
+    r = await _cast(client, cid, charme, slot_level=1)
+    assert r.status_code == 409 and r.json()["detail"] == {"code": "cast_confirm", "warnings": ["quickened_after"]}, r.text
+    assert (await _slots(client, cid))[1] == prima
+    assert (await client.get(f"/characters/{cid}/spells/{charme}/cast-check")).json() == ["quickened_after"]
+    trucchetto = await _spell(client, cid, "Luce", 0)
+    assert (await client.get(f"/characters/{cid}/spells/{trucchetto}/cast-check")).json() == []
+    r = await client.post(f"/characters/{cid}/spells/{charme}/use", json={"slot_level": 1, "confirm": ["quickened_after"]})
+    assert r.status_code == 200, r.text
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    assert (await client.get(f"/characters/{cid}/spells/{charme}/cast-check")).json() == []

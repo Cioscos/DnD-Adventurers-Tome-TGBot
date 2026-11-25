@@ -911,6 +911,8 @@
         "one_slot_per_turn_body": "You already spent a slot this turn and the rule allows only one. If this is a new turn, go ahead.",
         "wild_shape_title": "Spells in Wild Shape",
         "wild_shape_body": "You cannot cast spells in Wild Shape unless a feature allows it. Cast it anyway?",
+        "quickened_after_title": "After Quickened Spell",
+        "quickened_after_body": "You used Quickened Spell this turn: normally only cantrips remain. If this is a new turn, go ahead.",
         "bonus_spell_title": "Bonus action spell",
         "bonus_spell_body": "With a bonus action spell, the other spell in the same turn can only be an action cantrip. If this is a new turn, go ahead.",
         "ritual_unprepared_title": "Ritual not prepared",

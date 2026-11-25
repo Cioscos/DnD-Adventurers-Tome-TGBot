@@ -81,7 +81,7 @@ async function castWarnings(charId: number, spellId: number, ritual: boolean, sl
 }
 
 /** Regole del turno (secondo slot, incantesimo ad azione bonus) già confermate all'inizio del lancio (T3). */
-const TURN_RULES = ['one_slot_per_turn', 'bonus_spell']
+const TURN_RULES = ['one_slot_per_turn', 'bonus_spell', 'quickened_after']
 let turnRulesConfirmed: { spellId: number; codes: string[] } | null = null
 
 /** T3: le regole del turno si chiedono all'apertura del lancio, non dopo slot, bersagli e tiro. `false` se il giocatore rinuncia. */

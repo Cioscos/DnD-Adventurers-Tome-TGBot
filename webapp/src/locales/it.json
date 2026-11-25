@@ -911,6 +911,8 @@
         "one_slot_per_turn_body": "Hai già speso uno slot in questo turno: la regola ne ammette uno solo. Se è un nuovo turno, lancia pure.",
         "wild_shape_title": "Incantesimi in Forma Selvatica",
         "wild_shape_body": "In Forma Selvatica non si lanciano incantesimi, a meno di un privilegio che lo consenta. Lanciarlo comunque?",
+        "quickened_after_title": "Dopo Incantesimo Rapido",
+        "quickened_after_body": "In questo turno hai usato Incantesimo Rapido: di norma restano solo i trucchetti. Se è un nuovo turno, lancia pure.",
         "bonus_spell_title": "Incantesimo con azione bonus",
         "bonus_spell_body": "Con un incantesimo ad azione bonus, nello stesso turno l'altro può essere solo un trucchetto ad azione. Se è un nuovo turno, lancia pure.",
         "ritual_unprepared_title": "Rituale non preparato",

@@ -36,7 +36,6 @@ async def _hidden(client, cid) -> None:
 @pytest.mark.caccia(id="CB-2611", fonte="2024 · Stregone · Incantesimo Rapido · pag. 142", zona="regola:2024/sorcerer", voce="interazione",
                     copre=["carta:2024/classes/sorcerer.md#Incantesimo Rapido / Quickened Spell (Metamagia, pag. 142)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2611: difforme dal manuale, confermato")
 async def test_dopo_un_trucchetto_rapido_nessun_incantesimo_di_livello_nello_stesso_turno(client):
     # Incantesimo Rapido vieta di lanciare dopo, nello stesso turno, un incantesimo di livello 1 o più, anche se quello reso rapido era un trucchetto
     cid = await _caster24(client, 6, "quickened")

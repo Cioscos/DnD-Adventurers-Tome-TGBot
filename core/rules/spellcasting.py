@@ -439,6 +439,8 @@ def _turn_warning(char: Any, spell: Any, slotless: bool = False) -> str | None:
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
+        if spell.level > 0 and turn.get("quickened_cast"):  # Incantesimo Rapido 2024 (pag. 142): dopo, solo trucchetti, comunque pagati
+            return "quickened_after"
         # il limite è sullo slot speso (pag. 236): un lancio senza slot non ne spende un secondo
         return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") and not slotless else None
     if kind == "bonus":
