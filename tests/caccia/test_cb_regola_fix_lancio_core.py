@@ -5,10 +5,10 @@ from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 
 
-async def _pg(client, classe, livello, **punteggi) -> tuple[int, int]:
-    """``(personaggio, classe)`` 2014."""
-    r = await client.post("/characters", json={"name": "Incantatore", "rules_edition": "2014",
-                                               "initial_class": {"class_name": classe, "level": livello}})
+async def _pg(client, classe, livello, edizione="2014", sottoclasse=None, **punteggi) -> tuple[int, int]:
+    """``(personaggio, classe)``."""
+    r = await client.post("/characters", json={"name": "Incantatore", "rules_edition": edizione,
+                                               "initial_class": {"class_name": classe, "level": livello, "subclass": sottoclasse}})
     assert r.status_code == 201, r.text
     cid = r.json()["id"]
     for caratteristica, valore in punteggi.items():
@@ -71,3 +71,23 @@ async def test_guarigione_di_massa_divide_i_700_pf_fra_piu_creature(client, test
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == 60
     as_user(PLAYER_ID)
     assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 200
+
+
+@pytest.mark.caccia(id="CB-3995", fonte="2014 · Incantesimi · Rinascita · pag. 271; Rianimare Morti · pag. 270", zona="regola:2014/incantesimi-M-R",
+                    voce="regola", copre=["carta:2014/spells.md#Rinascita", "carta:2014/spells.md#Rianimare Morti",
+                                          "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
+@pytest.mark.parametrize("srd,livello", [("revivify", 3), ("raise-dead", 5)])
+async def test_rinascita_e_rianimare_morti_non_curano_un_alleato_vivo(client, test_session_factory, srd, livello):
+    _, eroe = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    for op, valore in (("set_max", 10), ("set_current", 5)):
+        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": op, "value": valore})).status_code == 200
+    as_user(GM_ID)
+    cid, _ = await _pg(client, "cleric", 9, sottoclasse="Dominio della Vita")  # Discepolo della Vita: 2 + livello a ogni cura
+    sid = next(s["id"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == srd)  # dal Dominio
+    await _seat(test_session_factory, cid, GM_ID)
+    assert (await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": livello})).status_code == 200
+    # Q-2014-incantesimi-m-r-4: riportano in vita con 1 PF una creatura morta; una creatura viva non recupera nulla
+    await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={"casting_level": livello, "target_character_ids": [eroe]})
+    as_user(PLAYER_ID)
+    assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 5

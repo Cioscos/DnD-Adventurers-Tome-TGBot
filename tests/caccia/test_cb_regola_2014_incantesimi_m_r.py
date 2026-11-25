@@ -115,7 +115,6 @@ async def test_rigenerazione_lanciata_dal_client_cura_una_volta_sola(client, tes
                     voce="regola", copre=["carta:2014/spells.md#Rinascita", "carta:2014/spells.md#Rianimare Morti",
                                           "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
 @pytest.mark.parametrize("nome,srd,livello", [("Rinascita", "revivify", 3), ("Rianimare Morti", "raise-dead", 5)])
-@pytest.mark.xfail(strict=True, reason="CB-3364: difforme dal manuale, confermato")
 async def test_incantesimi_di_ritorno_in_vita_non_curano_una_creatura_viva(client, nome, srd, livello):
     cid = await _pg(client, "Chierico", "cleric", 9, wisdom=16)
     sid = await _incantesimo(client, cid, nome, srd, livello)

@@ -26,10 +26,9 @@ SPELL_HEALING: dict[str, HealingSpec] = {
     "heal": HealingSpec(None, fixed=70, fixed_per_level=10, add_mod=False),
     "regenerate": HealingSpec("4d8", fixed=15, add_mod=False),
     # Gli altri che ridanno PF: i privilegi che contano «ogni incantesimo di 1° livello o superiore che ripristina PF»
-    # (Discepolo della Vita) li vedono. Bacca benefica: una bacca (ognuna ridà 1 PF).
+    # (Discepolo della Vita) li vedono. Bacca benefica: una bacca (ognuna ridà 1 PF). Rinascita e Rianimare Morti no:
+    # riportano in vita solo una creatura morta (2014 pag. 271 e 270), cosa che fa POST /revive, e il tiro curerebbe i vivi.
     "mass-heal": HealingSpec(None, fixed=700, add_mod=False),
-    "revivify": HealingSpec(None, fixed=1, add_mod=False),
-    "raise-dead": HealingSpec(None, fixed=1, add_mod=False),
     "goodberry": HealingSpec(None, fixed=1, add_mod=False),
 }
 
