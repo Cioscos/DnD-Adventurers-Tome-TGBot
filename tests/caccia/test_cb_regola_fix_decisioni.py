@@ -575,6 +575,30 @@ async def test_la_deflagrazione_respingente_spinge_per_ogni_raggio_a_segno(clien
     assert (await _danno(client, cid, sid, hit_options=[chiave]))["option_result"]["targets"] == [chiave]  # e di nuovo col secondo raggio
 
 
+@pytest.mark.caccia(id="CB-4685", fonte="2024 · Guerriero · Maestro di Battaglia, Attacco Minaccioso e Attacco Preciso · pag. 95 (se si colpisce; una manovra per attacco)",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Attacco Minaccioso / Menacing Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage", "POST /characters/{char_id}/last-roll/options"])
+async def test_una_manovra_dopo_il_colpo_di_un_incantesimo_spende_il_dado_e_lo_somma_al_danno(client):
+    from tests.caccia.test_cb_regola_fix_classi_2024_b import _maestro_mago, _opzioni_attacco
+    from tests.integration.rules.test_2014_bard import _ability
+    minaccia, dadi = "fighter.maneuver_menacing", "fighter.superiority_dice"
+    cid, dardo = await _maestro_mago(client, "precision", "menacing", "trip")
+    assert "fighter.maneuver_trip" not in await _opzioni_attacco(client, cid, dardo)  # Sbilanciante nomina l'arma
+    danni = f"/characters/{cid}/spells/{dardo}/roll_damage"
+    assert (await client.post(danni, json={"hit_options": [minaccia]})).status_code == 409  # senza un colpo
+    assert (await _raggio(client, cid, dardo, die=20)).status_code == 200
+    danno = await _danno(client, cid, dardo, main_rolls=[4, 4], is_critical=True, hit_options=[minaccia])
+    blocco = danno["option_result"]
+    assert len(blocco["extra_rolls"]) == 2 and danno["total"] == 8 + sum(blocco["extra_rolls"])  # il critico raddoppia anche il dado
+    assert blocco["targets"] == [minaccia] and [d[0] for d in danno["reroll_dice"]] == [10, 10, 8, 8]
+    assert (await _ability(client, cid, dadi))["uses"] == 3
+    assert (await _raggio(client, cid, dardo, die=8)).status_code == 200
+    assert (await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["fighter.maneuver_precision"]})).status_code == 200
+    assert (await client.post(danni, json={"hit_options": [minaccia]})).status_code == 409  # una sola manovra per attacco
+    assert (await _ability(client, cid, dadi))["uses"] == 2
+
+
 @pytest.mark.caccia(id="CB-4686", fonte="2024 · Talenti · Dono dell'Offensiva irresistibile, Colpo travolgente · pag. 211 (20 naturale sul d20 di un attacco)",
                     zona="regola:2024/talenti", voce="interazione",
                     copre=["carta:2024/feats.md#Dono dell'Offensiva irresistibile / Boon of Irresistible Offense (pag. 211) - Dono epico",
@@ -616,3 +640,17 @@ async def test_le_punizioni_gia_lanciate_non_si_offrono_su_un_attacco_con_incant
     offerte = lambda q: client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", **q})  # noqa: E731
     assert opzione not in {o["key"] for o in (await offerte({"spell_id": sid})).json()}
     assert opzione in {o["key"] for o in (await offerte({})).json()}  # il colpo senz'armi 2014 è un attacco con arma (D-030)
+
+
+@pytest.mark.caccia(id="CB-4688", fonte="2024 · Guerriero · Campione, Atleta Straordinario · pag. 96 (subito dopo un Colpo Critico, senza limite all'arma; Q-2024-fighter-2)",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Atleta Straordinario / Remarkable Athlete (Campione 3, pag. 96)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_atleta_straordinario_dopo_il_critico_di_un_incantesimo(client):
+    cid = await _pg(client, "2024", "fighter", 3, "Campione")
+    sid = await _deflagrazione(client, cid)
+    chiave, danni = "fighter.remarkable_athlete_move", f"/characters/{cid}/spells/{sid}/roll_damage"
+    assert (await _raggio(client, cid, sid, die=15)).status_code == 200
+    assert (await client.post(danni, json={"hit_options": [chiave]})).status_code == 409
+    assert (await _raggio(client, cid, sid, die=20)).status_code == 200
+    assert "metà" in (await _danno(client, cid, sid, is_critical=True, hit_options=[chiave]))["option_result"]["effects"][0]["it"]

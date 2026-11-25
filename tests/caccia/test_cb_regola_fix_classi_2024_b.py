@@ -147,7 +147,6 @@ async def test_attacco_preciso_e_finta_valgono_anche_per_l_attacco_con_incantesi
                     copre=["carta:2024/classes/fighter.md#Attacco Minaccioso / Menacing Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
                            "carta:2024/classes/fighter.md#Attacco Disarmante / Disarming Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-4516: difforme dal manuale, confermato (rinviato: il flusso degli attacchi con incantesimo non ha una fase after_hit)")
 async def test_le_manovre_dopo_un_colpo_valgono_anche_per_l_attacco_con_incantesimo(client):
     cid, dardo = await _maestro_mago(client, "precision", "disarming", "menacing")
     assert {"fighter.maneuver_disarming", "fighter.maneuver_menacing"} <= await _opzioni_attacco(client, cid, dardo)

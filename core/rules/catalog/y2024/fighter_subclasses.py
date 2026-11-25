@@ -118,13 +118,18 @@ def _after(ctx: RuleContext) -> bool:
     return _weapon_attack(ctx) and not _other_maneuver_used(ctx)
 
 
+def _after_any(ctx: RuleContext) -> bool:
+    """Come ``_after``, anche con un incantesimo: le manovre che dicono solo «se si colpisce» (pag. 95)."""
+    return _attack_roll(ctx) and not _other_maneuver_used(ctx)
+
+
 def _melee(ctx: RuleContext) -> bool:
     return ctx.attack_mode in ("melee", "offhand")
 
 
 def _attack_roll(ctx: RuleContext) -> bool:
     """Un tiro per colpire con arma, Colpo Senz'Armi o incantesimo (2024 pag. 361), non quello di un compagno: le manovre
-    che non nominano l'arma (Attacco Preciso, Attacco con Finta, pag. 95)."""
+    che non nominano l'arma (Attacco Preciso, Attacco con Finta, pag. 95) e Atleta Straordinario (pag. 96)."""
     return ctx.roll == "attack" and (ctx.spell is not None or _weapon_attack(ctx))
 
 
@@ -202,11 +207,11 @@ MANEUVER_ROWS = (
                "On an Intimidation, Performance or Persuasion check, spend a die and add it."), roll_options=(PRESENCE,)),
     _maneuver("disarming", "Attacco Disarmante", "Disarming Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Forza o il bersaglio lascia cadere un oggetto.",
-               "After a hit, +die to damage; Strength save or the target drops an item."), roll_options=(_paid(DISARMING, available=_after),)),
+               "After a hit, +die to damage; Strength save or the target drops an item."), roll_options=(_paid(DISARMING, available=_after_any),)),
     _maneuver("distracting", "Colpo Distraente", "Distracting Strike", 95,
               ("Dopo un colpo, +dado al danno; il prossimo attacco di un altro contro il bersaglio ha vantaggio fino al tuo turno.",
                "After a hit, +die to damage; the next attack by someone else against the target has advantage until your turn."),
-              roll_options=(_paid(DISTRACTING, available=_after),)),
+              roll_options=(_paid(DISTRACTING, available=_after_any),)),
     _maneuver("evasive_footwork", "Scarto Elusivo", "Evasive Footwork", 95,
               ("Azione bonus: Disimpegno; il dado tirato si somma alla CA fino all'inizio del tuo prossimo turno.",
                "Bonus action: Disengage; the die rolled is added to your AC until the start of your next turn."),
@@ -225,7 +230,7 @@ MANEUVER_ROWS = (
     _maneuver("goading", "Attacco Adescante", "Goading Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Saggezza o il bersaglio ha svantaggio contro chi non sei tu fino al tuo prossimo turno.",
                "After a hit, +die to damage; Wisdom save or the target has disadvantage against anyone but you until your next turn."),
-              roll_options=(_paid(GOADING, available=_after),)),
+              roll_options=(_paid(GOADING, available=_after_any),)),
     _maneuver("lunging", "Attacco con Affondo", "Lunging Attack", 95,
               ("Azione bonus: Scatto; se ti sei mosso in linea retta di 1,5 m prima di colpire in mischia, +dado al danno.",
                "Bonus action: Dash; if you moved 5 ft in a straight line before a melee hit, +die to damage."),
@@ -237,11 +242,11 @@ MANEUVER_ROWS = (
     _maneuver("maneuvering", "Attacco con Manovra", "Maneuvering Attack", 95,
               ("Dopo un colpo, +dado al danno; un alleato usa la reazione per muoversi di metà velocità senza provocare.",
                "After a hit, +die to damage; an ally uses their reaction to move half speed without provoking."),
-              roll_options=(_paid(MANEUVERING, available=_after),)),
+              roll_options=(_paid(MANEUVERING, available=_after_any),)),
     _maneuver("menacing", "Attacco Minaccioso", "Menacing Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Saggezza o il bersaglio è spaventato fino alla fine del tuo prossimo turno.",
                "After a hit, +die to damage; Wisdom save or the target is frightened until the end of your next turn."),
-              roll_options=(_paid(MENACING, available=_after),)),
+              roll_options=(_paid(MENACING, available=_after_any),)),
     _maneuver("parry", "Parata", "Parry", 95,
               ("Reazione: un attacco in mischia ti ferisce, il danno scende del dado + Forza o Destrezza.",
                "Reaction: a melee attack hurts you, the damage drops by the die + Strength or Dexterity."), "reaction", roll_options=(PARRY_24,)),
@@ -347,7 +352,7 @@ def _athlete_move(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 
 ATHLETE_MOVE = RollOptionSpec(
-    key=f"{CK}.remarkable_athlete_move", phase="after_hit", rolls=("attack",), available=lambda c: _weapon_attack(c) and _crit_pending(c),
+    key=f"{CK}.remarkable_athlete_move", phase="after_hit", rolls=("attack",), available=lambda c: _attack_roll(c) and _crit_pending(c),
     label=_both("Atleta Straordinario: hai messo a segno un critico, ti muovi di metà velocità",
                 "Remarkable Athlete: you scored a critical hit, move half your Speed"), effect=_athlete_move)
 
