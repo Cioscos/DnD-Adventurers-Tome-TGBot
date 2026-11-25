@@ -682,7 +682,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
             extra_rolls, extra_total, result.damage_total = option_damage(
                 char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus),
-                _option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
+                *_option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
             option_dice = pairs(before.rolled_dice)
         if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
             block = block.model_copy(update={"extra_rolls": extra_rolls, "extra_total": extra_total,
@@ -720,10 +720,13 @@ def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: I
     return {"second_die": outcome.kept, "second_total": outcome.kept + bonus}
 
 
-def _option_reroll(char: Character, item: Item | None, ability: str, attack_mode: str | None, grip: str, offhand: bool) -> int:
-    """Soglia di ritiro dei dadi che le opzioni aggiungono a un attacco con un'arma (Combattere con Armi Possenti 2014)."""
-    return modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip,
-                         offhand=offhand).damage_reroll if item else 0
+def _option_reroll(char: Character, item: Item | None, ability: str, attack_mode: str | None, grip: str, offhand: bool) -> tuple[int, int]:
+    """Soglia di ritiro (2014) e valore minimo (2024) dei dadi che le opzioni aggiungono a un attacco con un'arma (Combattere
+    con Armi Possenti, Combattere con Armi a Due Mani)."""
+    if item is None:
+        return 0, 0
+    mods = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
+    return mods.damage_reroll, mods.damage_min_die
 
 
 def _base_damage(
@@ -809,7 +812,7 @@ async def deferred_attack_damage(
     second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
     rolls, extra, result.damage_total = option_damage(
         char, opts, result.is_critical, result.damage_total + opts.bonus,
-        _option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
+        *_option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
     result.damage_bonus += opts.bonus
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
@@ -938,7 +941,7 @@ async def attack_with_weapon(
             rerolled)
         option_rolls, option_total, damage_total = option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus),
-            _option_reroll(char, item, ability, resolved_mode, grip, offhand))
+            *_option_reroll(char, item, ability, resolved_mode, grip, offhand))
 
     result_str = (
         f"Attacco {item.name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"

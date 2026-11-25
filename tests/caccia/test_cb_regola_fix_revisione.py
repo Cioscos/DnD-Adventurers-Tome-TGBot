@@ -264,3 +264,24 @@ async def test_gli_incantesimi_di_un_talento_contano_i_bonus_degli_oggetti(clien
     await _amuleto(client, cid)
     charme = next(s for s in (await _scheda(client, cid))["spells"] if s["srd_index"] == "charm-person")
     assert (charme["save_dc"], charme["attack_bonus"]) == (8 + 2 + 2 + 1, 2 + 2 + 1)
+
+
+@pytest.mark.caccia(id="CB-4784", fonte="2024 · Talenti · Combattere con armi a due mani / Great Weapon Fighting · pag. 209",
+                    zona="regola:2024/talenti", voce="interazione",
+                    copre=["carta:2024/feats.md#Combattere con armi a due mani / Great Weapon Fighting (pag. 209)",
+                           "POST /characters/{char_id}/attack/{attack_id}/damage"])
+async def test_armi_a_due_mani_2024_anche_il_dado_di_superiorita_vale_almeno_3(client, dadi):
+    cid = await _guerriero(client, 3, "battle_master", strength=16)
+    stile = next(c for c in (await _scheda(client, cid))["pending_choices"] if c.get("group") == "fighting_style")
+    r = await client.post(f"/characters/{cid}/choices/{stile['id']}/resolve", json={"kind": "class_option", "options": ["great_weapon"]})
+    assert r.status_code == 200, r.text
+    await _manovre(client, cid, "pushing", "trip", "menacing")
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Spadone", "item_type": "weapon", "item_metadata": {
+        "damage_dice": "2d6", "weapon_type": "melee", "properties": ["two_handed", "heavy"]}})
+    spadone = max(i["id"] for i in r.json()["items"])
+    dadi(6, 6)
+    colpo = await _hit(client, cid, spadone, grip="two")
+    dadi(1)
+    r = await _damage(client, cid, colpo, _key("pushing"))
+    assert r.status_code == 200, r.text
+    assert r.json()["option_result"]["extra_rolls"] == [3]  # «ogni 1 o 2 sui dadi di danno conta come 3»
