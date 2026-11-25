@@ -1,6 +1,0 @@
-import{c as _}from"./index-B6QMkZNA.js";/**
- * @license lucide-react v1.11.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const h=[["path",{d:"M10 11v6",key:"nco0om"}],["path",{d:"M14 11v6",key:"outv1u"}],["path",{d:"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",key:"miytrc"}],["path",{d:"M3 6h18",key:"d0wm0j"}],["path",{d:"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",key:"e791ji"}]],p=_("trash-2",h),s="character.conditions.effect";function y(n,a,o){const{expiry_anchor:e,expiry_edge:c,expiry_count:r}=n,t=[];if(r!=null&&r>0)if(e&&c){const i=`${s}.until_${c}_${e==="owner"&&!o?"owner":"source"}`,u=e==="owner"?o:n.source_name||a(`${s}.source_unknown`);t.push(a(r===1?`${i}_next`:`${i}_nth`,{n:r,name:u}))}else t.push(a(`${s}.rounds`,{count:r}));return n.ends_with_concentration&&n.source_name&&t.push(a(`${s}.while_concentrating`,{name:n.source_name})),t.join(" · ")}function m(n){const{source_note:a,source_name:o}=n;return a&&o?`${a} (${o})`:a||o||null}function $(n,a,o){if(!n.save_ability||n.save_dc==null)return null;const e=o&&n.save_edge?"_of":"";return a(`${s}.save_${n.save_edge??"any"}${e}`,{ability:a(`character.ability.${n.save_ability}_short`),dc:n.save_dc,name:o})}export{p as T,y as a,m as b,$ as f};
