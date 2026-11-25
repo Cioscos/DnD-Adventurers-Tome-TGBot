@@ -62,7 +62,7 @@ from api.schemas.character import (
     SavingThrowsUpdate,
     XPUpdate,
 )
-from api.schemas.common import D20RollSubmission, RollResult, ToolCheckSubmission
+from api.schemas.common import D20RollSubmission, PendingSaveSubmission, RollResult, ToolCheckSubmission
 from api.schemas.condition_effects import EscapeResult, PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
@@ -1104,7 +1104,7 @@ async def close_pending_save(
     ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
     ps.last_roll = {**roll, "passed": passed}
     # Build the read model before apply_conditions deletes the effect and its saves.
-    save_read = pending_read(ps, effect.slug)
+    save_read = pending_read(ps, effect)
     if effect.pending:  # effetto di un privilegio: il TS decide se la condizione esiste, nulla di preesistente si tocca
         if passed:
             await drop_pending_effect(session, effect)
@@ -1137,7 +1137,7 @@ async def roll_pending_save(
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    body: Annotated[D20RollSubmission | None, Body()] = None,
+    body: Annotated[PendingSaveSubmission | None, Body()] = None,
 ) -> PendingSaveRollResult:
     char = await get_owned(char_id, user_id, session, full=True)
     ps = await _owned_pending_save(session, char_id, psid)
@@ -1158,6 +1158,10 @@ async def roll_pending_save(
             raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
+    if body and body.ability:
+        if body.ability not in (ps.ability, effect.save_alt_ability if ps.status == "pending" else None):
+            raise HTTPException(status_code=422, detail={"code": "save_ability"})
+        ps.ability = body.ability  # il reroll e le opzioni dopo il tiro restano su questa
     if reroll:
         spend_inspiration_reroll(char)
 

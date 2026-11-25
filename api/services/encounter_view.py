@@ -109,11 +109,11 @@ async def build_encounter_block(
     for row, read in zip(rows, await effect_reads(db, rows)):
         effects.setdefault(row.combatant_id, []).append(read)
     pending: dict[int, list[PendingSaveRead]] = {}
-    slugs = {r.id: r.slug for r in all_rows}
+    by_id = {r.id: r for r in all_rows}
     for p in (await db.execute(select(PendingSave).where(
             PendingSave.combatant_id.in_(mon_ids), PendingSave.character_id.is_(None),
             PendingSave.status == "pending").order_by(PendingSave.id))).scalars():
-        pending.setdefault(p.combatant_id, []).append(pending_read(p, slugs.get(p.effect_id, "")))
+        pending.setdefault(p.combatant_id, []).append(pending_read(p, by_id.get(p.effect_id)))
     pc_ids = [c.character_id for c in combs if c.kind == "pc" and c.character_id]
     states: dict[int, list[PublicState]] = {}
     if pc_ids:

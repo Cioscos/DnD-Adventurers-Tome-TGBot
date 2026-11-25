@@ -103,6 +103,7 @@ class TargetEffectRead(BaseModel):
     condition: str | None = None
     also: list[str] = []  # altre condizioni insieme a ``condition``, stesso TS e stessa durata
     save_ability: str | None = None
+    save_alt_ability: str | None = None  # il bersaglio sceglie fra le due
     save_dc: int | None = None
     rounds: int | None = None
     ends_at: dict | None = None

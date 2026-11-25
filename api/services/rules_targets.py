@@ -286,7 +286,8 @@ async def apply_target_effect(
         also_slugs=",".join(effect.get("also", ())) or None,
         # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito
         save_ability=effect["save_ability"] if effect.get("repeat_save") else None,
-        save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"))
+        save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"),
+        save_alt_ability=effect.get("save_alt_ability"))
     db.add(eff)
     await db.flush()
     save = PendingSave(

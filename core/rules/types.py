@@ -176,6 +176,7 @@ class TargetEffect:
     finché dura (Sguardo Ipnotico 2014)."""
     condition: str | None = None
     save_ability: str | None = None
+    save_alt_ability: str | None = None  # il bersaglio sceglie al tiro fra questa e ``save_ability`` (Collera della Natura 2014)
     save_dc: int | None = None
     rounds: int | None = None
     ends_at: dict | None = None

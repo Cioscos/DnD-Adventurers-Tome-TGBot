@@ -27,6 +27,7 @@ class PendingSaveRead(BaseModel):
     id: int
     slug: str
     ability: str
+    alt_ability: Optional[str] = None  # il bersaglio può tirare con questa invece di ``ability``
     dc: int
     status: str
     created_at: str

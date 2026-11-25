@@ -5773,6 +5773,7 @@
     "banner_failed": "Fallito: {{condition}} — tocca per vedere",
     "your_turn": "Tocca a te",
     "title": "Tiro salvezza: {{ability}}",
+    "choose_ability": "Scegli la caratteristica del tiro salvezza",
     "line": "{{condition}} · CD {{dc}}",
     "source": "da {{name}}",
     "progress": "{{n}} di {{total}}",

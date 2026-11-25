@@ -288,7 +288,7 @@ export default function CombatantRow({
             >
               <p className="flex-1 min-w-0 text-xs text-dnd-amber break-words">
                 {t('character.conditions.effect.save_any', {
-                  ability: t(`character.ability.${ps.ability}_short`), dc: ps.dc,
+                  ability: [ps.ability, ps.alt_ability].filter(Boolean).map((a) => t(`character.ability.${a}_short`)).join(' / '), dc: ps.dc,
                 })}
                 {' — '}{formatCondition(ps.slug, true, t)}
               </p>

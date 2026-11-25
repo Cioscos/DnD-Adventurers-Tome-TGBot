@@ -241,8 +241,8 @@ WARDING = RollOptionSpec(
 
 
 def _wrath_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
-    """Trattenuto; il bersaglio sceglie Forza o Destrezza per il TS (lo segna il GM), ripetuto a fine turno."""
-    return TargetEffect(condition="restrained", save_ability="strength", save_dc=_spell_dc(ctx), repeat_save="end")
+    """Trattenuto; il bersaglio sceglie Forza o Destrezza a ogni TS, ripetuto a fine turno."""
+    return TargetEffect(condition="restrained", save_ability="strength", save_alt_ability="dexterity", save_dc=_spell_dc(ctx), repeat_save="end")
 
 
 def _abjure_effect(ctx: RuleContext, _params: dict) -> TargetEffect:

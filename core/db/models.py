@@ -972,6 +972,8 @@ class ConditionEffect(Base):
     immunity_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     # Altre condizioni dello stesso effetto (`TargetEffect.also`), separate da virgola: arrivano insieme alla prima col TS fallito.
     also_slugs: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    # Seconda caratteristica del TS fra cui sceglie il bersaglio (Collera della Natura 2014: Forza o Destrezza)
+    save_alt_ability: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 

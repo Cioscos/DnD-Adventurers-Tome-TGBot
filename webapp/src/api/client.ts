@@ -223,6 +223,7 @@ export type RollChoice = {
 export type TargetEffect = {
   condition: string | null
   save_ability: string | null
+  save_alt_ability?: string | null
   save_dc: number | null
   rounds: number | null
   ends_at: { anchor: 'owner' | 'source' | 'active'; edge: 'start' | 'end'; count: number } | null
@@ -810,10 +811,10 @@ export const api = {
     turnOther: (id: number) =>
       request<TurnBlock>(`/characters/${id}/turn/other`, { method: 'POST' }),
     pendingSaves: {
-      roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
+      roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false, ability?: string) =>
         request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {
           method: 'POST',
-          body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration }),
+          body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration, ability }),
         }),
       dismiss: (id: number, saveId: number) =>
         request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),

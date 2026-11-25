@@ -37,6 +37,7 @@ class SaveSpec:
     ability: str
     dc: int
     edge: Literal["start", "end"]
+    alt: str | None = None
 
 
 @dataclass
@@ -441,6 +442,7 @@ async def upsert_effect(
         expiry_edge=expiry.edge if expiry else None,
         expiry_count=count,
         save_ability=save.ability if save else None,
+        save_alt_ability=save.alt if save else None,
         save_dc=save.dc if save else None,
         save_edge=save.edge if save else None,
         save_skip_once=skip_once,
@@ -484,8 +486,8 @@ async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list
     ) for e in effects]
 
 
-def pending_read(p: PendingSave, slug: str) -> PendingSaveRead:
-    return PendingSaveRead(id=p.id, slug=slug, ability=p.ability, dc=p.dc, status=p.status,
+def pending_read(p: PendingSave, eff: ConditionEffect | None) -> PendingSaveRead:
+    return PendingSaveRead(id=p.id, slug=eff.slug if eff else "", ability=p.ability, alt_ability=eff.save_alt_ability if eff else None, dc=p.dc, status=p.status,
                            created_at=p.created_at, last_roll=p.last_roll)
 
 
@@ -500,7 +502,7 @@ async def characters_effect_payload(
     on = dict((await db.execute(select(Character.id, Character.conditions).where(Character.id.in_(char_ids)))).all())
     # i pending non sono sulla scheda, né la condizione già spenta che aspetta l'archivio del suo TS...
     active = [e for e in rows if e.pending is False and (on.get(e.character_id) or {}).get(e.slug)]
-    slugs = {(e.character_id, e.id): e.slug for e in rows}  # ...ma i loro TS vanno mostrati
+    effects = {(e.character_id, e.id): e for e in rows}  # ...ma i loro TS vanno mostrati
     newest = {(cid, eid): top for cid, eid, top in (await db.execute(
         select(PendingSave.character_id, PendingSave.effect_id, func.max(PendingSave.id))
         .where(PendingSave.character_id.in_(char_ids))
@@ -513,7 +515,7 @@ async def characters_effect_payload(
         out[eff.character_id][0].append(read)
     for p in saves:
         if p.status == "pending" or newest.get((p.character_id, p.effect_id)) == p.id:
-            out[p.character_id][1].append(pending_read(p, slugs.get((p.character_id, p.effect_id), "")))
+            out[p.character_id][1].append(pending_read(p, effects.get((p.character_id, p.effect_id))))
     return out
 
 

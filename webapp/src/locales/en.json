@@ -5774,6 +5774,7 @@
     "banner_failed": "Failed: {{condition}} — tap to view",
     "your_turn": "Your turn",
     "title": "Saving throw: {{ability}}",
+    "choose_ability": "Choose the saving throw ability",
     "line": "{{condition}} · DC {{dc}}",
     "source": "from {{name}}",
     "progress": "{{n}} of {{total}}",

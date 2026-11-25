@@ -3,10 +3,15 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
+import SaveRollSheet from '@/components/SaveRollSheet'
 
-const { getChar, updateXP } = vi.hoisted(() => ({ getChar: vi.fn(), updateXP: vi.fn() }))
+const { getChar, updateXP, rollSave } = vi.hoisted(() => ({ getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { characters: { get: getChar, updateXP } } }))
+vi.mock('@/api/client', () => ({
+  api: { characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave } } },
+  ApiError: class ApiError extends Error {},
+}))
+vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => async () => undefined, d20Arg: () => undefined }))
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useParams: () => ({ id: '5' }) }))
 vi.mock('react-i18next', async (orig) => ({
   ...(await orig<typeof import('react-i18next')>()), useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),
@@ -27,5 +32,17 @@ describe('caccia: decisioni', () => {
     expect(screen.getByText('0%')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /level_up_to/ }))
     await waitFor(() => expect(updateXP).toHaveBeenCalledWith(5, { add: undefined, set: 14000 }))
+  })
+
+  // caccia: {"id": "CB-4616", "fonte": "decisione D-040 (tests/caccia/decisioni.md): Collera della Natura 2014, il bersaglio sceglie Forza o Destrezza al tiro", "zona": "regola:2014/paladin", "voce": "interazione", "copre": ["carta:2014/classes/paladin.md#Collera della Natura / Nature's Wrath (Incanalare Divinità, Giuramento degli Antichi, Paladino 3, pag. 100)", "POST /characters/{char_id}/pending-saves/{psid}/roll"]}
+  it('il bersaglio sceglie la caratteristica del tiro salvezza', async () => {
+    getChar.mockResolvedValue({ id: 5, rules_edition: '2014' })
+    const save = { id: 1, slug: 'restrained', ability: 'strength', alt_ability: 'dexterity', dc: 14, status: 'pending' as const, created_at: '' }
+    rollSave.mockResolvedValue({ save: { ...save, ability: 'dexterity', status: 'passed' }, roll: { die: 11, bonus: 3, total: 14 }, passed: true, condition_removed: true })
+    renderWithProviders(<SaveRollSheet charId={5} saves={[save]} onClose={() => {}} />)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })  // il foglio entra con un'animazione che jsdom non completa
+    await user.click(screen.getByRole('radio', { name: 'character.stats.dexterity' }))
+    await user.click(screen.getByText('pendingSaves.roll'))
+    await waitFor(() => expect(rollSave).toHaveBeenCalledWith(5, 1, undefined, false, 'dexterity'))
   })
 })

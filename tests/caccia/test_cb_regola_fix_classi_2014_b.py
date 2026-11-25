@@ -49,10 +49,9 @@ async def test_una_disciplina_si_sostituisce_solo_quando_se_ne_impara_una_nuova(
     assert r.status_code in (409, 422), r.status_code
 
 
-@pytest.mark.caccia(id="CB-4432", fonte="2014 · Paladino · Collera della Natura · pag. 100", zona="regola:2014/paladin", voce="interazione",
+@pytest.mark.caccia(id="CB-4432", fonte="decisione D-040 (tests/caccia/decisioni.md): il bersaglio sceglie Forza o Destrezza al tiro, anche nel TS ripetuto; 2014 · Paladino · Collera della Natura · pag. 100", zona="regola:2014/paladin", voce="interazione",
                     copre=["carta:2014/classes/paladin.md#Collera della Natura / Nature's Wrath (Incanalare Divinità, Giuramento degli Antichi, Paladino 3, pag. 100)",
                            "POST /characters/{char_id}/target-effects", "POST /characters/{char_id}/pending-saves/{psid}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-4432: Q-2014-paladin-1 rinviato, scelta automatica (A) o del bersaglio (B, schema) da decidere")
 async def test_collera_della_natura_il_bersaglio_puo_usare_la_destrezza(client, monkeypatch):
     # TS su Forza o Destrezza a scelta del bersaglio: con Destrezza 16 (+3) e 11 al dado arriva a 14, la CD
     install_fake_telegram(monkeypatch)
@@ -78,9 +77,25 @@ async def test_collera_della_natura_il_bersaglio_puo_usare_la_destrezza(client, 
     assert r.status_code == 200, r.text
     act(PB)
     r = await client.post(f"/characters/{bersaglio}/pending-saves/{r.json()['pending_save_id']}/roll",
-                          json={"die": 11, "ability": "dexterity"})
+                          json={"die": 11, "ability": "wisdom"})
+    assert r.status_code == 422, r.text
+    r = await client.post(f"/characters/{bersaglio}/pending-saves/{(await _scheda(client, bersaglio))['pending_saves'][0]['id']}/roll",
+                          json={"die": 5, "ability": "dexterity"})
     assert r.status_code == 200, r.text
-    assert r.json()["passed"] is True
+    assert (r.json()["passed"], r.json()["roll"]["bonus"]) == (False, 3)
+    # il TS ripetuto a fine turno: si sceglie di nuovo (Trattenuto dà svantaggio alla Destrezza, 11 e 11)
+    act(GM)
+    for _ in range(4):
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn", json={})).status_code == 200
+        act(PB)
+        ts = next((p for p in (await _scheda(client, bersaglio))["pending_saves"] if p["status"] == "pending"), None)
+        act(GM)
+        if ts:
+            break
+    assert (ts["ability"], ts["alt_ability"]) == ("strength", "dexterity")
+    act(PB)
+    r = await client.post(f"/characters/{bersaglio}/pending-saves/{ts['id']}/roll", json={"die": 13, "ability": "strength"})
+    assert (r.status_code, r.json()["roll"]["bonus"], r.json()["passed"]) == (200, 1, True), r.text
 
 
 @pytest.mark.caccia(id="CB-4433", fonte="2014 · Paladino · Tocco Purificatore · pag. 98", zona="regola:2014/paladin", voce="interazione",

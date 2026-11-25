@@ -515,6 +515,8 @@ export interface PendingSave {
   id: number
   slug: string
   ability: string
+  /** Il bersaglio può tirare con questa invece di `ability` (Collera della Natura 2014). */
+  alt_ability?: string | null
   dc: number
   status: 'pending' | 'failed' | 'passed'
   created_at: string

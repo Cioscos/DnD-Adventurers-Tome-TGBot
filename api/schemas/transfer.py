@@ -367,6 +367,7 @@ class ExportConditionEffect(BaseModel):
     expiry_edge: Optional[Literal["start", "end"]] = None
     expiry_count: Optional[Annotated[int, _rng(1, 100_000)]] = None
     save_ability: Optional[str] = Field(None, max_length=20)
+    save_alt_ability: Optional[Literal["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]] = None
     save_dc: Optional[Annotated[int, _rng(1, 100)]] = None
     save_edge: Optional[Literal["start", "end"]] = None
     source_note: Optional[str] = Field(None, max_length=120)

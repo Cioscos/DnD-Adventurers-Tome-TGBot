@@ -279,7 +279,7 @@ async def import_character(
             await upsert_effect(
                 session, ("character", char.id), e.slug,
                 expiry=ExpirySpec("owner", e.expiry_edge or "start", e.expiry_count) if e.expiry_count else None,
-                save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end") if e.save_ability and e.save_dc else None,
+                save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end", e.save_alt_ability) if e.save_ability and e.save_dc else None,
                 source_note=e.source_note, replace=False)  # ogni istanza esportata resta, anche con la stessa nota
 
     rolls = (char.settings or {}).get("hp_rolls")

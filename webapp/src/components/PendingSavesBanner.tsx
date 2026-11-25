@@ -29,7 +29,7 @@ export default function PendingSavesBanner({ charId }: { charId: number }) {
     : pending.length > 1
       ? t('pendingSaves.banner_many', { count: pending.length })
       : pending.length === 1
-        ? t('pendingSaves.banner_one', { ability: t(`character.stats.${first.ability}`), dc: first.dc, condition: cond })
+        ? t('pendingSaves.banner_one', { ability: [first.ability, first.alt_ability].filter(Boolean).map((a) => t(`character.stats.${a}`)).join(' / '), dc: first.dc, condition: cond })
         : t('pendingSaves.banner_failed', { condition: cond })
 
   const onTap = () => {

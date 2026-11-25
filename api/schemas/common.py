@@ -562,6 +562,11 @@ class D20RollSubmission(RollOptionsBody):
     dice: Optional[D20Dice] = None
 
 
+class PendingSaveSubmission(D20RollSubmission):
+    """TS in sospeso: ``ability`` è la scelta del bersaglio, quando l'effetto ne ammette due (Collera della Natura 2014)."""
+    ability: Optional[str] = None
+
+
 class ToolCheckSubmission(D20RollSubmission):
     """Prova con strumento: la caratteristica la sceglie il giocatore; ``skill`` (solo 2024) dà vantaggio se competente."""
     ability: str
