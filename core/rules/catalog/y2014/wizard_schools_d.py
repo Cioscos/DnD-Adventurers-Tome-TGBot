@@ -95,8 +95,11 @@ def _stone(benefit: str, damage_type: str | None = None):
 
 
 def _not_overloaded(ctx: RuleContext) -> bool:
-    """La pietra dà +3 m solo a chi non è ingombrato: oltre la capacità di carico non vale."""
-    return not (ctx.char.carry_capacity and (ctx.char.encumbrance or 0) > ctx.char.carry_capacity)
+    """La pietra dà +3 m solo a chi non è ingombrato: oltre la capacità di carico non vale, e con la Variante: Ingombro
+    (pag. 176) già da «ingombrato» (oltre For x5). Solo sul tiro «speed»: ``encumbrance_level`` rilegge i modificatori."""
+    from core.game.containers import encumbrance_level  # import locale: containers usa i modificatori
+    return (ctx.roll == "speed" and not (ctx.char.carry_capacity and (ctx.char.encumbrance or 0) > ctx.char.carry_capacity)
+            and encumbrance_level(ctx.char) == "none")
 
 
 def _stone_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:

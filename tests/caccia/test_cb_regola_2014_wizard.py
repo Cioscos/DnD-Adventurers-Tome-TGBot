@@ -188,7 +188,6 @@ async def test_comandare_non_morti_immunita_anche_dopo_il_riposo_lungo(client, t
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Pietra del Trasmutatore / Transmuter's Stone (Trasmutazione 6, pag. 88)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2115: difforme dal manuale, confermato")
 async def test_pietra_velocita_niente_bonus_da_ingombrato(client):
     cid = await _mago(client, 6, "transmutation", strength=10)  # variante: ingombrato oltre 50 lb
     impostazioni = {**((await _scheda(client, cid))["settings"] or {}), "encumbrance_variant": True}
