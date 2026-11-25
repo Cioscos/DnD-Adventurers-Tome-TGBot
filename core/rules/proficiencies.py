@@ -354,6 +354,12 @@ def seed_character(char: Any, lang: str = "it") -> None:
     _keep_inventory_proficient(char, lang)
 
 
+# Concessioni che il catalogo non fa più ma che le schede di prima hanno salvato: togliendo il privilegio se ne vanno anche loro.
+# Armatura media 2024 dava anche gli Scudi (CB-3464, PHB 2024 pag. 205).
+# shortcut: toglie anche uno «Scudi» scritto a mano dopo la correzione; registrare cosa si è concesso, come gli strumenti, se serve
+_FORMER_GRANTS = {"feat.2024_moderately_armored": {"armor": ("shields",)}}
+
+
 def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
     """Il cambio di edizione (o di sottoclasse) toglie le competenze date da un privilegio che non c'è più, salvo quelle
     che un altro privilegio attivo o la classe danno comunque. Armature, armi e strumenti; le abilità restano."""
@@ -370,6 +376,8 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
         feat = FEAT_FEATURES.get(key)  # talento rimosso (Armatura leggera): le sue competenze
         for cat in gone if feat and feat.proficiency_grants else ():
             gone[cat].update(feat.proficiency_grants.get(cat, ()))
+        for cat, ids in _FORMER_GRANTS.get(key, {}).items():
+            gone[cat].update(ids)
         for ed in EDITIONS:
             for row in char.classes:
                 for spec in features_for(ed, row_class_key(row)):
