@@ -288,10 +288,10 @@ export default function CharacterSelect() {
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
   const hasEquipmentStep = !!selectedClass && !isCustomSelected
-  // Il background (nel 2024 anche la specie) viene prima della classe: le abilità che dà non si possono scegliere due volte.
+  // Background e specie vengono prima della classe: le abilità che danno non si possono scegliere due volte.
   const steps: Step[] = [
     'name',
-    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['background', 'class', 'species'] as Step[])),
+    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['background', 'species', 'class'] as Step[])),
     'abilities',
     ...(hasEquipmentStep ? (['equipment'] as Step[]) : []),
     'identity',
@@ -299,13 +299,17 @@ export default function CharacterSelect() {
   const goNext = () => setStep(steps[steps.indexOf(step) + 1])
   const goBack = () => setStep(steps[steps.indexOf(step) - 1])
   const takenByOrigin = (bg: Background2024Choice | null, sp: Species24State) =>
-    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : backgroundSkills
+    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : [...backgroundSkills, ...(speciesPayload?.skills ?? [])]
   // Tornando indietro a cambiare origine cadono le scelte che ora sarebbero doppie: il loro passo le richiede.
   const dropTakenClassSkills = (taken: string[]) =>
     setSelectedClass((c) => (c?.skills ? { ...c, skills: c.skills.filter((s) => !taken.includes(s)) } : c))
   const changeSpecies24 = (sp: Species24State, bg = bg24) => {
     setSpecies24(sp)
     dropTakenClassSkills(takenByOrigin(bg, sp))
+  }
+  const changeSpecies = (c: SpeciesChoice) => {
+    setSpecies(c)
+    if (c.race) dropTakenClassSkills(buildSpecies(c.race, c.sub ?? null, lang).skills)
   }
   const changeBackground24 = (bg: Background2024Choice | null) => {
     setBg24(bg)
@@ -765,7 +769,7 @@ export default function CharacterSelect() {
 
           {step === 'species' && (
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
+              <SpeciesStep choice={species} onChoice={changeSpecies} freeText={race} onFreeText={setRace}
                 edition={edition} species24={species24} onSpecies24={changeSpecies24}
                 takenSkills={bg24?.entry.skills} />
               <WizardFooter

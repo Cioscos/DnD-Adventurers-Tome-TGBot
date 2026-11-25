@@ -28,7 +28,10 @@ vi.mock('framer-motion', async (orig) => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { ...((await orig()) as Record<string, unknown>), m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
+  // un componente per tag, sempre lo stesso: uno nuovo a ogni accesso rimonterebbe i bottoni a ogni render (clic su nodi staccati)
+  const cache = new Map<string, ReturnType<typeof make>>()
+  const get = (tag: string) => cache.get(tag) ?? cache.set(tag, make(tag)).get(tag)!
+  return { ...((await orig()) as Record<string, unknown>), m: new Proxy({}, { get: (_t: object, tag: string | symbol) => get(String(tag)) }) }
 })
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), info: vi.fn() } }))
 vi.mock('@/store/overlayStore', () => ({ useRegisterOverlay: () => {} }))
@@ -67,8 +70,6 @@ describe('caccia: correzione fe-specie-progressione', () => {
     await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
     await user.click(avanti())
     await user.click(avanti()) // nessun background
-    await clic(/dnd.classes.cleric/)
-    await user.click(avanti())
     await clic(/character.create.species_pick/)
     await user.click(await screen.findByText('Nano'))
     expect(avanti()).toBeDisabled()
