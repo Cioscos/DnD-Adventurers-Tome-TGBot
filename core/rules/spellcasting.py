@@ -217,7 +217,12 @@ def _has_ritual_feat(char: Any) -> bool:
 
 def granted_ritual_only(char: Any, spell: Any) -> bool:
     """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), alla
-    classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
+    classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri.
+    Anche i rituali del libro di Incantatore Rituale 2014 (pag. 168), se non sono pure di una classe."""
+    if spell.class_id is None and spell.srd_index and any(
+            a.feature_key == "feat.ritual_caster" and spell.srd_index in ((a.options or {}).get("rituals") or [])
+            for a in char.abilities):
+        return True
     return any(spell.srd_index == key and spec.granted_ritual_only and spell.class_id == row.id
                for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
 

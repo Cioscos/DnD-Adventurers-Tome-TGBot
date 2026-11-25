@@ -1,6 +1,8 @@
 """Controlli scritti dai correttori del gruppo scelte per i dubbi risolti come difetti (Q-…)."""
 import pytest
 
+from tests.integration.rules.test_feats_take_complete import _complete, _feat_rows, _spell, _take
+
 SCORES = {"strength": 14, "dexterity": 14, "constitution": 12, "intelligence": 12, "wisdom": 14, "charisma": 14}
 # tutte le abilità dell'elenco del ranger in multiclasse (pag. 164): l'elenco è esaurito
 RANGER = ("animal_handling", "athletics", "insight", "investigation", "nature", "perception", "stealth", "survival")
@@ -59,3 +61,36 @@ async def test_il_dono_epico_del_19_ammette_l_aumento_di_caratteristica(client):
     assert r.status_code == 200, r.text
     assert next(s["value"] for s in r.json()["ability_scores"] if s["name"] == "strength") == 16
     assert all(c["id"] != scelta["id"] for c in r.json()["pending_choices"])
+
+
+@pytest.mark.caccia(id="CB-4118", fonte="2014 · Talenti · Incantatore Rituale: incantesimi che il personaggio può lanciare come rituali, scritti nel libro dei rituali · pag. 168",
+                    zona="regola:2014/talenti", voce="regola",
+                    copre=["carta:2014/feats.md#Incantatore Rituale / Ritual Caster (pag. 168)",
+                           "GET /characters/{char_id}/spells/{spell_id}/cast-check"])
+async def test_i_rituali_di_incantatore_rituale_si_lanciano_solo_come_rituali(client):
+    async def pg(classe: str, gia: dict | None = None) -> tuple[int, dict]:
+        r = await client.post("/characters", json={"name": "Ritualista", "rules_edition": "2014", "ability_scores": SCORES,
+                                                   "initial_class": {"class_name": classe, "level": 5}})
+        assert r.status_code == 201, r.text
+        cid, class_id = r.json()["id"], r.json()["classes"][0]["id"]
+        if gia:  # lo stesso incantesimo già della classe
+            assert (await client.post(f"/characters/{cid}/spells", json={**gia, "class_id": class_id})).status_code == 201
+        r = await _take(client, cid, "ritual_caster")
+        assert r.status_code == 201, r.text
+        riga = next(a for a in _feat_rows(r.json(), "ritual_caster") if a["feat_status"] == "incomplete")
+        libro = [{**_spell("Allarme", 1, "alarm"), "is_ritual": True}, {**_spell("Identificare", 1, "identify"), "is_ritual": True}]
+        r = await _complete(client, cid, riga["id"], {"list": "wizard"}, libro)
+        assert r.status_code == 200, r.text
+        return cid, {s["srd_index"]: s for s in r.json()["spells"]}
+
+    async def avvisi(cid: int, spell: dict, rituale: bool = False) -> list[str]:
+        return (await client.get(f"/characters/{cid}/spells/{spell['id']}/cast-check", params={"ritual": rituale})).json()
+
+    # paladino con gli slot: i rituali del libro non si lanciano con uno slot, solo come rituali
+    cid, libro = await pg("paladin")
+    assert "ritual_only" in await avvisi(cid, libro["alarm"])
+    assert "ritual_only" not in await avvisi(cid, libro["alarm"], rituale=True)
+    # mago con Allarme già nel libro degli incantesimi: quello si lancia come gli altri della classe
+    cid, libro = await pg("wizard", {**_spell("Allarme", 1, "alarm"), "is_ritual": True})
+    assert "ritual_only" not in await avvisi(cid, libro["alarm"])
+    assert "ritual_only" in await avvisi(cid, libro["identify"])
