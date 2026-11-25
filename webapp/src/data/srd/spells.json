@@ -12843,8 +12843,8 @@
     "it": "Pronunci una parola di potere che può sopraffare la mente di una creatura che puoi vedere entro il raggio d'azione, lasciandola sbalordita. Se il bersaglio ha 150 punti ferita o meno, è stordito. Altrimenti, l'incantesimo non ha effetto.\n\nIl bersaglio stordito deve effettuare un tiro salvezza su Costituzione alla fine di ciascuno dei suoi turni. Se supera il tiro salvezza, l'effetto di stordimento termina."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -13037,8 +13037,8 @@
     "it": "Un piano di luce scintillante e multicolore forma un muro verticale opaco (lungo fino a 90 piedi, alto 30 piedi e spesso 1 pollice) centrato su un punto che puoi vedere entro il raggio d'azione. In alternativa, puoi dare al muro la forma di una sfera di diametro fino a 30 piedi centrata su un punto a tua scelta entro il raggio d'azione. Il muro rimane in posizione per la durata. Se posizioni il muro in modo che attraversi uno spazio occupato da una creatura, l'incantesimo fallisce e la tua azione e lo slot incantesimo sono sprecati.\n\nIl muro emana luce intensa fino a un raggio di 100 piedi e luce fioca per ulteriori 100 piedi. Tu e le creature che designi al momento del lancio dell'incantesimo potete attraversare il muro e restare vicino a esso senza subire danni. Se un'altra creatura che può vedere il muro si sposta entro 20 piedi da esso o vi inizia il proprio turno, la creatura deve superare un tiro salvezza su Costituzione o rimanere accecata per 1 minuto.\n\nIl muro è composto da sette strati, ciascuno di un colore diverso. Quando una creatura tenta di allungarsi dentro o di attraversare il muro, lo fa uno strato alla volta attraverso tutti gli strati del muro. Mentre attraversa o si allunga attraverso ciascuno strato, la creatura deve effettuare un tiro salvezza su Destrezza o essere influenzata dalle proprietà di quello strato come descritto di seguito.\n\nIl muro può essere distrutto, sempre uno strato alla volta, in ordine dal rosso al viola, con mezzi specifici per ciascuno strato. Una volta che uno strato è distrutto, rimane tale per la durata dell'incantesimo. Una verga dell'annullamento distrugge un muro prismatico, ma un campo antimagia non ha alcun effetto su di esso.\n\n***1. Rosso.*** La creatura subisce 10d6 danni da fuoco se fallisce il tiro salvezza, o la metà di tali danni se lo supera. Finché questo strato è presente, gli attacchi a distanza non magici non possono attraversare il muro. Lo strato può essere distrutto infliggendogli almeno 25 danni da freddo.\n\n***2. Arancione.*** La creatura subisce 10d6 danni da acido se fallisce il tiro salvezza, o la metà di tali danni se lo supera. Finché questo strato è presente, gli attacchi a distanza magici non possono attraversare il muro. Lo strato è distrutto da un vento forte.\n\n***3. Giallo.*** La creatura subisce 10d6 danni da fulmine se fallisce il tiro salvezza, o la metà di tali danni se lo supera. Questo strato può essere distrutto infliggendogli almeno 60 danni da forza.\n\n***4. Verde.*** La creatura subisce 10d6 danni da veleno se fallisce il tiro salvezza, o la metà di tali danni se lo supera. Un incantesimo passapareti, o un altro incantesimo di livello pari o superiore che possa aprire un portale su una superficie solida, distrugge questo strato.\n\n***5. Blu.*** La creatura subisce 10d6 danni da freddo se fallisce il tiro salvezza, o la metà di tali danni se lo supera. Questo strato può essere distrutto infliggendogli almeno 25 danni da fuoco.\n\n***6. Indaco.*** Se fallisce il tiro salvezza, la creatura è trattenuta. Deve poi effettuare un tiro salvezza su Costituzione alla fine di ciascuno dei suoi turni. Se supera il tiro salvezza tre volte, l'incantesimo termina. Se fallisce il tiro salvezza tre volte, si trasforma permanentemente in pietra ed è soggetta alla condizione di pietrificato. I successi e i fallimenti non devono essere consecutivi; tieni traccia di entrambi finché la creatura non accumula tre risultati dello stesso tipo.\n\nFinché questo strato è presente, non è possibile lanciare incantesimi attraverso il muro. Lo strato è distrutto dalla luce intensa emessa da un incantesimo luce diurna o da un incantesimo simile di livello pari o superiore.\n\n***7. Viola.*** Se fallisce il tiro salvezza, la creatura è accecata. Deve poi effettuare un tiro salvezza su Saggezza all'inizio del tuo turno successivo. Un tiro salvezza superato pone fine alla cecità. Se fallisce quel tiro salvezza, la creatura viene trasportata su un altro piano a scelta del DM e non è più accecata. (Tipicamente, una creatura che si trova su un piano che non è il suo piano natale viene bandita a casa, mentre le altre creature vengono solitamente scagliate nel Piano Astrale o nel Piano Etereo.) Questo strato è distrutto da un incantesimo dissolvi magie o da un incantesimo simile di livello pari o superiore che possa porre fine a incantesimi ed effetti magici."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -14216,7 +14216,7 @@
     "en": "When you cast this spell using a spell slot of 3rd level or higher, you create one additional ray for each slot level above 2nd.",
     "it": "Quando lanci questo incantesimo usando uno slot incantesimo di 3° livello o superiore, crei un raggio aggiuntivo per ogni livello dello slot superiore al 2°."
    },
-   "attack_type": null,
+   "attack_type": "ATK",
    "save_ability": null,
    "damage_dice": "2d6",
    "damage_type": "fire",
@@ -16819,8 +16819,8 @@
     "it": "Scegli una creatura o un oggetto non magico che puoi vedere entro il raggio d'azione. Trasformi la creatura in una creatura diversa, la creatura in un oggetto, o l'oggetto in una creatura (l'oggetto non deve essere né indossato né trasportato da un'altra creatura). La trasformazione dura per la durata, o finché il bersaglio non scende a 0 punti ferita o muore. Se ti concentri su questo incantesimo per l'intera durata, la trasformazione diventa permanente.\n\nI mutaforma non sono influenzati da questo incantesimo. Una creatura non consenziente può effettuare un tiro salvezza su Saggezza e, se lo supera, non è influenzata da questo incantesimo.\n\n***Da creatura a creatura.*** Se trasformi una creatura in un altro tipo di creatura, la nuova forma può essere di qualsiasi tipo a tua scelta il cui grado di sfida sia pari o inferiore a quello del bersaglio (o al suo livello, se il bersaglio non ha un grado di sfida). Le statistiche di gioco del bersaglio, compresi i punteggi delle caratteristiche mentali, sono sostituite dalle statistiche della nuova forma. Mantiene il suo allineamento e la sua personalità.\n\nIl bersaglio assume i punti ferita della sua nuova forma e, quando torna alla sua forma normale, la creatura torna al numero di punti ferita che aveva prima di trasformarsi. Se torna normale a causa dell'azzeramento dei punti ferita, qualsiasi danno in eccesso si trasferisce alla sua forma normale. Finché il danno in eccesso non riduce la forma normale della creatura a 0 punti ferita, essa non cade priva di sensi.\n\nLa creatura è limitata nelle azioni che può compiere dalla natura della sua nuova forma, e non può parlare, lanciare incantesimi o compiere qualsiasi altra azione che richieda mani o parola, a meno che la sua nuova forma non sia in grado di tali azioni.\n\nL'equipaggiamento del bersaglio si fonde nella nuova forma. La creatura non può attivare, usare, impugnare o altrimenti trarre beneficio da alcun suo equipaggiamento.\n\n***Da oggetto a creatura.*** Puoi trasformare un oggetto in qualsiasi tipo di creatura, purché la taglia della creatura non sia superiore a quella dell'oggetto e il grado di sfida della creatura sia 9 o inferiore. La creatura è amichevole nei tuoi confronti e verso i tuoi compagni. Agisce in ciascuno dei tuoi turni. Decidi tu quale azione compie e come si muove. Il DM possiede le statistiche della creatura e risolve tutte le sue azioni e i suoi movimenti.\n\nSe l'incantesimo diventa permanente, non controlli più la creatura. Potrebbe rimanere amichevole nei tuoi confronti, a seconda di come l'hai trattata.\n\n***Da creatura a oggetto.*** Se trasformi una creatura in un oggetto, essa si trasforma in quella forma insieme a tutto ciò che indossa e trasporta. Le statistiche della creatura diventano quelle dell'oggetto, e la creatura non ha alcun ricordo del tempo trascorso in questa forma, dopo che l'incantesimo termina ed essa torna alla sua forma normale."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -17367,8 +17367,8 @@
     "it": "Un muro non magico di pietra solida appare in un punto a tua scelta entro il raggio d'azione. Il muro è spesso 6 pollici ed è composto da dieci pannelli di 10 piedi per 10. Ogni pannello deve essere contiguo ad almeno un altro pannello. In alternativa, puoi creare pannelli di 10 piedi per 20 spessi solo 3 pollici.\n\nSe il muro taglia lo spazio di una creatura quando appare, la creatura viene spinta su un lato del muro (a tua scelta). Se una creatura si troverebbe circondata su tutti i lati dal muro (o dal muro e da un'altra superficie solida), quella creatura può effettuare un tiro salvezza su Destrezza. Se ha successo, può usare la propria reazione per muoversi fino alla sua velocità in modo da non essere più racchiusa dal muro.\n\nIl muro può avere qualsiasi forma desideri, anche se non può occupare lo stesso spazio di una creatura o di un oggetto. Il muro non deve essere verticale né poggiare su alcuna fondazione solida. Deve, tuttavia, fondersi con la pietra esistente ed essere saldamente sostenuto da essa. Pertanto, puoi usare questo incantesimo per fare da ponte su un baratro o creare una rampa.\n\nSe crei una campata di lunghezza superiore a 20 piedi, devi dimezzare la dimensione di ciascun pannello per creare dei sostegni. Puoi modellare grossolanamente il muro per creare merlature, bastioni e così via.\n\nIl muro è un oggetto di pietra che può essere danneggiato e quindi aperto a forza. Ogni pannello ha CA 15 e 30 punti ferita per pollice di spessore. Ridurre un pannello a 0 punti ferita lo distrugge e potrebbe causare il crollo dei pannelli collegati a discrezione del DM.\n\nSe mantieni la concentrazione su questo incantesimo per l'intera durata, il muro diventa permanente e non può essere dissolto. Altrimenti, il muro scompare quando l'incantesimo termina."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -17627,8 +17627,8 @@
     "it": "Evochi una massa di spessa e appiccicosa ragnatela in un punto a tua scelta entro il raggio d'azione. Le ragnatele riempiono un cubo di 20 piedi a partire da quel punto per la durata. Le ragnatele sono terreno difficile e oscurano leggermente la loro area.\n\nSe le ragnatele non sono ancorate tra due masse solide (come muri o alberi) o stese su un pavimento, un muro o un soffitto, la ragnatela evocata collassa su se stessa e l'incantesimo termina all'inizio del tuo prossimo turno. Le ragnatele stese su una superficie piana hanno una profondità di 5 piedi.\n\nOgni creatura che inizia il proprio turno nelle ragnatele o che vi entra durante il proprio turno deve effettuare un tiro salvezza su Destrezza. Se fallisce, la creatura è trattenuta finché rimane nelle ragnatele o finché non si libera.\n\nUna creatura trattenuta dalle ragnatele può usare la propria azione per effettuare una prova di Forza contro la CD del tuo incantesimo. Se ha successo, non è più trattenuta.\n\nLe ragnatele sono infiammabili. Qualsiasi cubo di ragnatele di 5 piedi esposto al fuoco brucia in 1 round, infliggendo 2d4 danni da fuoco a ogni creatura che inizia il proprio turno nel fuoco."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
