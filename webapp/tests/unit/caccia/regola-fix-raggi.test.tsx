@@ -7,7 +7,8 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { usePromptStore } from '@/lib/rollOptions'
 import type { CharacterFull, Spell } from '@/types'
 
-const { attack, rollDamage, rollOptions, turnState, lastRollRefund } = vi.hoisted(() => ({
+const { attack, rollDamage, rollOptions, turnState, lastRollRefund, lastRollOptions } = vi.hoisted(() => ({
+  lastRollOptions: vi.fn(),
   attack: vi.fn(), rollDamage: vi.fn(), rollOptions: vi.fn(async () => [] as unknown[]), turnState: vi.fn(), lastRollRefund: vi.fn(async () => ({})),
 }))
 
@@ -15,7 +16,7 @@ vi.mock('@/api/client', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   api: {
     spells: { attack, rollDamage, castCheck: vi.fn(async () => []) },
-    characters: { rollOptions, turnState, lastRollRefund, sessionAllies: vi.fn(async () => []) },
+    characters: { rollOptions, turnState, lastRollRefund, lastRollOptions, sessionAllies: vi.fn(async () => []) },
   },
 }))
 vi.mock('react-i18next', async (orig) => ({
@@ -36,14 +37,14 @@ const colpo = (die: number, ray: number) => ({
 })
 const danno = { rolls: [7], total: 7, half_damage: 3, damage_type: 'force', breakdown: '', casting_level: 0, is_critical: false, main_kind: 'd10', main_rolls: [7], extra_kind: null, extra_rolls: [] }
 
-function Banco() {
-  const flow = useCastFlow(7, char)
+function Banco({ pg = char }: { pg?: CharacterFull }) {
+  const flow = useCastFlow(7, pg)
   return <><button onClick={() => flow.beginCast(blast)}>lancia</button>{flow.elements}</>
 }
 
-const monta = () => {
+const monta = (pg = char) => {
   turnState.mockResolvedValue({ in_encounter: false, turn: { last_roll: { refundable: { x: [] } } } })
-  renderWithProviders(<Banco />, { client: new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }) })
+  renderWithProviders(<Banco pg={pg} />, { client: new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }) })
   return userEvent.setup({ pointerEventsCheck: 0 })  // i fogli entrano con un'animazione che jsdom non completa
 }
 
@@ -108,5 +109,22 @@ describe('caccia: raggi della Deflagrazione Occulta', () => {
     usePromptStore.getState().request!.answer({ options: [], option_inputs: {}, outcome: 'miss' })
     await waitFor(() => expect(screen.queryByText(/ray_of/)).toBeNull())  // ultimo raggio mancato: il lancio è finito
     expect(rollDamage).toHaveBeenCalledTimes(2)
+  })
+
+  // caccia: {"id": "CB-4879", "fonte": "decisione D-048 (tests/caccia/decisioni.md): il rilancio con Ispirazione tiene le opzioni confermate sul primo tiro", "zona": "regola:2024/generali", "voce": "interazione", "copre": ["POST /characters/{char_id}/spells/{spell_id}/attack", "POST /characters/{char_id}/last-roll/options"]}
+  it('dopo il rilancio con Ispirazione il d4 di Benedizione già sommato non si somma di nuovo', async () => {
+    rollOptions.mockResolvedValue([{ key: 'bless', phase: 'after_roll', after: 'add', label: 'Benedizione', needs: null, input_options: [], preselected: true, multiplier: null, cost: null }])
+    lastRollOptions.mockResolvedValue({ die: 4, dice: [4], mode: 'normal', bonus: 5, total: 12, notes: [], is_critical: false, is_fumble: false })
+    attack.mockResolvedValueOnce({ ...colpo(4, 1), cast_option_result: { keys: ['x'], effects: [{ it: 'effetto del lancio', en: 'cast effect' }] } })
+      .mockResolvedValueOnce({ ...colpo(14, 1), to_hit_bonus: 8, to_hit_total: 22 })
+    const user = monta({ ...char, heroic_inspiration: true } as CharacterFull)
+    await user.click(screen.getByText('lancia'))
+    expect(await screen.findByText('12')).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /character.inspiration/ }))
+    expect(await screen.findByText('22')).toBeInTheDocument()
+    expect(attack).toHaveBeenLastCalledWith(7, 1, expect.objectContaining({ with_inspiration: true }))
+    await waitFor(() => expect(turnState).toHaveBeenCalled())
+    expect(lastRollOptions).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('effetto del lancio')).toBeInTheDocument()
   })
 })

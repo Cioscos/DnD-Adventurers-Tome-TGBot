@@ -184,7 +184,9 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     },
     onSuccess: (result) => {
       qc.setQueryData(['character', charId], result.character)
-      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      // ciò che si è confermato sul primo tiro resta (D-048)
+      setAttackState((prev) => prev && { ...prev, result: { ...result, forced_hit: prev.result.forced_hit, cast_option_result: prev.result.cast_option_result }, wasRerolled: true })
       haptic.success()
     },
     onError: (err) => {
@@ -605,7 +607,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
             <AfterRollOptions
               charId={charId}
               query={{ roll: 'attack', spell_id: attackState.spell.id }}
-              rollToken={`${attackMutation.submittedAt}:${attackRerollMutation.submittedAt}`}
+              rollToken={attackMutation.submittedAt}
               onResult={(roll) => setAttackState((prev) => prev && {
                 ...prev,
                 result: {

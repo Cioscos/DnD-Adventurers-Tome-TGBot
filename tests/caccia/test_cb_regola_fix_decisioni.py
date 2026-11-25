@@ -770,3 +770,57 @@ async def test_la_lama_infuocata_attacca_con_l_azione_in_piu_solo_nel_2014(clien
     r = await client.post(f"/characters/{cid}/features/fighter.action_surge/use", json={})
     assert r.status_code == 200, r.text[:200]
     assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == esito
+
+
+async def _ispirato(client, cid) -> None:
+    assert (await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4877", fonte="decisione D-048 (tests/caccia/decisioni.md): il rilancio con Ispirazione tiene le opzioni confermate e i loro dadi; 2024 · Malocchio · pag. 285, Marchio del Cacciatore · pag. 285, Ispirazione Eroica · pag. 13",
+                    zona="regola:2024/generali", voce="interazione",
+                    copre=["carta:2024/spells.md#Malocchio", "POST /characters/{char_id}/spells/{spell_id}/attack",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_il_rilancio_di_un_raggio_tiene_i_dadi_del_malocchio(client):
+    cid = await _pg(client, "2024", "warlock", 5)
+    sid = await _deflagrazione(client, cid)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Hex", "level": 1, "srd_index": "hex", "is_concentration": True, "is_prepared": True})
+    slot = next(s for s in (await _scheda(client, cid))["spell_slots"])
+    r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"slot_id": slot["id"], "slot_level": slot["level"], "choices": {"ability": "wisdom"}})
+    assert r.status_code == 200, r.text[:300]
+    for raggio in ({}, {"ray": True}) * 3:  # più giri: il d6 già tirato non cambia col d20
+        await _ispirato(client, cid)
+        primo = (await _raggio(client, cid, sid, die=3, options=["spell:hex:damage"], **raggio)).json()
+        secondo = (await _raggio(client, cid, sid, die=12, with_inspiration=True)).json()
+        assert secondo["to_hit_die"] == 12 and secondo["option_result"]["extra_rolls"] == primo["option_result"]["extra_rolls"]
+        assert (await _danno(client, cid, sid, main_rolls=[5]))["total"] == 5 + sum(primo["option_result"]["extra_rolls"])
+    # un critico nato dal rilancio raddoppia i dadi dell'opzione
+    await client.post(f"/characters/{cid}/turn/new")
+    await _ispirato(client, cid)
+    await _raggio(client, cid, sid, die=3, options=["spell:hex:damage"])
+    assert len((await _raggio(client, cid, sid, die=20, with_inspiration=True)).json()["option_result"]["extra_rolls"]) == 2
+
+
+@pytest.mark.caccia(id="CB-4878", fonte="decisione D-048 (tests/caccia/decisioni.md): il rilancio con Ispirazione tiene le opzioni confermate senza ripagarle; 2024 · Guerriero · Maestro di Battaglia, Attacco Preciso · pag. 95 (una manovra per attacco)",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Attacco Preciso / Precision Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "POST /characters/{char_id}/spells/{spell_id}/attack", "POST /characters/{char_id}/last-roll/options"])
+async def test_il_rilancio_di_un_attacco_con_incantesimo_tiene_la_manovra_usata_dopo_il_tiro(client):
+    from tests.caccia.test_cb_regola_fix_classi_2024_b import _maestro_mago
+    from tests.integration.rules.test_2014_bard import _ability
+    preciso = "fighter.maneuver_precision"
+    cid, dardo = await _maestro_mago(client, "precision", "menacing", "trip")
+    await _ispirato(client, cid)
+    primo = (await _raggio(client, cid, dardo, die=4)).json()
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [preciso]})
+    assert r.status_code == 200, r.text[:300]
+    dado = r.json()["total"] - primo["to_hit_total"]
+    assert dado >= 1
+    secondo = (await _raggio(client, cid, dardo, die=9, with_inspiration=True)).json()
+    assert secondo["to_hit_total"] == 9 + primo["to_hit_bonus"] + dado, secondo
+    assert (await _ability(client, cid, "fighter.superiority_dice"))["uses"] == 3
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [preciso]})
+    assert r.status_code == 409  # già usata su questo tiro
+    r = await client.post(f"/characters/{cid}/spells/{dardo}/roll_damage", json={"hit_options": ["fighter.maneuver_menacing"]})
+    assert r.status_code == 409  # una sola manovra per attacco
+    # l'attacco dopo è un altro tiro: nessun bonus
+    assert (await _raggio(client, cid, dardo, die=9)).json()["to_hit_total"] == 9 + primo["to_hit_bonus"]

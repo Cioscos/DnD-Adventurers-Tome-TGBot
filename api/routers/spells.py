@@ -64,7 +64,7 @@ from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
 from core.rules.roll_options import AppliedOptions, option_names, scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
-from api.services.rules_states import _spend_atomically, remove_state
+from api.services.rules_states import MISS_REFUND, _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, refuse_surge_magic, spend
 from core.rules.catalog import active_features
@@ -653,11 +653,13 @@ async def spell_attack(
     refuse_if_incapacitated(char)
 
     cast_block = spell_fx = None
+    rerolled: dict = {}  # il tiro che l'Ispirazione ritira: le opzioni già confermate restano, senza ripagarle (D-048)
     lit = hurled_lit(char, spell.srd_index, spell.name)
     cast_rays = get_turn(char).get(SPELL_RAYS) or {}
     cast_rays = cast_rays if cast_rays.get("spell_id") == spell.id else {}
     if body.with_inspiration:
         spend_inspiration_attack(char, spell_id=spell.id)
+        rerolled = get_turn(char)["last_roll"]
     elif body.ray:  # il raggio seguente dello stesso lancio: un altro tiro per colpire, niente da pagare
         if not cast_rays or cast_rays["ray"] >= cast_rays["rays"]:
             raise HTTPException(status_code=409, detail={"code": "no_ray_left"})
@@ -698,21 +700,29 @@ async def spell_attack(
     opts = use_options(session, char, "attack", body, spell=spell)
     merge_options(applied, opts)
     bonus = (caster.attack_bonus if caster else char.proficiency_bonus) + applied.flat + opts.bonus
+    if rerolled:  # anche ciò che si è sommato dopo il tiro (Attacco Preciso, Benedizione)
+        bonus = rerolled["total"] - rerolled["die"]
     outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
     is_fumble = die == 1
     is_critical = die >= applied.crit_min or (opts.force_crit and not is_fumble)
-    # I dadi che il giocatore ha confermato prima del tiro (Sortilegio, Marchio del Cacciatore) valgono per il danno di questo attacco
-    option_rolls, option_total = roll_option_dice(char, opts, is_critical)
-    attack_block = option_result(opts, option_rolls, option_total)
+    carry = get_turn(char)
+    kept = carry.pop(SPELL_ATTACK_DICE, None) if rerolled else None
+    if kept and (carry.get("pending_attack") or {}).get("result", {}).get("is_critical") == is_critical:  # il rilancio tocca il d20, non questi
+        opts.rolled_dice, attack_block = kept["dice"], OptionResult(**kept["block"])
+        option_rolls = [v for _, v in kept["dice"]]
+    else:
+        # I dadi che il giocatore ha confermato prima del tiro (Sortilegio, Marchio del Cacciatore) valgono per il danno di questo attacco
+        option_rolls, option_total = roll_option_dice(char, opts, is_critical)
+        attack_block = option_result(opts, option_rolls, option_total)
     carry = get_turn(char)
     carry.pop(SPELL_ATTACK_DICE, None)
     carry.pop(SPELL_RAYS, None)
     if cast_rays:
         carry[SPELL_RAYS] = cast_rays
     # In sospeso come un attacco con arma, per le opzioni ``after_hit`` del suo danno (Deflagrazione Respingente, manovre 2024)
-    carry["pending_attack"] = {"spell_id": spell.id, "options": opts.keys, "result": {
+    carry["pending_attack"] = {"spell_id": spell.id, "options": [*opts.keys, *rerolled.get("after_used", [])], "result": {
         "to_hit_die": die, "mode": outcome.mode, "is_critical": is_critical, "is_fumble": is_fumble}}
     if option_rolls:
         carry[SPELL_ATTACK_DICE] = {"spell_id": spell.id, "dice": pairs(opts.rolled_dice), "block": attack_block.model_dump(mode="json")}
@@ -740,10 +750,18 @@ async def spell_attack(
         },
     )
     notifications = collect_homebrew_notifications(firing)
+    if rerolled:  # ciò che torna se manca vale anche per il tiro nuovo
+        turn = get_turn(char)
+        char.turn_state = {**turn, MISS_REFUND: {**rerolled["refundable"], **turn.get(MISS_REFUND, {})}}
     remember_roll(char, "attack", opts, {
         "die": die, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus, "total": total,
         "notes": applied.notes, "auto_fail": False, "description": "",
     }, spell_id=spell.id)
+    if rerolled:
+        turn = get_turn(char)
+        turn["last_roll"] = {**turn["last_roll"], "forced_hit": rerolled["forced_hit"], "after_used": rerolled.get("after_used", []),
+                             "option_result": rerolled.get("option_result")}
+        char.turn_state = turn
 
     twinned = _twinned_attack(char, spell, body.mode, applied, bonus, keep=body.with_inspiration)
     character = await build_character_response(session, char)
