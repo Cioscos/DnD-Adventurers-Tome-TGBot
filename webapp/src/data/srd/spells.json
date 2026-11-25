@@ -5433,8 +5433,8 @@
    "higher_level": null,
    "attack_type": null,
    "save_ability": null,
-   "damage_dice": "1d4",
-   "damage_type": "radiant",
+   "damage_dice": null,
+   "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
     "paladin"

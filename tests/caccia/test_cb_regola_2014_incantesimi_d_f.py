@@ -106,7 +106,6 @@ async def test_forma_gassosa_finisce_quando_il_bersaglio_scende_a_zero_pf(client
 @pytest.mark.caccia(id="CB-3263", fonte="2014 · Incantesimi · Favore Divino (1d4 radiosi agli attacchi con arma, nessun danno al lancio) · pag. 235",
                     zona="regola:2014/incantesimi-D-F", voce="regola",
                     copre=["carta:2014/spells.md#Favore Divino", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3263: difforme dal manuale, confermato")
 async def test_favore_divino_non_tira_danni_al_lancio(client):
     cid = await _pg(client, "paladin", 2)
     await _impara(client, cid, "divine-favor")
