@@ -75,18 +75,23 @@ SPELLS: tuple[SpellEffect, ...] = (
                       "Choose: breathe underwater and swim, change appearance, or natural weapons (unarmed strikes 1d6, proficient, magical with +1 to attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True),
         "2024": _text("Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (Colpo Senz'Armi 1d6, con il modificatore da incantatore per colpire e per i danni). Il tipo di danno delle armi naturali lo decidi a mano.",
                       "Choose: breathe underwater and swim, change appearance, or natural weapons (Unarmed Strike 1d6, using your spellcasting modifier for attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True)}),
+    # 2014 p.237 e 2024 (SRD 5.2): termina sul bersaglio che scende a 0 PF
     SpellEffect("gaseous_form", ("gaseous-form",), ("Forma Gassosa", "Gaseous Form"), _ALLY, {
-        "2014": _text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
-                      "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
-        "2024": _text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
-                      "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True)}),
+        "2014": replace(_text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                              "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
+                        ends_on=("unconscious", "manual")),
+        "2024": replace(_text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                              "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
+                        ends_on=("unconscious", "manual"), max_targets=lambda slot: max(slot - 2, 1))}),  # 2024 p.277: un bersaglio in più per slot oltre il 3°
     SpellEffect("wind_walk", ("wind-walk",), ("Camminare nel Vento", "Wind Walk"), SpellTarget("allies", lambda slot: 11), _WIND_WALK),
     SpellEffect("mirror_image", ("mirror-image",), ("Immagine Speculare", "Mirror Image"), _SELF, {"2014": _MIRROR_2014, "2024": _MIRROR_2024}),
     SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
         "2014": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia un incantesimo su un nemico.",
                       "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts a spell at an enemy.", MIN1),
-        "2024": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
-                      "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1)}),
+        # 2024 p.313: finisce a ogni tiro per colpire o lancio del protetto (il danno senza tiro lo chiude il giocatore)
+        "2024": replace(_text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
+                              "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1),
+                        ends_on=("attack", "cast", "manual"))}),
     SpellEffect("blink", ("blink",), ("Intermittenza", "Blink"), _SELF, _BLINK),
     SpellEffect("glibness", ("glibness",), ("Loquacità", "Parlantina", "Glibness"), _SELF, both(_text(
         "Nelle prove di Carisma, se il dado dà meno di 15 conta 15.",
@@ -103,9 +108,10 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("globe_of_invulnerability", ("globe-of-invulnerability",), ("Globo di Invulnerabilità", "Globe of Invulnerability"), _SELF, both(_text(
         "Sfera di 3 m: gli incantesimi di 5° livello o inferiore lanciati da fuori non la penetrano. Zona: tienine conto a mano.",
         "A 10 ft sphere: spells of 5th level or lower cast from outside do not enter. A zone: account for it by hand.", MIN1, concentration=True))),
-    SpellEffect("magic_circle", ("magic-circle",), ("Cerchio Magico", "Magic Circle"), _SELF, both(_text(
+    SpellEffect("magic_circle", ("magic-circle",), ("Cerchio Magico", "Magic Circle"), _SELF, both(replace(_text(
         "Cilindro di 3 m: celestiali, elementali, folletti, immondi e non morti ne sono ostacolati. Zona: tienine conto a mano.",
-        "A 10 ft cylinder: celestials, elementals, fey, fiends and undead are hindered by it. A zone: account for it by hand.", HOUR))),
+        "A 10 ft cylinder: celestials, elementals, fey, fiends and undead are hindered by it. A zone: account for it by hand.", HOUR),
+        rounds_by_slot=lambda slot: HOUR * max(slot - 2, 1)))),  # 2014 p.221 e 2024 p.293: +1 ora per slot oltre il 3°
     SpellEffect("leomunds_tiny_hut", ("tiny-hut", "leomunds-tiny-hut"), ("Capanna di Leomund", "Leomund's Tiny Hut"), _SELF, both(_text(
         "Cupola di 3 m che ripara dagli elementi e dalle creature esterne. Zona: nessun effetto sulla scheda.",
         "A 10 ft dome that shelters from the elements and outside creatures. A zone: no effect on the sheet.", HOUR8))),

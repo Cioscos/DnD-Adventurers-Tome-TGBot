@@ -1,6 +1,8 @@
 """Incantesimi sui punti ferita: PF temporanei, CA impostata, Interdizione alla Morte, Legame di Protezione, rigenerazione."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.game.stats import effective_ability_mod
 from core.rules.catalog.spells.defenses import HOUR, both, txt
 from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant, roll
@@ -41,11 +43,11 @@ def _agathys(ends_at_zero: bool) -> SpellVariant:
                  "the app reminds you on every damage." + (" It ends when the temporary HP are gone." if ends_at_zero else "")))
 
 
-# Vita Falsata: istantanea nel 2024; nel 2014 dura un'ora ma i PF temporanei sono solo quelli tirati (nessuno stato)
+# Vita Falsata: istantanea nel 2024; nel 2014 i PF temporanei valgono «per la durata» (1 ora, p.289): quelli rimasti svaniscono alla fine
 _FALSE_LIFE_2014 = SpellVariant(
-    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d),
-    text=txt("I PF temporanei restano a fine durata (1 ora): se al tavolo li perdi alla fine, toglili tu.",
-             "The temporary HP stay when the duration ends (1 hour): if your table loses them at the end, remove them yourself."))
+    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d), track=True, rounds=HOUR, temp_hp_ends=True,
+    text=txt("I PF temporanei durano 1 ora: alla fine quelli rimasti svaniscono (automatico).",
+             "The temporary HP last 1 hour: those left vanish when it ends (automatic)."))
 _FALSE_LIFE_2024 = SpellVariant(temp_hp=lambda d: roll(2, 4, 4) + _HIGHER(d))
 # Parola del Potere: Fortificare: 120 PF temporanei divisi in parti uguali (la ripartizione a scelta non c'è)
 _FORTIFY = SpellVariant(
@@ -87,12 +89,13 @@ _VITALITY_TEXT = txt("2d6 PF a una creatura nell'aura: usa «Cura» sulla scheda
                      "2024 on casting and at the start of each of your turns).")
 _AURA_VITALITY = SpellVariant(track=True, concentration=True, rounds=10, text=_VITALITY_TEXT)
 # Preghiera di Guarigione 2024: promemoria «già ricevuta» fino al Riposo Lungo; il Riposo Breve lo fa ogni bersaglio dalla propria scheda
+# 2024 p.307: «una creatura non può essere influenzata di nuovo finché non termina un Riposo Lungo»: il segno cade con il Riposo Lungo del bersaglio
 _PRAYER_OF_HEALING = SpellVariant(
-    track=True, until_rest="long",
+    track=True, until_rest="long", once_per_long_rest=True, ends_on=("rest_long", "manual"),
     text=txt("Fino a cinque creature ottengono i benefici di un Riposo Breve e recuperano 2d8 PF (la cura la tira «Cura» dell'incantesimo): ogni bersaglio fa il Riposo Breve dalla propria scheda. "
-             "Non vale di nuovo su una creatura finché non termina un Riposo Lungo: il segno resta fino ad allora.",
+             "Non vale di nuovo su una creatura finché non termina un Riposo Lungo: il segno resta fino ad allora e l'app rifiuta il lancio su chi lo porta.",
              "Up to five creatures gain the benefits of a Short Rest and regain 2d8 HP (the spell's healing roll rolls it): each target takes the Short Rest from their own sheet. "
-             "It cannot affect a creature again until it finishes a Long Rest: the mark stays until then."))
+             "It cannot affect a creature again until it finishes a Long Rest: the mark stays until then and the app refuses the cast on whoever bears it."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("mage_armor", ("mage-armor",), ("Armatura Magica", "Mage Armor"), SpellTarget("ally"), both(_MAGE_ARMOR)),
@@ -106,7 +109,8 @@ SPELLS: tuple[SpellEffect, ...] = (
                 SpellTarget("allies", lambda slot: 6), {"2024": _FORTIFY}),
     SpellEffect("death_ward", ("death-ward",), ("Interdizione alla Morte", "Death Ward"), SpellTarget("ally"), both(_DEATH_WARD)),
     SpellEffect("warding_bond", ("warding-bond",), ("Vincolo di Interdizione", "Legame di Protezione", "Warding Bond"),
-                SpellTarget("ally"), both(_WARDING_BOND)),
+                # 2024 p.340: «un'altra creatura consenziente», chi lancia non è un bersaglio (il 2014 dice «una creatura consenziente»)
+                SpellTarget("ally"), {"2014": _WARDING_BOND, "2024": replace(_WARDING_BOND, not_self=True)}),
     SpellEffect("regenerate", ("regenerate",), ("Rigenerazione", "Regenerate"), SpellTarget("ally"), both(_REGENERATE)),
     SpellEffect("prayer_of_healing", ("prayer-of-healing",), ("Preghiera di Guarigione", "Prayer of Healing"),
                 SpellTarget("allies", lambda _s: 5), {"2024": _PRAYER_OF_HEALING}),

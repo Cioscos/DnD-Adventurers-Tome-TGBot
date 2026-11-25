@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
+from core.db.models import ConditionEffect
 from core.rules.catalog.spells import spell_effect
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard_inspiration import _seat
@@ -66,7 +68,6 @@ async def _stati(client, cid, chiave) -> list[dict]:
 @pytest.mark.caccia(id="CB-3661", fonte="2024 · Incantesimi · Colpo Accecante · pag. 247", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Colpo Accecante", "POST /characters/{char_id}/attack/{attack_id}/damage",
                            "GET /characters/{char_id}/target-effects/{effect_key}", "POST /characters/{char_id}/target-effects"])
-@pytest.mark.xfail(strict=True, reason="CB-3661: difforme dal manuale, confermato")
 async def test_colpo_accecante_acceca_subito_senza_un_primo_tiro_salvezza(client, test_session_factory, monkeypatch):
     _sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
@@ -83,6 +84,9 @@ async def test_colpo_accecante_acceca_subito_senza_un_primo_tiro_salvezza(client
     assert r.status_code == 200, r.text
     # 2024: il bersaglio colpito è Accecato; il TS di Costituzione arriva solo alla fine di ogni suo turno
     assert r.json()["applied"] is True and r.json()["pending_save_id"] is None
+    async with test_session_factory() as s:  # il TS a fine turno resta, per terminarla
+        eff = (await s.execute(select(ConditionEffect).where(ConditionEffect.combatant_id == goblin, ConditionEffect.slug == "blinded"))).scalar_one()
+    assert (eff.pending, eff.save_ability, eff.save_edge) == (False, "constitution", "end")
 
 
 @pytest.mark.caccia(id="CB-3662", fonte="2024 · Incantesimi · Colonna di fiamme · pag. 275", zona="regola:2024/incantesimi-A-C", voce="limiti",
@@ -102,7 +106,6 @@ async def test_colonna_di_fiamme_con_slot_piu_alto_aggiunge_un_d6_di_ciascun_tip
 @pytest.mark.caccia(id="CB-3663", fonte="2024 · Incantesimi · Arma Spirituale · pag. 319-320", zona="regola:2024/incantesimi-A-C", voce="limiti",
                     copre=["carta:2024/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(3, 2), (5, 4), (9, 8)])
-@pytest.mark.xfail(strict=True, reason="CB-3663: difforme dal manuale, confermato")
 async def test_arma_spirituale_del_dominio_della_guerra_aggiunge_un_d8_per_slot_oltre_il_secondo(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 3, "Dominio della Guerra", wisdom=16)  # Arma Spirituale sempre preparata dal dominio
     arma = await _incantesimo(client, cid, "spiritual-weapon")
@@ -125,7 +128,7 @@ async def test_il_danno_di_arma_spirituale_2024_somma_il_modificatore_da_incanta
 
 @pytest.mark.caccia(id="CB-3665", fonte="2024 · Incantesimi · Cerchio Magico · pag. 293", zona="regola:2024/incantesimi-A-C", voce="limiti",
                     copre=["carta:2024/spells.md#Cerchio Magico", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.parametrize("slot, ore", [(3, 1), pytest.param(4, 2, marks=pytest.mark.xfail(strict=True, reason="CB-3665: difforme dal manuale, confermato")), pytest.param(5, 3, marks=pytest.mark.xfail(strict=True, reason="CB-3665: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, ore", [(3, 1), (4, 2), (5, 3)])
 async def test_cerchio_magico_2024_dura_un_ora_in_piu_per_ogni_slot_oltre_il_terzo(client, slot, ore):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     cerchio = await _dal_catalogo(client, cid, "magic-circle")
@@ -173,7 +176,6 @@ async def test_rilanciare_arma_magica_2024_toglie_l_effetto_dall_arma_di_prima(c
 @pytest.mark.caccia(id="CB-3668", fonte="2024 · Incantesimi · Colpo dell'Esilio · pag. 245", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Colpo dell'Esilio", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-3668: difforme dal manuale, confermato")
 async def test_colpo_dell_esilio_2024_lanciato_prima_non_vale_con_un_arma_a_distanza(client):
     cid = await _pg(client, "paladin", 17, charisma=16)
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Colpo dell'Esilio", "srd_index": "banishing-smite", "level": 5,
@@ -188,7 +190,6 @@ async def test_colpo_dell_esilio_2024_lanciato_prima_non_vale_con_un_arma_a_dist
 
 @pytest.mark.caccia(id="CB-3669", fonte="2024 · Incantesimi · Arma Magica · pag. 295", zona="regola:2024/incantesimi-A-C", voce="interazione",
                     copre=["carta:2024/spells.md#Arma Magica", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3669: difforme dal manuale, confermato")
 async def test_arma_magica_del_dominio_2024_non_toglie_la_concentrazione_di_scudo_della_fede(client):
     cid = await _pg(client, "cleric", 3, "Dominio della Guerra", wisdom=16)  # entrambi sempre preparati dal dominio
     scudo = (await _incantesimo(client, cid, "shield-of-faith"))["id"]

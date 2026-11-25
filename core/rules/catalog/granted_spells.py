@@ -73,7 +73,8 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'spiritual-weapon': GrantedSpell(
         'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force', concentration_2024=True),
     'spirit-guardians': GrantedSpell(
-        'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+        'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True,
+        attack_save='SAVE', damage_dice='3d8', higher_levels_dice='1d8'),  # tipo: radiosi o necrotici secondo l'allineamento (Q-2014-incantesimi-g-l-2)
     'crusaders-mantle': GrantedSpell(
         'crusaders-mantle', {"it": 'Manto del crociato', "en": "Crusader's Mantle"}, 3, '1 azione', 'Personale (raggio 9 m)', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'freedom-of-movement': GrantedSpell(
@@ -118,7 +119,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'fireball': GrantedSpell(
         'fireball', {"it": 'Palla di fuoco', "en": 'Fireball'}, 3, '1 azione', '45 m', 'Istantanea', attack_save='SAVE', damage_dice='8d6', damage_type='fire', higher_levels_dice='1d6'),
     'guardian-of-faith': GrantedSpell(
-        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore'),
+        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore', attack_save='SAVE'),
     'wall-of-fire': GrantedSpell(
         'wall-of-fire', {"it": 'Muro di fuoco', "en": 'Wall of Fire'}, 4, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='fire', higher_levels_dice='1d8'),
     'animal-friendship': GrantedSpell(
@@ -150,7 +151,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'call-lightning': GrantedSpell(
         'call-lightning', {"it": 'Invocare fulmine', "en": 'Call Lightning'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='3d10', damage_type='lightning', higher_levels_dice='1d10'),
     'sleet-storm': GrantedSpell(
-        'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+        'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'control-water': GrantedSpell(
         'control-water', {"it": 'Controllare acqua', "en": 'Control Water'}, 4, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning'),
     'ice-storm': GrantedSpell(
@@ -215,7 +216,8 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'haste': GrantedSpell(
         'haste', {"it": 'Velocità', "en": 'Haste'}, 3, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'dream': GrantedSpell(
-        'dream', {"it": 'Sogno', "en": 'Dream'}, 5, '1 minuto', 'Speciale', '8 ore'),
+        'dream', {"it": 'Sogno', "en": 'Dream'}, 5, '1 minuto', 'Speciale', '8 ore', attack_save='SAVE', damage_dice='3d6',
+        damage_type='psychic'),  # TS Saggezza o 3d6 psichici al risveglio (2014 p.279, 2024 p.266)
     'meld-into-stone': GrantedSpell(
         'meld-into-stone', {"it": 'Fondersi nella pietra', "en": 'Meld Into Stone'}, 3, '1 azione', 'Contatto', '8 ore', is_ritual=True),
     'lightning-bolt': GrantedSpell(
@@ -460,7 +462,8 @@ for _spell, _comp in (
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "S, M"),
         (GrantedSpell("guiding-bolt", {"it": "Dardo guida", "en": "Guiding Bolt"}, 1, "1 azione", "36 m", "1 round", attack_save="ATK",
                       damage_dice="4d6", damage_type="radiant", higher_levels_dice="1d6"), "V, S"),
-        (GrantedSpell("fire-shield", {"it": "Scudo di fuoco", "en": "Fire Shield"}, 4, "1 azione", "Personale", "10 minuti"),
+        (GrantedSpell("fire-shield", {"it": "Scudo di fuoco", "en": "Fire Shield"}, 4, "1 azione", "Personale", "10 minuti",
+                      damage_dice="2d8", damage_type="fire"),
          "V, S, M"),
         (GrantedSpell("steel-wind-strike", {"it": "Colpo del vento d'acciaio", "en": "Steel Wind Strike"}, 5, "1 azione", "9 m",
                       "Istantanea", attack_save="ATK", damage_dice="6d10", damage_type="force"), "S, M")):
@@ -532,7 +535,7 @@ for _spell, _comp in (
         (GrantedSpell("calm-emotions", {"it": "Calmare le emozioni", "en": "Calm Emotions"}, 2, "1 azione", "18 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S"),
         (GrantedSpell("detect-thoughts", {"it": "Individuazione dei pensieri", "en": "Detect Thoughts"}, 2, "1 azione", "Personale",
-                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M"),  # sondare a fondo: TS Saggezza (2024 p.262)
         (GrantedSpell("hunger-of-hadar", {"it": "Fame di Hadar", "en": "Hunger of Hadar"}, 3, "1 azione", "45 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
         (GrantedSpell("sending", {"it": "Messaggio a distanza", "en": "Sending"}, 3, "1 azione", "Illimitata", "1 round"), "V, S, M"),
@@ -551,7 +554,8 @@ for _spell, _comp in (
         (GrantedSpell("chromatic-orb", {"it": "Sfera cromatica", "en": "Chromatic Orb"}, 1, "1 azione", "27 m", "Istantanea",
                       attack_save="ATK", damage_dice="3d8", damage_type="fire", higher_levels_dice="1d8"), "V, S, M"),
         (GrantedSpell("dragons-breath", {"it": "Soffio del drago", "en": "Dragon's Breath"}, 2, "1 azione bonus", "Contatto",
-                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="3d6",
+                      damage_type="fire", higher_levels_dice="1d6"), "V, S, M"),
         (GrantedSpell("charm-monster", {"it": "Charme su mostri", "en": "Charm Monster"}, 4, "1 azione", "9 m", "1 ora",
                       attack_save="SAVE"), "V, S"),
         (GrantedSpell("summon-dragon", {"it": "Evocare drago", "en": "Summon Dragon"}, 5, "1 azione", "18 m",
@@ -566,7 +570,7 @@ _COMPONENTS["contact-other-plane"] = "V"
 for _spell, _comp in (
         (GrantedSpell("phantasmal-force", {"it": "Forza fantasmagorica", "en": "Phantasmal Force"}, 2, "1 azione", "18 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="2d8",
-                      damage_type="psychic", higher_levels_dice="1d8"), "V, S, M"),
+                      damage_type="psychic"), "V, S, M"),  # 2d8 a ogni slot: la carta non scala (2024 p.304)
         (GrantedSpell("sacred-flame", {"it": "Fiamma sacra", "en": "Sacred Flame"}, 0, "1 azione", "18 m", "Istantanea",
                       attack_save="SAVE", damage_dice="1d8", damage_type="radiant"), "V, S"),
         (GrantedSpell("summon-celestial", {"it": "Evocare celestiale", "en": "Summon Celestial"}, 5, "1 azione", "27 m",
@@ -681,6 +685,18 @@ GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_S
 # oltre il 5° nel 2024 vale per entrambi i tipi, il tiro di danno ne dà uno solo (rivederlo con la scalata).
 GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "flame-strike": replace(GRANTED_SPELLS["flame-strike"], damage_dice="5d6", extra_damage_dice="5d6"),
+    # Arma Magica: 1 ora senza Concentrazione (p.295)
+    "magic-weapon": replace(GRANTED_SPELLS["magic-weapon"], duration="1 ora", is_concentration=False),
+    # Arma Spirituale: +1d8 per livello oltre il 2° (p.319-320); nel 2014 è +1d8 ogni due livelli, che il tiro non sa scalare
+    "spiritual-weapon": replace(GRANTED_SPELLS["spiritual-weapon"], higher_levels_dice="1d8"),
+    # Tempesta di ghiaccio: 2d10 contundenti, +1d10 per livello oltre il 4° (p.287)
+    "ice-storm": replace(GRANTED_SPELLS["ice-storm"], damage_dice="2d10", higher_levels_dice="1d10"),
+    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti (p.254)
+    "conjure-elemental": replace(GRANTED_SPELLS["conjure-elemental"], casting_time="1 azione", range_area="18 m",
+                                 duration="Concentrazione, fino a 10 minuti", components="V, S"),
+    # Saltare: azione bonus (p.290); Inviare: istantanea (p.314)
+    "jump": replace(GRANTED_SPELLS["jump"], casting_time="1 azione bonus"),
+    "sending": replace(GRANTED_SPELLS["sending"], duration="Istantanea"),
 }
 # Scuole cambiate nel 2024 (spells-2024: Cura Ferite abiurazione, Rianimare necromanzia...)
 _SCHOOLS_2024 = {

@@ -123,7 +123,6 @@ async def test_soffio_del_drago_tira_3d6_del_tipo_scelto_piu_1d6_per_slot(client
                     copre=["carta:2024/spells.md#Tempesta di ghiaccio", "POST /characters",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(4, "2d10"), (5, "3d10")])
-@pytest.mark.xfail(strict=True, reason="CB-3864: difforme dal manuale, confermato")
 async def test_tempesta_di_ghiaccio_concessa_nel_2024_usa_i_d10_del_manuale_2024(client, slot, dadi_attesi):
     cid = await _pg(client, "druid", 9, "Circolo del Mare")
     riga = await _concesso(client, cid, "ice-storm")
@@ -141,7 +140,6 @@ async def test_tempesta_di_ghiaccio_concessa_nel_2024_usa_i_d10_del_manuale_2024
     ("sleet-storm", {"attack_save": "SAVE"}),  # Circolo della Terra polare 2024
     ("fire-shield", {"damage_dice": "2d8"}),  # Dominio della Guerra e Patrono Immondo 2024
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3865: difforme dal manuale, confermato")
 def test_incantesimo_concesso_nel_2024_ha_ts_e_dadi_della_carta(indice, attesi):
     riga = granted_spell(indice, "2024")
     assert {campo: getattr(riga, campo) for campo in attesi} == attesi
@@ -149,7 +147,6 @@ def test_incantesimo_concesso_nel_2024_ha_ts_e_dadi_della_carta(indice, attesi):
 
 @pytest.mark.caccia(id="CB-3866", fonte="2024 · Incantesimi · Saltare · pag. 290; Warlock · Balzo Ultraterreno · pag. 156", zona="regola:2024/incantesimi-S-Z",
                     voce="edizioni", copre=["carta:2024/spells.md#Saltare"])
-@pytest.mark.xfail(strict=True, reason="CB-3866: difforme dal manuale, confermato")
 def test_saltare_concesso_nel_2024_si_lancia_con_un_azione_bonus():
     assert casting_kind(granted_spell("jump", "2024")) == "bonus"  # oggi «1 azione», il tempo di lancio 2014
 
@@ -193,7 +190,6 @@ async def test_scudo_di_fuoco_2024_freddo_infligge_danni_da_freddo(client):
 
 @pytest.mark.caccia(id="CB-3870", fonte="2024 · Incantesimi · Santuario · pag. 313", zona="regola:2024/incantesimi-S-Z", voce="interazione",
                     copre=["carta:2024/spells.md#Santuario", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3870: difforme dal manuale, confermato")
 async def test_santuario_2024_finisce_quando_il_protetto_lancia_un_incantesimo(client):
     cid = await _pg(client, "cleric", 1)
     santuario = await _impara(client, cid, "sanctuary")

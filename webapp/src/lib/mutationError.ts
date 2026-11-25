@@ -31,7 +31,7 @@ export function notifyMutationError(err?: unknown): void {
   else toast.error(i18n.t(actionFailedKey(err)))
 }
 
-const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'self_only_spell', 'invalid_choice', 'option_unavailable']
+const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'self_only_spell', 'invalid_choice', 'option_unavailable', 'already_affected']
 
 /** Un lancio rifiutato dal server per una regola (azione già spesa, usi finiti) lo dice con il suo testo; il resto è un errore generico. */
 export function notifyCastError(err: unknown): void {

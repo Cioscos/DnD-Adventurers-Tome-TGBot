@@ -91,7 +91,6 @@ async def test_dominare_con_slot_superiore_allunga_la_concentrazione(client, cla
                     voce="regola",
                     copre=["carta:2014/spells.md#Forma Gassosa", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-3262: difforme dal manuale, confermato")
 async def test_forma_gassosa_finisce_quando_il_bersaglio_scende_a_zero_pf(client, test_session_factory):
     eroe, cid, sid = await _serata(client, test_session_factory, "sorcerer", 5, "gaseous-form")
     as_user(GM_ID)

@@ -100,7 +100,6 @@ async def test_colpo_infuocato_preso_dal_catalogo_infligge_anche_4d6_radiosi(cli
 @pytest.mark.caccia(id="CB-3214", fonte="2014 · Incantesimi · Cerchio Magico · pag. 221", zona="regola:2014/incantesimi-A-C", voce="limiti",
                     copre=["carta:2014/spells.md#Cerchio Magico", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("slot, ore", [(4, 2), (5, 3)])
-@pytest.mark.xfail(strict=True, reason="CB-3214: difforme dal manuale, confermato")
 async def test_cerchio_magico_dura_un_ora_in_piu_per_ogni_slot_oltre_il_terzo(client, slot, ore):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     cerchio = await _dal_catalogo(client, cid, "magic-circle")

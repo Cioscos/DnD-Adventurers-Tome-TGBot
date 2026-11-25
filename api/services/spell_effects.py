@@ -88,6 +88,13 @@ async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Ch
         raise _invalid("invalid_choice")
 
 
+def _check_again(effect: SpellEffect, variant: SpellVariant, chars: list[Character]) -> None:
+    """409 ``already_affected``: un bersaglio porta ancora lo stato di un incantesimo che non lo influenza di nuovo prima del suo Riposo Lungo."""
+    key = f"{SPELL_STATE_PREFIX}{effect.key}"
+    if variant.once_per_long_rest and any(s.get("key") == key for c in chars for s in c.active_states or []):
+        raise _invalid("already_affected", status.HTTP_409_CONFLICT)
+
+
 async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: int,
                    targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = ()):
     """``(effetto, variante, bersagli, scelte, fuori_serata)`` o ``None`` se l'incantesimo non è nel catalogo.
@@ -100,8 +107,11 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
     chosen = _check_choices(variant, edition, choices)
     if effect.target.kind == "self" and any(t != caster.id for t in targets or []):
         raise _invalid("self_only_spell")  # un effetto solo su chi lancia non si dà ad altri
+    if variant.not_self and (targets is None or caster.id in targets):
+        raise _invalid("invalid_target")  # solo su un'altra creatura (Legame di Protezione 2024)
     if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio
         await _check_weapon(session, variant, caster, chosen)
+        _check_again(effect, variant, [caster])
         return effect, variant, [caster], chosen, False
     if len(targets) != len(set(targets)) or len(targets) > effect.max_targets(edition, slot_level) + (TWINNED_KEY in options):  # Raddoppiato: una creatura in più
         raise _invalid("invalid_target")
@@ -114,6 +124,7 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
             if ally.is_dead:
                 raise _invalid("target_dead", status.HTTP_409_CONFLICT)
             chars.append(ally)
+    _check_again(effect, variant, chars)
     if not outside and chars:
         await _check_weapon(session, variant, chars[0], chosen)
     else:
@@ -343,7 +354,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if rolled:
         data["per_target"] = rolled
     ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on]
-    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
+    counted = {"skip_new_turns": 1} if "turn_end_counted" in ends else {}  # fino alla fine del turno seguente (Interdizione alle Lame 2014)
+    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data, **counted}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}

@@ -1,6 +1,8 @@
 """Incantesimi di difesa: resistenze, immunità, vantaggi ai tiri salvezza e condizioni imposte (Pelle di Pietra, Aura di Purezza, Invisibilità...)."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.data.damage_types import DAMAGE_TYPES
 from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant, roll
 from core.rules.types import Modifier, RollOptionSpec, RuleContext
@@ -66,7 +68,8 @@ _AURA_PURITY_2024 = SpellVariant(modifiers=res("poison"), options=(_PURITY_OPTIO
 BLADE_WARD_2014 = SpellVariant(
     options=(confirm_physical("spell:blade_ward:weapon", txt("Interdizione alle Lame: è il danno di un attacco con arma?",
                                                              "Blade Ward: is it the damage of a weapon attack?")),),
-    rounds=1,
+    # l'orologio finisce alla fine del turno che segue il lancio (2014 p.245); i 2 round sono il tetto fuori incontro
+    rounds=2, clock_ends_on=("new_turn", "turn_end_counted"),
     text=txt("Resistenza ai danni degli attacchi con armi fino alla fine del tuo turno successivo: conferma al danno che viene da un attacco con arma.",
              "Resistance to weapon attack damage until the end of your next turn: confirm on the damage that it comes from a weapon attack."))
 
@@ -180,6 +183,10 @@ _HEROISM = SpellVariant(
     turn_temp_hp=lambda d: max(0, d.get("cast_mod", 0)),  # il modificatore da incantatore di chi lancia, fissato al lancio
     text=txt("A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato (automatico). Alla fine dell'incantesimo quelli rimasti svaniscono (automatico).",
              "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier (automatic). Those left vanish when the spell ends (automatic)."))
+# 2024 p.285: la carta non li toglie a fine incantesimo, quindi valgono le regole generali (p.29: fino a esaurimento o al Riposo Lungo)
+_HEROISM_2024 = replace(_HEROISM, temp_hp_ends=False, text=txt(
+    "A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato (automatico). Alla fine dell'incantesimo quelli rimasti restano.",
+    "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier (automatic). Those left stay when the spell ends."))
 _MIND_BLANK = SpellVariant(
     modifiers=lambda d: (Modifier("immunity:psychic", 1),), immune_conditions=("charmed",), rounds=DAY,
     text=txt("Immune anche a ciò che percepisce emozioni o legge i pensieri e alle divinazioni: lo applica il GM.",
@@ -229,7 +236,7 @@ SPELLS: tuple[SpellEffect, ...] = (
                 SpellTarget("allies", lambda slot: max(slot - 1, 1)), {"2014": _INVISIBILITY_2014, "2024": _INVISIBILITY_2024}),
     SpellEffect("greater_invisibility", ("greater-invisibility",), ("Invisibilità Superiore", "Greater Invisibility"),
                 SpellTarget("ally"), both(_GREATER_INVISIBILITY)),
-    SpellEffect("heroism", ("heroism",), ("Eroismo", "Heroism"), SpellTarget("allies", lambda slot: max(slot, 1)), both(_HEROISM)),
+    SpellEffect("heroism", ("heroism",), ("Eroismo", "Heroism"), SpellTarget("allies", lambda slot: max(slot, 1)), {"2014": _HEROISM, "2024": _HEROISM_2024}),
     SpellEffect("mind_blank", ("mind-blank",), ("Vuoto Mentale", "Mente Vuota", "Mind Blank"), SpellTarget("ally"), both(_MIND_BLANK)),
     SpellEffect("heroes_feast", ("heroes-feast",), ("Banchetto degli Eroi", "Heroes' Feast"),
                 SpellTarget("allies", lambda slot: 12), {"2014": _FEAST_2014, "2024": _FEAST_2024}),

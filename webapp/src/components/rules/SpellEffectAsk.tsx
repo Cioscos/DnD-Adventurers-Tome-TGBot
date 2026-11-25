@@ -76,7 +76,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
       </Sheet>
     )
   }
-  const list = [{ id: charId, name: t('character.turn.removal_self') }, ...allies.filter((a) => a.id !== charId && !a.dead)]
+  const list = [...(effect.not_self ? [] : [{ id: charId, name: t('character.turn.removal_self') }]), ...allies.filter((a) => a.id !== charId && !a.dead)]
   return (
     <AllyTargetSheet
       title={title}

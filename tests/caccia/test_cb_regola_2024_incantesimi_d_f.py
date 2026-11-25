@@ -121,7 +121,6 @@ async def test_evoca_fatato_2024_sale_di_2d12_per_slot_oltre_il_sesto(client, sl
 
 @pytest.mark.caccia(id="CB-3716", fonte="2024 · Incantesimi · Forma gassosa · pag. 277", zona="regola:2024/incantesimi-D-F", voce="limiti",
                     copre=["carta:2024/spells.md#Forma gassosa", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3716: difforme dal manuale, confermato")
 async def test_forma_gassosa_2024_un_bersaglio_in_piu_per_slot_oltre_il_terzo(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(GM_ID)
@@ -158,7 +157,6 @@ async def test_dominare_2024_la_concentrazione_dura_di_piu_con_uno_slot_superior
                     copre=["carta:2024/spells.md#Evoca Elementale",
                            "carta:2024/classes/druid.md#Incantesimi del Circolo del Mare / Circle of the Sea Spells (Circolo del Mare 3, pag. 87)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3718: difforme dal manuale, confermato")
 async def test_evoca_elementale_del_circolo_del_mare_2024_concentrazione_fino_a_10_minuti(client):
     cid = await _circle(client, "sea", 9, wisdom=16)
     riga = await _concesso(client, cid, "conjure-elemental")
@@ -172,7 +170,6 @@ async def test_evoca_elementale_del_circolo_del_mare_2024_concentrazione_fino_a_
                     copre=["carta:2024/spells.md#Forza Fantasmatica",
                            "carta:2024/classes/warlock.md#Incantesimi del Grande Antico / Great Old One Spells (Patrono Grande Antico 3, pag. 163)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3719: difforme dal manuale, confermato")
 async def test_forza_fantasmatica_del_grande_antico_2024_fa_2d8_anche_con_slot_superiore(client):
     cid = await _make(client, "great_old_one", 5)
     riga = await _concesso(client, cid, "phantasmal-force")
