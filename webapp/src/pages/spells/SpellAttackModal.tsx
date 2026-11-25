@@ -86,10 +86,10 @@ export default function SpellAttackModal({
       title={
         <span className="inline-flex items-center justify-center gap-1.5">
           <Swirl size={14} className="text-dnd-gold-bright" />
-          {spell_name}{ray && ` · ${t('character.spells.ray_of', ray)}`}
+          {spell_name}
         </span>
       }
-      subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
+      subtitle={[ray && t('character.spells.ray_of', ray), wasRerolled && t('character.inspiration.reroll_badge')].filter(Boolean).join(' · ') || undefined}
       extraActions={
         <div className="space-y-2">
           {afterRollRow}

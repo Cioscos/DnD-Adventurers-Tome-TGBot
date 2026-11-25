@@ -306,6 +306,17 @@ describe('SpellDamageSheet', () => {
     expect(screen.queryByText('character.spells.roll_damage.critical')).not.toBeInTheDocument()
   })
 
+  it('rolls the 3D dice of one ray when the spell has a ray per attack roll (Eldritch Blast, D-037)', async () => {
+    flags.anim = true
+    playAndCollect.mockResolvedValue([])
+    rollDamage.mockResolvedValue(result)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    client.setQueryData(['character', 7], { id: 7, classes: [{ level: 11 }], spells: [] })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={{ ...cantrip, damage_dice: '1d10', rays: 3 }} slotLevel={0} slotAlreadyConsumed initialCritical onClose={() => {}} />, { client })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd10', count: 2 }]))  // 1d10, raddoppiato dal critico
+  })
+
   it('goes back to the slot step before rolling', async () => {
     const onBack = vi.fn()
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} onClose={() => {}} onBack={onBack} />)
