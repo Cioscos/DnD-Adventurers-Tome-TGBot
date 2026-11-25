@@ -52,7 +52,7 @@ from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.cleric import BLESSED_HEALER
-from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, SP, SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, QUICKENED_KEY, SP, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -263,7 +263,7 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
-    silent: bool = False, war_magic: bool = False, no_concentration_option: bool = False,
+    silent: bool = False, war_magic: bool = False, no_concentration_option: bool = False, quickened: bool = False,
 ) -> Ability | None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
@@ -304,7 +304,7 @@ def _consume_cast(
             )
     slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(
         char, spell, slot_id, slot_level, pact_only=invocation is not None)
-    missing = [w for w in cast_warnings(char, spell, ritual, slotless=free_cast or ki) if w not in (confirm or [])]
+    missing = [w for w in cast_warnings(char, spell, ritual, slotless=free_cast or ki, quickened=quickened) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
@@ -596,7 +596,7 @@ async def use_spell(
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
-        war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
+        war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])), quickened=QUICKENED_KEY in (body.options or []),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.options or [],
                                          no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or []))
@@ -638,6 +638,7 @@ async def cast_check(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     ritual: bool = False,
     slotless: bool | None = None,
+    quickened: bool = False,
 ) -> list[str]:
     """Le regole che questo lancio violerebbe, da confermare prima di tirare i dadi. Il lancio le ricontrolla.
     ``slotless`` non indicato: come si paga non è ancora scelto, e chi può lanciare senza slot non conferma il secondo."""
@@ -649,7 +650,7 @@ async def cast_check(
         pact = pact_cast(char, spell)
         slotless = (free_cast_state(char, spell) is not None or at_will(char, spell) or ki_cast_info(char, spell) is not None
                     or (pact is not None and pact.kind == "arcanum"))
-    return cast_warnings(char, spell, ritual, slotless=slotless)
+    return cast_warnings(char, spell, ritual, slotless=slotless, quickened=quickened)
 
 
 @router.post("/{char_id}/spells/{spell_id}/attack", response_model=SpellAttackResult)
@@ -676,7 +677,7 @@ async def spell_attack(
         await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.cast_options)  # prima di spendere
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.cast_options or [])),
-                                                      war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
+                                                      war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])), quickened=QUICKENED_KEY in (body.cast_options or []),
                                                       no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.cast_options or []))))
         spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.cast_options,
                                              no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.cast_options)))

@@ -48,7 +48,6 @@ async def test_onde_di_caos_vale_anche_per_l_iniziativa_e_per_il_ts_contro_la_mo
                            "carta:2014/general.md#Tempo di Lancio / Casting Time (pag. 202)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("quickened_level", [1, 0])
-@pytest.mark.xfail(strict=True, reason="CB-2012: difforme dal manuale, confermato")
 async def test_incantesimo_rapido_dopo_un_incantesimo_di_livello_lanciato_con_l_azione_chiede_conferma(client, quickened_level):
     # Un incantesimo lanciato con l'azione bonus lascia nel turno solo un trucchetto da 1 azione, in qualsiasi ordine
     cid = await _caster(client, 5, "quickened")

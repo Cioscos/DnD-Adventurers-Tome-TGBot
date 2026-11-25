@@ -433,8 +433,8 @@ def _form_materials(char: Any, spell: Any) -> str | None:
     return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
 
 
-def _turn_warning(char: Any, spell: Any, slotless: bool = False) -> str | None:
-    kind = casting_kind(spell)
+def _turn_warning(char: Any, spell: Any, slotless: bool = False, quickened: bool = False) -> str | None:
+    kind = "bonus" if quickened else casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
         return None
     turn = char.turn_state or {}
@@ -449,8 +449,9 @@ def _turn_warning(char: Any, spell: Any, slotless: bool = False) -> str | None:
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
-def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool = False) -> list[str]:
-    """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
+def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool = False, quickened: bool = False) -> list[str]:
+    """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri.
+    ``quickened``: il lancio usa Incantesimo Rapido, quindi l'azione bonus."""
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char, spell):
         out.append("wild_shape")
@@ -464,7 +465,7 @@ def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool = False) -
         out.append("ritual_only")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
-    warning = _turn_warning(char, spell, slotless)
+    warning = _turn_warning(char, spell, slotless, quickened)
     return [*out, warning] if warning else out
 
 

@@ -72,9 +72,9 @@ export function askCastConfirm(code: string): Promise<boolean> {
   })
 }
 
-async function castWarnings(charId: number, spellId: number, ritual: boolean, slotless?: boolean): Promise<string[]> {
+async function castWarnings(charId: number, spellId: number, ritual: boolean, slotless?: boolean, quickened?: boolean): Promise<string[]> {
   try {
-    return (await api.spells.castCheck(charId, spellId, ritual, slotless)) ?? []
+    return (await api.spells.castCheck(charId, spellId, ritual, slotless, quickened)) ?? []
   } catch {
     return []  // il lancio ricontrolla sul server
   }
@@ -97,7 +97,7 @@ export async function confirmTurnRules(charId: number, spellId: number): Promise
 
 /** Prima dei dadi: conferme delle regole violate, poi opzioni del lancio. `CastCancelled` se il giocatore rinuncia. */
 export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false, ki = false) {
-  const confirm = await castWarnings(charId, spellId, ritual, freeCast || ki)
+  const confirm = [...await castWarnings(charId, spellId, ritual, freeCast || ki)]
   const asked = turnRulesConfirmed?.spellId === spellId ? turnRulesConfirmed.codes : []
   turnRulesConfirmed = null  // vale per un lancio solo
   for (const code of confirm) {
@@ -109,6 +109,13 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   const choice = await askRollOptions(
     charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true, cancellable: true },
   )
+  if (choice.options.includes('sorcerer.metamagic_quickened')) {  // Rapido: il lancio diventa di azione bonus, le regole del turno si ricontrollano
+    for (const code of await castWarnings(charId, spellId, ritual, freeCast || ki, true)) {
+      if (confirm.includes(code)) continue
+      if (!(await askCastConfirm(code))) throw new CastCancelled()
+      confirm.push(code)
+    }
+  }
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
 
