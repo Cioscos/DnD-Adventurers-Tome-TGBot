@@ -587,7 +587,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
     from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES, FAST_CRAFTING_TOOLS
-    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS
+    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS, proficient_with
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
     if not needs:
@@ -669,9 +669,10 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         cats["weapons"] = [*cats["weapons"], *(n for n in names if n.lower() not in have)]
         char.general_proficiencies = cats
         saved["weapons"] = list(weapons)
-    if "weapon_mastery" in needs:  # Maestro d'armi
+    if "weapon_mastery" in needs:  # Maestro d'armi: un'arma semplice o da guerra in cui si è competenti (2024 pag. 209)
         weapons = options.get("weapon_mastery")
-        if not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS:
+        if (not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS
+                or not proficient_with(char, weapons[0])):
             raise _bad("feat_options_invalid")
         saved["weapon_mastery"] = list(weapons)
     if "list" in needs and not key.startswith("feat.2024_"):  # talenti 2014 con una lista di classe

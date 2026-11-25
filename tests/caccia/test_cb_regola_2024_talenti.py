@@ -155,7 +155,6 @@ async def test_artigiano_sceglie_solo_strumenti_della_tabella_creazione_rapida(c
 @pytest.mark.caccia(id="CB-3468", fonte="2024 · Talenti · Maestro d'armi · pag. 209", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Maestro d'armi / Weapon Master (pag. 209) - Generale (livello 4+)",
                            "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3468: difforme dal manuale, confermato")
 async def test_maestro_d_armi_sceglie_solo_un_arma_in_cui_si_e_competenti(client):
     ch = await _pg(client, "wizard", 4)
     riga = _righe(await _preso(client, ch["id"], "2024_weapon_master", "strength"), "2024_weapon_master")[0]
