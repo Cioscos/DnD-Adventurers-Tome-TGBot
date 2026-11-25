@@ -490,3 +490,15 @@ async def test_il_monaco_ripete_anche_un_ts_contro_la_morte_fallito(client, ediz
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [opzione], "dice": [15]})
     assert r.status_code == 200, r.text
     assert r.json()["death"]["successes"] == 1
+
+
+@pytest.mark.caccia(id="CB-4814", fonte="2014 · Warlock · Tutt'Uno con le Ombre · pag. 119: finisce con un'azione (l'azione Attacco di cui si cede un attacco)", zona="regola:2014/warlock", voce="interazione",
+                    copre=["carta:2014/classes/warlock.md#Tutt'Uno con le Ombre / One with Shadows (Suppliche Occulte, livello 5, pag. 119)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_tutt_uno_con_le_ombre_finisce_anche_cedendo_un_attacco_al_famiglio(client):
+    cid = await _caster(client, 5, "one_with_shadows", boon="chain")
+    assert (await _use(client, cid, "warlock.one_with_shadows", params={"light": "dark"})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    r = await _use(client, cid, "warlock.pact_of_the_chain")
+    assert r.status_code == 200, r.text
+    assert not (await client.get(f"/characters/{cid}")).json()["conditions"].get("invisible")

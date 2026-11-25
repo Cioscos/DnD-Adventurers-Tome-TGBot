@@ -75,10 +75,15 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     else:
         st[_FLAGS[slot]] = True
     _save(char, st)
-    if slot in ("action", "reaction"):  # gli stati che finiscono agendo o reagendo (Tutt'Uno con le Ombre e Nascondersi in Piena Vista 2014)
-        from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
-        end_states(char, slot)
+    if slot in ("action", "reaction"):
+        _end_acting(char, slot)
     return st
+
+
+def _end_acting(char, slot: str) -> None:
+    """Gli stati che finiscono agendo o reagendo (Tutt'Uno con le Ombre e Nascondersi in Piena Vista 2014)."""
+    from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
+    end_states(char, slot)
 
 
 def release(char, slot: str) -> dict:
@@ -129,6 +134,7 @@ def forgo_attack(char) -> dict:
     st["action_attacks"] += 1
     st["action_weapons"] = [*(st.get("action_weapons") or []), [FORGONE, False]]  # ceduto: non è un attacco con un'arma leggera
     _save(char, st)
+    _end_acting(char, "action")  # è un attacco dell'azione Attacco
     return st
 
 
