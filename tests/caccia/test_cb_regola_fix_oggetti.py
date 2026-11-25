@@ -40,3 +40,25 @@ async def test_armi_possenti_ritira_anche_il_dado_di_superiorita(client, dadi):
     assert r.status_code == 200, r.text
     # «su un 1 o un 2 a un dado dei danni» dell'attacco in mischia a due mani: anche il dado che la manovra aggiunge
     assert r.json()["option_result"]["extra_rolls"] == [5]
+
+
+@pytest.mark.caccia(id="CB-4275", fonte="2014 · Equipaggiamento · Tabella pag. 150, Strumenti pag. 154, Armature pag. 145",
+                    zona="regola:2014/equipaggiamento", voce="regola",
+                    copre=["carta:2014/equipment.md#Tabella (pag. 150)", "carta:2014/equipment.md#Strumenti (tabella, pag. 154)",
+                           "carta:2014/equipment.md#Armature / Armor (pag. 145)", "POST /characters"])
+@pytest.mark.parametrize("classe, scelte, nome, libbre", [
+    ("wizard", [0, 0, 0, 0], "Libro degli incantesimi", 3),  # 1,5 kg
+    ("wizard", [0, 0, 0, 0], "Borsa componenti", 2),  # 1 kg
+    ("ranger", [0, 0, 1, 0], "Faretra", 1),  # 0,5 kg
+    ("ranger", [0, 0, 1, 0], "Frecce", 1),  # 20 frecce, 0,5 kg in tutto
+    ("cleric", [0, 0, 0, 0, 0], "Quadrelli", 1.5),  # 20 quadrelli, 0,75 kg in tutto
+    ("rogue", [0, 0, 0, 0], "Arnesi da scasso", 1),  # 0,5 kg
+    ("bard", [0, 0, 0, 0, 0], "Liuto", 2),  # 1 kg
+    ("druid", [0, 0, 0], "Scudo di legno", 6),  # lo scudo, 3 kg, come quello dell'SRD
+])
+async def test_gli_oggetti_di_partenza_2014_pesano_come_la_tabella(client, classe, scelte, nome, libbre):
+    r = await client.post("/characters", json={"name": "Peso", "rules_edition": "2014", "initial_class": {"class_name": classe},
+                                               "starting_equipment": scelte})
+    assert r.status_code == 201, r.text
+    oggetto = next(i for i in r.json()["items"] if i["name"] == nome)
+    assert oggetto["weight"] * oggetto["quantity"] == pytest.approx(libbre)

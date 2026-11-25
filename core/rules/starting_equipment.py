@@ -73,6 +73,18 @@ GENERIC: dict[str, tuple[str, str, str]] = {
     "gaming-set": ("tool", "Set da gioco a scelta", "Gaming set of choice"),
 }
 
+# Peso in lb per unità delle voci con un peso unico stampato, uguale nelle due edizioni (2014 pag. 145, 150, 154; 2024
+# pag. 219-223; libro degli incantesimi 2024 pag. 165). Le altre restano 0: pacchetti (non scomposti), focus, simbolo sacro
+# e segnaposti «a scelta», il cui peso dipende da ciò che il giocatore sceglie.
+_WEIGHT_LB: dict[str, float] = {
+    "wooden-shield": 6, "arrows": 0.05, "bolts": 0.075, "quiver": 1, "component-pouch": 2, "lute": 2,
+    "thieves-tools": 1, "herbalism-kit": 3, "spellbook": 3, "occult-book": 5, "robe": 4,
+    "book-prayers": 5, "book-philosophy": 5, "book-history": 5, "pouch": 1, "travelers-clothes": 4, "fine-clothes": 6,
+    "costume": 4, "crowbar": 5, "mirror": 0.5, "healers-kit": 3, "iron-pot": 10, "shovel": 5, "hooded-lantern": 2,
+    "manacles": 6, "bedroll": 7, "tent": 20, "lamp": 1, "oil": 1,
+    "rope": 5,  # solo nei background 2024: la corda del 2024 (la canapa 2014 pesa 10)
+}
+
 _E, _D = "explorer-pack", "dungeoneer-pack"
 _S, _SM, _M, _MM = "simple-weapon", "simple-melee", "martial-weapon", "martial-melee"
 _WEAPON_CHOICES = (_S, _SM, _M, _MM)
@@ -163,7 +175,8 @@ def _item(key: str, qty: int, lang: str) -> dict[str, Any]:
         kind, it, en = GENERIC[key] if key in GENERIC else ("tool", TOOLS[key].it, TOOLS[key].en)
         # U8: l'arma «a scelta» porta la categoria: l'inventario la fa sostituire con un'arma del catalogo
         meta = {"ac_bonus": 2} if kind == "shield" else {"choice": key} if key in _WEAPON_CHOICES else None
-        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty, "weight": 0.0, "item_metadata": meta}
+        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty,
+                "weight": float(_WEIGHT_LB.get(key, 0)), "item_metadata": meta}
     e = _srd()[key]
     meta: dict[str, Any] = {"srd_index": key}
     if e.get("armor_type") == "shield":
