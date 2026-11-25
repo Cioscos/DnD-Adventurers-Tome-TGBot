@@ -682,7 +682,9 @@ class FeatureSpec:
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
-    granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
+    # gli incantesimi concessi, o scelti con le sue ``choices``, si lanciano solo come rituale (Cercatore di Spiriti, Libro degli Antichi Segreti 2014)
+    granted_ritual_only: bool = False
+    granted_ritual: bool = False  # gli incantesimi concessi si lanciano anche come rituale, oltre che con uno slot (Patto della Catena 2014)
     condition_immunities: tuple[str, ...] = ()  # condizioni che il privilegio impedisce sempre (Interdizione della Natura)
     needs_conscious: bool = False  # ``condition_immunities`` valgono solo con il personaggio cosciente (Aura di Coraggio)
     ignores_components: bool = False  # Arcidruido: le componenti V, S e M senza costo non servono

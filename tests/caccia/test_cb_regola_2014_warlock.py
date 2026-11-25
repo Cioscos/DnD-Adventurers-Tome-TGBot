@@ -71,7 +71,6 @@ async def test_arcanum_mistico_si_sceglie_dalla_lista_del_warlock(client):
 @pytest.mark.caccia(id="CB-2064", fonte="2014 · Warlock · Patto della Catena · pag. 115", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Patto della Catena / Pact of the Chain (Warlock 3, pag. 115)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2064: difforme dal manuale, confermato")
 async def test_patto_della_catena_lancia_trova_famiglio_come_rituale(client):
     cid = await _warlock(client, 3)
     assert (await _resolve(client, cid, "pact_boon", ["chain"])).status_code == 200
@@ -85,7 +84,6 @@ async def test_patto_della_catena_lancia_trova_famiglio_come_rituale(client):
 @pytest.mark.caccia(id="CB-2065", fonte="2014 · Warlock · Libro degli Antichi Segreti · pag. 118", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Libro degli Antichi Segreti / Book of Ancient Secrets (Suppliche Occulte, Patto del Tomo, pag. 118)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2065: difforme dal manuale, confermato")
 async def test_i_rituali_del_libro_si_lanciano_solo_come_rituali(client):
     cid = await _caster(client, 3, "book_of_ancient_secrets", boon="tome")
     pick = _choice(await _full(client, cid), "book_rituals")

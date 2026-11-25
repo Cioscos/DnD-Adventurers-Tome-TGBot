@@ -338,7 +338,7 @@ FEATURES = (
     _boon_row("chain", "Patto della Catena / Pact of the Chain (Warlock 3, pag. 115)", ("Patto della Catena", "Pact of the Chain"),
               ("Trova famiglio come rituale, fuori dai conosciuti: forma normale, imp, pseudodrago, quasit o spiritello. Rinunci a un attacco e il famiglio attacca con la sua reazione.",
                "Find familiar as a ritual, outside your known spells: normal form, imp, pseudodragon, quasit or sprite. Give up an attack and the familiar attacks with its reaction."),
-              "special", granted_spells=("find-familiar",), on_use=CHAIN_USE),
+              "special", granted_spells=("find-familiar",), granted_ritual=True, on_use=CHAIN_USE),
     _boon_row("blade", "Patto della Lama / Pact of the Blade (Warlock 3, pag. 115)", ("Patto della Lama", "Pact of the Blade"),
               ("Azione: crei un'arma da mischia del patto in mano, della forma che scegli. Sei competente e conta come magica; una nuova creazione sostituisce la precedente.",
                "Action: you create a pact melee weapon in your hand, in the form you choose. You are proficient and it counts as magical; a new one replaces the old."),

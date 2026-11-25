@@ -215,11 +215,26 @@ def _has_ritual_feat(char: Any) -> bool:
                for a in char.abilities)
 
 
+def _granted_by(char: Any, spell: Any, flag: str) -> bool:
+    """L'incantesimo è concesso (``granted_spells``) alla classe a cui è assegnato da un privilegio con ``flag``."""
+    return any(getattr(spec, flag) and spell.srd_index in spec.granted_spells and spell.srd_index in GRANTED_SPELLS
+               and spell.class_id == row.id for spec, row in active_features(char))
+
+
 def granted_ritual_only(char: Any, spell: Any) -> bool:
-    """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), alla
-    classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
-    return any(spell.srd_index == key and spec.granted_ritual_only and spell.class_id == row.id
-               for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
+    """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), o scelto
+    con una sua scelta (i rituali del Libro degli Antichi Segreti 2014), alla classe a cui è assegnato: chi lo ha da
+    un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
+    picked = spell.srd_index or spell.name
+    return _granted_by(char, spell, "granted_ritual_only") or any(
+        spec.granted_ritual_only and spell.class_id == row.id
+        and any(ch.spell_pick and picked in ((getattr(row, "options", None) or {}).get(ch.group) or []) for ch in spec.choices)
+        for spec, row in active_features(char))
+
+
+def granted_ritual(char: Any, spell: Any) -> bool:
+    """Un privilegio fa lanciare l'incantesimo come rituale: solo così, o anche con uno slot (Patto della Catena 2014)."""
+    return granted_ritual_only(char, spell) or _granted_by(char, spell, "granted_ritual")
 
 
 def _book_rituals(char: Any, spell: Any) -> bool:
@@ -309,7 +324,7 @@ def can_ritual(char: Any, spell: Any = None) -> bool:
     """2014: Lancio Rituale di classe o talento. 2024: chiunque abbia incantesimi preparati. Un incantesimo concesso
     come rituale si lancia anche senza."""
     edition = character_edition(char)
-    if spell is not None and granted_ritual_only(char, spell):
+    if spell is not None and granted_ritual(char, spell):
         return True
     if _has_ritual_feat(char) or _book_rituals(char, spell):
         return True

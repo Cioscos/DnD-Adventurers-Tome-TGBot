@@ -194,7 +194,7 @@ _ROWS = (
     _inv("book_of_ancient_secrets", "Libro degli Antichi Segreti", "Book of Ancient Secrets", "Suppliche Occulte, Patto del Tomo, pag. 118", 2,
          ("Trascrivi nel Libro delle Ombre due rituali di 1° livello di qualsiasi lista: fuori dai conosciuti. Impugnando il libro lanci come rituale anche i tuoi rituali da warlock.",
           "Inscribe two 1st-level rituals from any list in your Book of Shadows, outside your known spells. While holding it you also cast your warlock rituals as rituals."),
-         boon="tome", ritual_casting=True,
+         boon="tome", ritual_casting=True, granted_ritual_only=True,  # i due rituali trascritti: solo come rituali (pag. 118)
          choices=(ChoiceSpec(group="book_rituals", levels={2: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
                              spell_ritual=True),)),
     _will("beast_speech", "Lingue delle Bestie", "Beast Speech", "Suppliche Occulte, pag. 119", 2, "speak-with-animals",
