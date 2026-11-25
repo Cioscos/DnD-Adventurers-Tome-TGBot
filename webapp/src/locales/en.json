@@ -26,6 +26,7 @@
     "action_failed": "Action failed: check your connection and try again.",
     "action_refused": "Action failed.",
     "server_errors": {
+      "no_ray_left": "This casting has no rays left, or the turn has passed: cast the spell again.",
       "flame_not_lit": "The flame is not lit: cast the spell again, then hurl it.",
       "option_unavailable": "That option is not available now: a requirement is not met or the resource is already spent.",
       "turn_slot_used": "You already used that action this turn.",

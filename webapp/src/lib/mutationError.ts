@@ -9,7 +9,7 @@ const SERVER_ERRORS = [
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
   'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest', 'replace_after_rest', 'replace_on_level_up',
   'death_save_not_needed', 'character_dead', 'option_prerequisite', 'option_is_prerequisite', 'class_already_present', 'form_hit_dice',
-  'death_save_already_rolled', 'flame_not_lit',
+  'death_save_already_rolled', 'flame_not_lit', 'no_ray_left',
 ]
 
 /** Il codice che il server ha messo nel dettaglio dell'errore (`{code}`), se l'errore viene dal server. */

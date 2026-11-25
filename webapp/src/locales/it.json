@@ -26,6 +26,7 @@
     "action_failed": "Operazione non riuscita: controlla la connessione e riprova.",
     "action_refused": "Operazione non riuscita.",
     "server_errors": {
+      "no_ray_left": "I raggi di questo lancio sono finiti o il turno è passato: lancia di nuovo l'incantesimo.",
       "flame_not_lit": "La fiamma non è accesa: lancia di nuovo l'incantesimo, poi scagliala.",
       "option_unavailable": "Quell'opzione non è disponibile ora: un requisito non è soddisfatto o la risorsa è già stata spesa.",
       "turn_slot_used": "Hai già usato quell'azione in questo turno.",
