@@ -420,6 +420,7 @@ export type DeathSaveRollResult = {
   dice?: number[]
   mode?: RollMode
   notes?: string[]
+  bonus?: number
   outcome: 'nat20' | 'nat1' | 'success' | 'failure' | 'revived'
   successes: number
   failures: number

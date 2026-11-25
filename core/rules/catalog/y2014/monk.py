@@ -202,6 +202,8 @@ def _save_proficiency(ctx: RuleContext) -> int:
 
 
 def _lacks_save_proficiency(ctx: RuleContext) -> bool:
+    if ctx.roll == "death_save":  # «tutti i tiri salvezza»: anche quello contro la morte, senza caratteristica (D-052)
+        return True
     return (ctx.roll in ("save", "concentration") and bool(ctx.ability)
             and not (ctx.char.saving_throws or {}).get(ctx.ability))
 

@@ -929,3 +929,33 @@ async def test_invocazione_potente_non_si_riapre_nei_turni_dopo_dello_stesso_lan
         assert await _tiro_danni(client, cid, nube, casting_level=2) == 6 + 4
         await client.post(f"/characters/{cid}/turn/new")
         assert await _tiro_danni(client, cid, nube, casting_level=2) == 6
+
+
+@pytest.mark.caccia(id="CB-4887", fonte="decisione D-052 (tests/caccia/decisioni.md): competenza anche nei TS contro la morte; 2014 · Monaco · Anima Adamantina · pag. 92; 2024 · Sopravvissuto Disciplinato · pag. 103",
+                    zona="regola:2014/monk", voce="regola",
+                    copre=["carta:2014/classes/monk.md#Anima Adamantina / Diamond Soul (Monaco 14, pag. 92)",
+                           "carta:2024/classes/monk.md#Sopravvissuto Disciplinato / Disciplined Survivor (Monaco 14, pag. 103)",
+                           "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
+@pytest.mark.parametrize("edizione, privilegio", [("2014", "diamond_soul"), ("2024", "disciplined_survivor")])
+async def test_il_monaco_somma_la_competenza_al_ts_contro_la_morte(client, edizione, privilegio):
+    async def morente(livello) -> int:
+        cid = await _pg(client, edizione, "monk", livello)
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).status_code == 200
+        return cid
+
+    async def tira(cid, die) -> dict:
+        r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": die})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    cid = await morente(14)  # competenza +5
+    esito = await tira(cid, 5)
+    assert (esito["outcome"], esito["bonus"]) == ("success", 5) and f"feature:monk.{privilegio}" in esito["notes"]
+    esito = await tira(cid, 4)
+    assert (esito["outcome"], esito["bonus"], esito["failures"]) == ("failure", 5, 1)
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [f"monk.{privilegio}"], "dice": [6]})
+    assert r.status_code == 200, r.text
+    assert (r.json()["death"]["outcome"], r.json()["death"]["bonus"], r.json()["death"]["failures"]) == ("success", 5, 0)
+    assert (await tira(await morente(14), 1))["outcome"] == "nat1"  # l'1 naturale resta tale
+    esito = await tira(await morente(13), 9)  # al 13° il privilegio non c'è
+    assert (esito["outcome"], esito["bonus"]) == ("failure", 0)

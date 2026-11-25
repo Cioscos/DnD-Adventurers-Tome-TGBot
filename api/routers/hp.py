@@ -1244,6 +1244,7 @@ async def roll_death_save(
         mode=d20.mode,
         mode_applied=d20.mode,
         notes=applied.notes,
+        bonus=bonus + option_total,
         outcome=outcome,
         successes=ds["successes"],
         failures=ds["failures"],
@@ -1304,7 +1305,7 @@ async def retouch_death_save(
         add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
     ds = char.death_saves
     return DeathSaveRollResult(
-        die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], outcome=outcome,
+        die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], bonus=total - die, outcome=outcome,
         successes=ds["successes"], failures=ds["failures"], stable=ds.get("stable", False), revived=revived,
         current_hp=char.current_hit_points, option_result=roll["option_result"],
     ), {**death, "after": death_state(char)}

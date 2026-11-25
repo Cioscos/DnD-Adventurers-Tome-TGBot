@@ -489,7 +489,7 @@ async def test_i_recuperi_passivi_scattano_da_soli_al_tiro_di_iniziativa(client,
 async def test_il_monaco_ripete_anche_un_ts_contro_la_morte_fallito(client, edizione, opzione):
     cid = await _crea(client, edizione, ("monk", 14, None))
     assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).status_code == 200
-    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 4})  # +5 di competenza (D-052)
     assert r.status_code == 200 and r.json()["outcome"] == "failure", r.text
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [opzione], "dice": [15]})
     assert r.status_code == 200, r.text

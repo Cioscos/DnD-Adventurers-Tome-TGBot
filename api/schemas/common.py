@@ -480,6 +480,7 @@ class DeathSaveRollResult(BaseModel):
     mode: RollMode = "normal"
     mode_applied: RollMode = "normal"
     notes: list[str] = []
+    bonus: int = 0  # ciò che si somma al d20 (Anima Adamantina, auree): la soglia è 10
     outcome: str  # "nat20" | "nat1" | "success" | "failure" | "revived" (Vendetta Ardente: nessun tiro)
     successes: int
     failures: int

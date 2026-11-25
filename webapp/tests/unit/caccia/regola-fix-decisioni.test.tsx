@@ -7,6 +7,7 @@ import SaveRollSheet from '@/components/SaveRollSheet'
 import Extras from '@/pages/Extras'
 import Spells from '@/pages/Spells'
 import CharacterSelect from '@/pages/CharacterSelect'
+import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
 import Settings from '@/pages/Settings'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
@@ -143,5 +144,13 @@ describe('caccia: decisioni', () => {
     renderWithProviders(<Settings />)
     await screen.findByText('character.settings.coin_weight_label')
     expect(screen.queryByText('character.settings.encumbrance_variant_label') !== null).toBe(visibile)
+  })
+
+  // caccia: {"id": "CB-4888", "fonte": "decisione D-052 (tests/caccia/decisioni.md): il dettaglio del TS contro la morte mostra la competenza; 2014 · Monaco · Anima Adamantina · pag. 92", "zona": "regola:2014/monk", "voce": "regola", "copre": ["carta:2014/classes/monk.md#Anima Adamantina / Diamond Soul (Monaco 14, pag. 92)", "route:/char/:id/hp"]}
+  it.each([['success', 6, '11', true], ['nat1', 1, '1', true], ['failure', 6, '6', false]] as const)('dettaglio del TS contro la morte: %s con %i mostra %s', (outcome, die, grande, conBonus) => {
+    renderWithProviders(<DeathSaveResultDialog onClose={() => {}} result={{
+      die, outcome, bonus: conBonus ? 5 : 0, successes: 1, failures: 0, stable: false, revived: false, current_hp: 0 }} />)
+    expect(screen.getByText(grande)).toBeInTheDocument()
+    expect(screen.queryByText(`d20 (${die}) +5`) !== null).toBe(conBonus)
   })
 })
