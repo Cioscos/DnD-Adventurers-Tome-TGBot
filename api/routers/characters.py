@@ -90,7 +90,7 @@ from core.rules.starting_equipment import (
 from core.data.backgrounds_2024 import BACKGROUNDS_2024, GOLD_OPTION, BackgroundData
 from core.data.feats_2024 import ALL_FEATS
 from core.rules.tools import add_tools
-from api.services.species_apply import apply_species, plan_species
+from api.services.species_apply import RACE_GRANTS, apply_species, plan_species
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
@@ -114,7 +114,7 @@ SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "res
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, TEMP_GIVEN, TEMP_RELEASE, TEMP_MANUAL, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
-                         SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, ASSASSIN_KITS_FLAG)
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, RACE_GRANTS, ASSASSIN_KITS_FLAG)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -281,14 +281,19 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
         char.settings = s
         langs = list(char.languages or [])
         char.languages = langs + [l for l in sp.languages if l not in langs]
+        granted = {"skills": [k for k in sp.skills if (char.skills or {}).get(k)], "resistances": list(sp.resistances),
+                   "tools": [t for t in sp.tools if t not in (char.tool_proficiencies or {})]}
         if sp.weapons:  # per nome, come il Maestro d'Armi: is_weapon_proficient li riconosce in entrambe le lingue
             cats = normalize(char.general_proficiencies)
-            cats["weapons"] += [WEAPONS[w].en if lang == "en" else WEAPONS[w].it for w in dict.fromkeys(sp.weapons)]
+            granted["weapons"] = [WEAPONS[w].en if lang == "en" else WEAPONS[w].it for w in dict.fromkeys(sp.weapons)]
+            cats["weapons"] += granted["weapons"]
             char.general_proficiencies = cats
         if sp.tools:
             add_tools(char, sp.tools)
         if sp.resistances:
             char.damage_modifiers = {**(char.damage_modifiers or {}), "resistances": sorted(set(sp.resistances))}
+        if body.rules_edition == "2014" and any(granted.values()):  # il passaggio a una specie 2024 li toglie
+            char.settings = {**char.settings, RACE_GRANTS: granted}
     return bg
 
 

@@ -1468,6 +1468,9 @@
         "scores_check": "Ability scores do not change: remove any 2014 racial bonuses by hand.",
         "skill_added": "{{skill}} proficiency added.",
         "skill_removed": "{{skill}} proficiency removed.",
+        "weapon_removed": "Old race proficiency with {{name}} removed.",
+        "tool_removed": "Old race proficiency with {{name}} removed.",
+        "resistance_removed": "Old race damage resistance removed: {{name}}.",
         "feat_added": "{{feat}} feat added.",
         "feat_removed": "{{feat}} feat removed.",
         "spell_removed": "{{name}} spell removed."

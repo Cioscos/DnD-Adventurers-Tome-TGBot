@@ -430,6 +430,7 @@ class SpeciesApply(BaseModel):
     weapons: list[str] = Field(default_factory=list, max_length=10)
     tools: list[str] = Field(default_factory=list, max_length=5)
     resistances: list[str] = Field(default_factory=list, max_length=13)
+    skills: list[str] = Field(default_factory=list, max_length=5)  # già in ``CharacterCreate.skills``: quali vengono solo dalla razza
 
 
 class CharacterCreate(BaseModel):

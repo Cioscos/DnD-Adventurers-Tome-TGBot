@@ -426,6 +426,18 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
     return [k for k in done if k not in lost]
 
 
+def without_other_source(char: Any, weapons: list[str]) -> list[str]:
+    """Fra le armi per nome date dalla razza 2014, quelle che né la classe (in una delle edizioni) né un privilegio danno comunque."""
+    from core.rules.catalog import active_features
+    from core.rules.edition import EDITIONS
+
+    kept = {w for sp, _ in active_features(char) for w in (sp.proficiency_grants or {}).get("weapons", ())}
+    for ed in EDITIONS:
+        for i, row in enumerate(char.classes):
+            kept.update(class_proficiencies(ed, row_class_key(row), i > 0).weapons)
+    return [w for w in weapons if _canon(w) not in kept]
+
+
 def apply_feature_grants(char: Any, lang: str = "it") -> None:
     """Competenze dei privilegi attivi (es. dominio): una volta sola per privilegio, anche da seconda classe."""
     from core.rules.catalog import active_features

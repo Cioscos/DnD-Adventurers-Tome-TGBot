@@ -2,6 +2,7 @@
 import pytest
 
 from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg, _scheda
+from tests.caccia.test_cb_regola_2014_razze import _specie
 from tests.caccia.test_cb_regola_2024_incantesimi_a_c import _dal_catalogo, _pg as _pg24
 from tests.caccia.test_cb_regola_2024_paladin import _seduti
 from tests.caccia.test_cb_regola_2024_rogue import _ladro
@@ -197,3 +198,40 @@ async def test_chi_e_incapacitato_non_lancia_da_una_pergamena(client):
     r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 1})
     assert (r.status_code, r.json()["detail"].get("code")) == (409, "incapacitated"), r.text
     assert next(i for i in (await _scheda(client, cid))["items"] if i["id"] == iid)["quantity"] == 1
+
+
+@pytest.mark.caccia(id="CB-4712", fonte="decisione D-005 (tests/caccia/decisioni.md): ciò che dava la vecchia specie se ne va col cambio; "
+                    "2014 · Tiefling pag. 43, Nano pag. 28, Elfo pag. 20, Gnomo delle Rocce pag. 37",
+                    zona="regola:2024/razze", voce="edizioni",
+                    copre=["carta:2014/races.md#Tiefling / Tiefling (pag. 43)", "carta:2014/races.md#Nano / Dwarf - tratti base (pag. 28)",
+                           "carta:2014/races.md#Gnomo delle Rocce / Rock Gnome (pag. 37)", "PUT /characters/{char_id}/species",
+                           "POST /characters/{char_id}/species/preview"])
+async def test_la_prima_specie_2024_toglie_cio_che_dava_la_razza_2014(client):
+    async def passa(specie, abilita=None, classe="wizard", chiave="2024_orc", opzioni=None) -> tuple[list, dict]:
+        r = await client.post("/characters", json={
+            "name": "R", "rules_edition": "2014", "species": specie, "skills": {a: True for a in abilita or ()},
+            "initial_class": {"class_name": classe, "level": 1}})
+        assert r.status_code == 201, r.text
+        cid = r.json()["id"]
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+        corpo = {"key": chiave, "options": opzioni or {}}
+        cambi = (await client.post(f"/characters/{cid}/species/preview", json=corpo)).json()["changes"]
+        assert (await client.put(f"/characters/{cid}/species", json=corpo)).status_code == 200
+        return cambi, await _scheda(client, cid)
+
+    cambi, tiefling = await passa(_specie("tiefling"))
+    assert "fire" not in tiefling["damage_modifiers"].get("resistances", []) and "resistance_removed:fire" in cambi
+    cambi, nano = await passa(_specie("dwarf", "hill-dwarf"))
+    assert not {"Ascia da battaglia", "Martello da guerra"} & set(nano["general_proficiencies"]["weapons"])
+    assert "weapon_removed:Ascia da battaglia" in cambi and "poison" not in nano["damage_modifiers"].get("resistances", [])
+    cambi, gnomo = await passa(_specie("gnome", "rock-gnome"))
+    assert "tinkers_tools" not in gnomo["tool_proficiencies"] and "tool_removed:tinkers_tools" in cambi
+    mezzorco = {**_specie("half-orc"), "skills": ["intimidation"]}
+    cambi, orco = await passa(mezzorco, ["intimidation", "insight"])
+    assert "intimidation" not in orco["skills"] and orco["skills"]["insight"] is True and "skill_removed:intimidation" in cambi
+    # ciò che dà anche la classe resta (Ladro 2014: spada lunga e corta), e l'abilità che la nuova specie sceglie pure
+    elfo = {**_specie("elf", "high-elf"), "skills": ["perception"]}
+    cambi, elfo24 = await passa(elfo, ["perception"], "rogue", "2024_elf", {"lineage": "high", "spell_ability": "intelligence", "skill": "perception"})
+    armi = set(elfo24["general_proficiencies"]["weapons"])
+    assert "Spada lunga" in armi and "Arco lungo" not in armi
+    assert elfo24["skills"]["perception"] is True and "skill_removed:perception" not in cambi

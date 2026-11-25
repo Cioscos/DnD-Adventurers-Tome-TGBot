@@ -36,7 +36,8 @@ export interface SpeciesPayload {
   weapons: string[]
   tools: string[]
   resistances: string[]
-  /** Non va nel campo species: creationExtras le unisce alle abilità d'origine (il server rifiuta i doppioni con la classe). */
+  /** creationExtras le unisce alle abilità d'origine (il server rifiuta i doppioni con la classe); nel campo species restano
+   *  quelle che vengono solo dalla razza: il passaggio a una specie 2024 le toglie. */
   skills: string[]
 }
 
@@ -178,11 +179,11 @@ export function creationExtras(o: {
   species: SpeciesPayload | null
   skills: string[]
 }) {
-  const { skills: raceSkills, ...species } = o.species ?? { skills: [] }
-  const skills = [...new Set([...o.skills, ...raceSkills])]
+  const raceSkills = (o.species?.skills ?? []).filter((k) => !o.skills.includes(k))
+  const skills = [...o.skills, ...raceSkills]
   return {
     ...(o.skipped ? {} : { ability_scores: o.scores }),
-    ...(o.species ? { species } : {}),
+    ...(o.species ? { species: { ...o.species, skills: raceSkills } } : {}),
     ...(skills.length ? { skills: Object.fromEntries(skills.map((k) => [k, true])) } : {}),
   }
 }

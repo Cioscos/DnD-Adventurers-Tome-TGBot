@@ -1467,6 +1467,9 @@
         "scores_check": "I punteggi di caratteristica non cambiano: togli a mano gli eventuali bonus razziali 2014.",
         "skill_added": "Competenza in {{skill}} aggiunta.",
         "skill_removed": "Competenza in {{skill}} tolta.",
+        "weapon_removed": "Competenza con {{name}} della vecchia razza tolta.",
+        "tool_removed": "Competenza con {{name}} della vecchia razza tolta.",
+        "resistance_removed": "Resistenza ai danni della vecchia razza tolta: {{name}}.",
         "feat_added": "Talento {{feat}} aggiunto.",
         "feat_removed": "Talento {{feat}} tolto.",
         "spell_removed": "Incantesimo {{name}} tolto."
