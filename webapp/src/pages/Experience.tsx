@@ -18,7 +18,7 @@ import { CornerFlourish } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { spring, ease } from '@/styles/motion'
-import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
+import { XP_THRESHOLDS, displayedTotalLevel, levelFromXp } from '@/lib/xpThresholds'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { formatInt, localeTag } from '@/lib/format'
 import ProgressionPreview from '@/components/character/ProgressionPreview'
@@ -37,6 +37,11 @@ function pickDefaultClass(char: CharacterFull): string {
   if (classes.length === 1) return classes[0].class_name
   // Multi-class fallback: alphabetic. (No reliable history field on CharacterFull.)
   return [...classes].sort((a, b) => a.class_name.localeCompare(b.class_name))[0].class_name
+}
+
+function levelOf(char: CharacterFull): number {
+  const classLevels = (char.classes ?? []).reduce((s, c) => s + c.level, 0)
+  return displayedTotalLevel(classLevels, char.settings?.advancement === 'milestone', char.experience_points)
 }
 
 export default function Experience() {
@@ -77,8 +82,8 @@ export default function Experience() {
     onSuccess: (updated) => {
       setPendingXp(null)
       setXpRolls(null)
-      const oldLevel = char ? levelFromXp(char.experience_points) : 0
-      const newLevel = levelFromXp(updated.experience_points)
+      const oldLevel = char ? levelOf(char) : 0
+      const newLevel = levelOf(updated)
       qc.setQueryData(['character', charId], updated)
       setAddValue('')
       haptic.success()
@@ -129,11 +134,12 @@ export default function Experience() {
   const xp = char.experience_points
   const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
   const milestone = char.settings?.advancement === 'milestone'
-  const level = milestone ? totalClassLevel : levelFromXp(xp)
+  const level = levelOf(char)
   const nextThreshold = milestone ? null : (XP_THRESHOLDS[level] ?? null)
   const prevThreshold = XP_THRESHOLDS[level - 1] ?? 0
   const progress = nextThreshold
-    ? Math.floor(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100)  // floor: a 299/300 XP non mostra 100%
+    // floor: a 299/300 XP non mostra 100%; max: il livello della classe può superare quello dei PE
+    ? Math.max(0, Math.floor(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
     : 100
   const xpToNext = nextThreshold ? nextThreshold - xp : 0
 

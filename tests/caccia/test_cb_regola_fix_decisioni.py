@@ -54,3 +54,17 @@ async def test_il_dado_del_valore_2024_raddoppia_sul_critico_di_un_arma(client, 
     assert colpo["is_critical"], colpo
     r = await client.post(f"/characters/{hero}/attack/{colpo['attack_id']}/damage", json={"options": ["bardic_die:damage"]})
     assert r.status_code == 200 and len(r.json()["option_result"]["extra_rolls"]) == dadi_tirati, r.text
+
+
+@pytest.mark.caccia(id="CB-4603", fonte="decisione D-028 (tests/caccia/decisioni.md): assegnare PE non abbassa mai il livello di classe; 2024 · Glossario · Punti Esperienza · pag. 366-367",
+                    zona="regola:2024/generali", voce="interazione",
+                    copre=["carta:2024/general.md#Experience Points (Punti Esperienza) (pag. 366-367)", "PATCH /characters/{char_id}/xp"])
+async def test_un_set_di_punti_esperienza_verso_l_alto_non_toglie_livelli(client):
+    cid = await _pg(client, "2024", "fighter", 5)  # 0 PE: il livello viene dalla classe
+    livello = lambda r: r.json()["classes"][0]["level"]  # noqa: E731
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 300})
+    assert r.status_code == 200 and livello(r) == 5
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 14000})
+    assert livello(r) == 6
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 2700})  # correzione esplicita verso il basso
+    assert livello(r) == 4

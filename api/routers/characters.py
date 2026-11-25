@@ -692,6 +692,7 @@ async def update_xp(
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
     old_xp = char.experience_points or 0
+    old_total_level = char.total_level
     if body.set is not None:
         char.experience_points = max(0, body.set)
     elif body.add is not None:
@@ -714,7 +715,7 @@ async def update_xp(
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
-        if body.set is None:  # guadagnare PE non toglie livelli (2024 pag. 366-367); sul 'set' decide Q-2024-generali-b-1
+        if body.set is None or char.experience_points >= old_xp:  # solo un 'set' verso il basso è una correzione (D-028)
             new_level = max(new_level, old_level)
         if new_level != old_level or body.hp_rolls:
             cls.level = new_level
@@ -756,7 +757,7 @@ async def update_xp(
         await sync_zero_hp(session, char, was_at_zero)
 
     # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
-    old_level_from_xp = xp_to_level(old_xp)
+    old_level_from_xp = max(xp_to_level(old_xp), old_total_level)  # i livelli già presi non si annunciano (D-028)
     new_level_from_xp = xp_to_level(char.experience_points)
     if (
         not milestone
