@@ -40,3 +40,11 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-034 | Abilità doppie nel 2024 dopo la creazione (Abile, seconda classe) | Rifiuto 422, come alla creazione e come nel 2014 | 2026-11-24 |
 | D-035 | Versatile dell'Umano 2024 uguale al talento non ripetibile del background | Non sceglibile nel passo della specie; cambiando background la scelta in conflitto si toglie | 2026-11-24 |
 | D-036 | Righe di incantesimi concessi già create con dati sbagliati | Si riempiono solo i campi vuoti delle righe create dal sistema | 2026-11-24 |
+| D-037 | Deflagrazione/Esplosione Occulta: un tiro per raggio? (2014 p.229, 2024 p.267) | Sì: un tiro per colpire e 1d10 per ogni raggio, con critico e modificatori per raggio | 2026-11-25 |
+| D-038 | Guarigione di Massa: come si dividono i 700 PF? | Quantità scelta per ogni bersaglio, somma massima 700 | 2026-11-25 |
+| D-039 | PF temporanei quando se ne hanno già | Automatico il valore più alto; la correzione a mano (set_temp) sopravvive alla fine degli effetti che li danno | 2026-11-25 |
+| D-040 | Collera della Natura 2014: Forza o Destrezza | La sceglie il giocatore del bersaglio al momento del tiro | 2026-11-25 |
+| D-041 | Vincolo di Interdizione 2014 su sé stessi | Rifiutato, come nel 2024 | 2026-11-25 |
+| D-042 | Compagno del Ranger 2014 con una bestia fuori regola | Avviso superabile con conferma (409 + force), non rifiuto secco | 2026-11-25 |
+| D-043 | Sonno 2014: la riserva cresce con lo slot? | Sì, +2d8 per slot oltre il 1° | 2026-11-25 |
+| D-044 | Fuga Velata 2024: solo con Passi del Fatato? | No, si paga anche con uno slot di 2° o più | 2026-11-25 |
