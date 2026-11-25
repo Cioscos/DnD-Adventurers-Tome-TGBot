@@ -104,7 +104,7 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
-    "new_turn", "attack", "cast", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor",
+    "new_turn", "attack", "cast", "act", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor",
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
@@ -122,7 +122,7 @@ class StateSpec:
     prossimo «Nuovo turno» di chi lo porta (Canto di Riposo); ``turn_end_counted`` = alla fine del turno che comincia dopo
     quello in cui è nato, con ``data["skip_new_turns"]`` = 1 (Colpo Mistico): ``new_turn`` lo fa scalare invece di
     chiuderlo e fuori da un incontro lo chiude al «Nuovo turno» seguente; ``attack`` / ``cast`` = quando chi lo porta attacca o lancia
-    un incantesimo (Manto di Ombre). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
+    un incantesimo (Manto di Ombre); ``act`` = quando chi lo porta spende la sua azione o la sua reazione (Tutt'Uno con le Ombre 2014). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
     quando finisce, a meno che ci fosse già per un'altra fonte. ``turn_end_unextended`` = alla fine di un turno di chi lo
     porta in cui non è stato prolungato (attacco, TS imposto o azione bonus: Ira 2024); lo stato nato in quel turno
     (``data["fresh"]``) vive fino alla fine del turno seguente. ``heavy_armor`` = quando chi lo porta indossa un'armatura pesante.
@@ -181,6 +181,8 @@ class TargetEffect:
     note: str | None = None
     # La condizione cade con la concentrazione di chi la applica (le punizioni: Punizione Collerica, Colpo Accecante...)
     ends_with_concentration: bool = False
+    # Un bersaglio alla volta: applicarlo a un altro toglie la condizione, se viene ancora da chi lo usa, al precedente (Creare Servitore)
+    exclusive: bool = False
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):
@@ -661,6 +663,8 @@ class FeatureSpec:
     name: dict[str, str]
     summary: dict[str, str]
     action_type: str | None
+    # Sottoclasse -> attivazione diversa da ``action_type`` (Forma Selvatica 2014: azione bonus per il Circolo della Luna)
+    subclass_action_types: dict[str, str] | None = None
     uses: Uses | None = None
     restoration: str | dict[int, str] = "none"  # dict: livello minimo -> tipo di riposo
     short_rest_recovers: "int | dict[int, int] | None" = None  # dict: livello minimo -> usi recuperati (Ripristino Stregonesco)
@@ -680,7 +684,9 @@ class FeatureSpec:
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
-    granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
+    # gli incantesimi concessi, o scelti con le sue ``choices``, si lanciano solo come rituale (Cercatore di Spiriti, Libro degli Antichi Segreti 2014)
+    granted_ritual_only: bool = False
+    granted_ritual: bool = False  # gli incantesimi concessi si lanciano anche come rituale, oltre che con uno slot (Patto della Catena 2014)
     condition_immunities: tuple[str, ...] = ()  # condizioni che il privilegio impedisce sempre (Interdizione della Natura)
     needs_conscious: bool = False  # ``condition_immunities`` valgono solo con il personaggio cosciente (Aura di Coraggio)
     ignores_components: bool = False  # Arcidruido: le componenti V, S e M senza costo non servono

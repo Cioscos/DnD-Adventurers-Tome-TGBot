@@ -17,7 +17,6 @@ LUCK = "warlock.dark_ones_own_luck"
                     copre=["carta:2014/classes/warlock.md#Fortuna dell'Oscuro / Dark One's Own Luck (Immondo 6, pag. 117)",
                            "POST /characters/{char_id}/last-roll/options"])
 @pytest.mark.parametrize("tiro", ["initiative", "death_save"])
-@pytest.mark.xfail(strict=True, reason="CB-2061: difforme dal manuale, confermato")
 async def test_fortuna_dell_oscuro_vale_su_iniziativa_e_ts_contro_morte(client, tiro):
     cid = await _warlock(client, 6, "fiend", charisma=16)
     if tiro == "initiative":
@@ -34,7 +33,6 @@ async def test_fortuna_dell_oscuro_vale_su_iniziativa_e_ts_contro_morte(client, 
 @pytest.mark.caccia(id="CB-2062", fonte="2014 · Warlock · Delirio Oscuro · pag. 117", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Delirio Oscuro / Dark Delirium (Signore Fatato 14, pag. 117)",
                            "POST /characters/{char_id}/target-effects", "PATCH /characters/{char_id}/concentration"])
-@pytest.mark.xfail(strict=True, reason="CB-2062: difforme dal manuale, confermato")
 async def test_delirio_oscuro_sul_bersaglio_finisce_con_la_concentrazione(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)
@@ -64,7 +62,6 @@ async def test_delirio_oscuro_sul_bersaglio_finisce_con_la_concentrazione(client
 @pytest.mark.caccia(id="CB-2063", fonte="2014 · Warlock · Arcanum Mistico · pag. 116", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Arcanum Mistico / Mystic Arcanum (Warlock 11, pag. 116)",
                            "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2063: difforme dal manuale, confermato")
 async def test_arcanum_mistico_si_sceglie_dalla_lista_del_warlock(client):
     full = await _full(client, await _warlock(client, 17))
     liste = {grado: _choice(full, f"arcanum_{grado}")["spell_pick"]["list"] for grado in (6, 7, 8, 9)}
@@ -74,7 +71,6 @@ async def test_arcanum_mistico_si_sceglie_dalla_lista_del_warlock(client):
 @pytest.mark.caccia(id="CB-2064", fonte="2014 · Warlock · Patto della Catena · pag. 115", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Patto della Catena / Pact of the Chain (Warlock 3, pag. 115)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2064: difforme dal manuale, confermato")
 async def test_patto_della_catena_lancia_trova_famiglio_come_rituale(client):
     cid = await _warlock(client, 3)
     assert (await _resolve(client, cid, "pact_boon", ["chain"])).status_code == 200
@@ -88,7 +84,6 @@ async def test_patto_della_catena_lancia_trova_famiglio_come_rituale(client):
 @pytest.mark.caccia(id="CB-2065", fonte="2014 · Warlock · Libro degli Antichi Segreti · pag. 118", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Libro degli Antichi Segreti / Book of Ancient Secrets (Suppliche Occulte, Patto del Tomo, pag. 118)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2065: difforme dal manuale, confermato")
 async def test_i_rituali_del_libro_si_lanciano_solo_come_rituali(client):
     cid = await _caster(client, 3, "book_of_ancient_secrets", boon="tome")
     pick = _choice(await _full(client, cid), "book_rituals")
@@ -104,7 +99,6 @@ async def test_i_rituali_del_libro_si_lanciano_solo_come_rituali(client):
 @pytest.mark.caccia(id="CB-2066", fonte="2014 · Warlock · Tutt'Uno con le Ombre · pag. 119", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Tutt'Uno con le Ombre / One with Shadows (Suppliche Occulte, livello 5, pag. 119)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2066: difforme dal manuale, confermato")
 async def test_tutt_uno_con_le_ombre_finisce_quando_compi_un_azione(client):
     cid = await _caster(client, 5, "one_with_shadows", "fiendish_vigor")
     assert (await _use(client, cid, "warlock.one_with_shadows", params={"light": "dark"})).status_code == 200
@@ -123,7 +117,6 @@ async def _goblin(client, sid, gid) -> dict:
 @pytest.mark.caccia(id="CB-2067", fonte="2014 · Warlock · Creare Servitore · pag. 118", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Creare Servitore / Create Thrall (Grande Antico 14, pag. 118)",
                            "POST /characters/{char_id}/target-effects", "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2067: difforme dal manuale, confermato")
 async def test_un_nuovo_servitore_libera_il_precedente(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)

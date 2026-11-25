@@ -78,7 +78,6 @@ async def test_il_calice_cura_una_sola_creatura_per_incantesimo(client, dadi):
     ("land", 3, "druid.lands_aid", {"mode": "self"}, "lands_aid"),
     ("sea", 3, "druid.wrath_of_the_sea", {}, "wrath_of_the_sea"),
     ("sea", 14, "druid.oceanic_gift", {"target": "ally"}, "oceanic_gift_ally")])
-@pytest.mark.xfail(strict=True, reason="CB-2313: difforme dal manuale, confermato")
 async def test_i_privilegi_di_circolo_usano_la_cd_degli_incantesimi_con_gli_oggetti(client, cerchio, livello, chiave, parametri, stato):
     cid = await _circle(client, cerchio, livello, wisdom=16)
     await _amuleto(client, cid)

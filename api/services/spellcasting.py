@@ -28,7 +28,7 @@ from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.states import SPELL_CAST_TYPE
 from core.rules.spellcasting import (
-    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
 
@@ -157,7 +157,7 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         prepared_count=count,
         cap_mode=cap_mode if preparing else "auto",
         has_ritual_caster=can_ritual(char),
-        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual_only(char, sp)],
+        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual(char, sp)],
         has_wizard=has_wizard(classes),
         casters=[SpellCasterStats(**asdict(c)) for c in caster_stats(char)],
         limits=_class_limits(char, cap_mode == "manual"),

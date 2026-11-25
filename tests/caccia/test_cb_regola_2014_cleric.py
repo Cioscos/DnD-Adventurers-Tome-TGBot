@@ -56,7 +56,6 @@ async def _arma(client, cid) -> int:
                     voce="interazione",
                     copre=["carta:2014/classes/cleric.md#Avatar della Battaglia / Avatar of Battle (Guerra 17, pag. 61)",
                            "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-1661: difforme dal manuale, confermato")
 async def test_avatar_della_battaglia_non_si_somma_a_una_resistenza_gia_presente(client):
     cid = await _chierico(client, 17, "war")
     r = await client.patch(f"/characters/{cid}", json={"damage_modifiers": {"resistances": ["slashing"]}})
@@ -73,7 +72,6 @@ async def test_avatar_della_battaglia_non_si_somma_a_una_resistenza_gia_presente
                     voce="interazione",
                     copre=["carta:2014/classes/cleric.md#Mitigare Elementi / Dampen Elements (Natura 6, pag. 62)",
                            "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-1662: difforme dal manuale, confermato")
 async def test_mitigare_elementi_non_si_somma_a_una_resistenza_gia_presente(client):
     cid = await _chierico(client, 6, "nature")
     r = await client.patch(f"/characters/{cid}", json={"damage_modifiers": {"resistances": ["fire"]}})
@@ -90,7 +88,6 @@ async def test_mitigare_elementi_non_si_somma_a_una_resistenza_gia_presente(clie
                     copre=["carta:2014/classes/cleric.md#Incanalare Divinità: Conoscenze Secolari / Channel Divinity: Knowledge of the Ages (Conoscenza 2, pag. 60)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/skills/{skill_name}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-1663: difforme dal manuale, confermato")
 async def test_conoscenze_secolari_sostituisce_il_factotum_invece_di_sommarsi(client):
     r = await client.post("/characters", json={"name": "Bardo", "rules_edition": "2014",
                                                "initial_class": {"class_name": "bard", "level": 2}})
@@ -117,7 +114,6 @@ async def test_conoscenze_secolari_sostituisce_il_factotum_invece_di_sommarsi(cl
     ("tempest", "cleric.divine_strike_tempest", "thunder"),
     ("nature", "cleric.divine_strike_nature_cold", "cold"),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1664: difforme dal manuale, confermato")
 async def test_i_dadi_del_colpo_divino_hanno_il_tipo_del_dominio(client, dominio, opzione, tipo):
     cid = await _chierico(client, 8, dominio, strength=14)
     wid = await _arma(client, cid)
@@ -134,7 +130,6 @@ async def test_i_dadi_del_colpo_divino_hanno_il_tipo_del_dominio(client, dominio
                     copre=["carta:2014/classes/cleric.md#Incanalare Divinità / Channel Divinity (Chierico 2, pag. 59)",
                            "carta:2014/classes/cleric.md#Incanalare Divinità: Scacciare Non Morti / Channel Divinity: Turn Undead (Chierico 2, pag. 59)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-1665: difforme dal manuale, confermato")
 async def test_la_cd_di_incanalare_divinita_e_quella_degli_incantesimi_del_chierico(client):
     cid = await _chierico(client, 2, wisdom=16)  # 8 + 2 + 3 = 13
     r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory",

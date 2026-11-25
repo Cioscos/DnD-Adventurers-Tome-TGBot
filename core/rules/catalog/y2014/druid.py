@@ -7,6 +7,7 @@ La Forma Selvatica vive nei compagni (``kind="wild_shape"``): limiti, durata e P
 from __future__ import annotations
 
 from core.rules.catalog._common import feature
+from core.rules.catalog.y2014.cleric import spell_dc  # CD degli incantesimi della classe, oggetti compresi
 from core.rules.types import ChoiceSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, TargetEffect, Uses
 
 ED, CK = "2014", "druid"
@@ -38,11 +39,6 @@ TERRITORY_SPELLS: dict[str, tuple[tuple[str, str], ...]] = {
     "underdark": (("spider-climb", "web"), ("gaseous-form", "stinking-cloud"), ("greater-invisibility", "stone-shape"),
                   ("cloudkill", "insect-plague")),
 }
-
-
-def spell_dc(ctx: RuleContext) -> int:
-    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
-    return 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
 
 
 def _no_options(_ctx: RuleContext) -> list[str]:
@@ -116,7 +112,8 @@ FEATURES = (
     feature("wild_shape", CK, ED, 2, "Forma Selvatica / Wild Shape (Druido 2, pag. 66)", ("Forma Selvatica", "Wild Shape"),
             ("Assumi una bestia già vista (azione; bonus per la Luna) entro i limiti del livello. 2 usi per riposo breve o lungo, illimitati al 20°. Dura metà livello in ore.",
              "Take the shape of a beast you have seen (action; bonus for the Moon) within your level's limits. 2 uses per short or long rest, unlimited at 20th. Lasts half your level in hours."),
-            "action", uses=Uses(table={2: 2}, unlimited_from=20), restoration="short_rest"),
+            "action", uses=Uses(table={2: 2}, unlimited_from=20), restoration="short_rest",
+            subclass_action_types={"moon": "bonus_action"}),  # Forma Selvatica da Combattimento, pag. 69
     feature("beast_shapes", CK, ED, 2, "Forme Bestiali / Beast Shapes (Druido 2, pag. 66)", ("Forme Bestiali", "Beast Shapes"),
             ("GS massimo 1/4 senza nuotare né volare al 2°; 1/2 senza volare al 4°; 1 all'8°. Solo bestie. Le forme fuori limite chiedono conferma.",
              "Max CR 1/4 with no swim or fly at 2nd; 1/2 with no fly at 4th; 1 at 8th. Beasts only. Forms outside the limits ask for confirmation."),

@@ -38,8 +38,12 @@ def destroy_threshold(level: int) -> str | None:
 
 
 def spell_dc(ctx: RuleContext) -> int:
+    """CD degli incantesimi della classe, oggetti compresi, come sulla scheda: Incanalare Divinità la usa (anche i circoli
+    del druido 2024)."""
     from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
-    return 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
+    mine = next((s.save_dc for s in caster_stats(ctx.char) if ctx.class_row is not None and s.class_id == ctx.class_row.id), None)
+    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
 
 
 def _wisdom_mod(ctx: RuleContext) -> int:
@@ -74,6 +78,19 @@ def _languages_missing(ctx: RuleContext) -> list[str]:
 
 def _no_options(_ctx: RuleContext) -> list[str]:
     return []
+
+
+_NATURE_SKILLS = ("animal_handling", "nature", "survival")
+
+
+def _nature_skill_owned(ctx: RuleContext) -> list[str]:
+    return [s for s in _NATURE_SKILLS if (ctx.char.skills or {}).get(s)]
+
+
+def _nature_skill_options(ctx: RuleContext) -> list[str]:
+    """Le tre senza quelle già competenti; se le ha tutte, un'altra abilità a scelta (competenza da due fonti, pag. 125)."""
+    skills = ctx.char.skills or {}
+    return [s for s in _NATURE_SKILLS if not skills.get(s)] or [s for s, _a in SKILLS if not skills.get(s)]
 
 
 # ---------------------------------------------------------------------------
@@ -160,11 +177,13 @@ def _ages_state(_ctx: RuleContext, params: dict) -> StateSpec:
 
 
 def _ages_bonus(ctx: RuleContext) -> int:
-    """Competenza in più per l'abilità scelta, solo se non l'hai già: chi è competente o esperto non la somma due volte."""
+    """Competenza in più per l'abilità scelta, solo se non l'hai già: chi è competente o esperto non la somma due volte.
+    Il Factotum, già sul totale, vale solo senza competenza: la competenza lo sostituisce (come l'Atleta Straordinario)."""
+    from core.game.skills import jack_of_all_trades_part  # import locale: skills usa stats, che usa il catalogo
     state = next((s for s in ctx.char.active_states or [] if s.get("key") == "knowledge_of_the_ages"), None)
     if state is None or (state.get("data") or {}).get("skill") != ctx.skill or (ctx.char.skills or {}).get(ctx.skill):
         return 0
-    return ctx.char.proficiency_bonus
+    return ctx.char.proficiency_bonus - jack_of_all_trades_part(ctx.char)
 
 
 def _read_thoughts_state(ctx: RuleContext, _params: dict) -> StateSpec:
@@ -214,11 +233,14 @@ def _weapon_hit(ctx: RuleContext) -> bool:
     return ctx.item is not None and ctx.spell is None
 
 
-def _divine_strike(domain: str, type_it: str, type_en: str, *, group: str | None = None, suffix: str = "") -> RollOptionSpec:
-    """Una volta per turno, dopo un colpo con un'arma: 1d8 (2d8 dal 14°) di danni; il tipo lo dice l'etichetta."""
+def _divine_strike(domain: str, type_it: str, type_en: str, damage_type: str | None = None, *, group: str | None = None,
+                   suffix: str = "") -> RollOptionSpec:
+    """Una volta per turno, dopo un colpo con un'arma: 1d8 (2d8 dal 14°) di danni in più. Il tipo è ``damage_type`` o, nelle
+    varianti a scelta, quello del suffisso (``_cold``; ``_radiant`` nei Colpi Benedetti 2024); la Guerra non ne ha: vale
+    quello dell'arma."""
     return RollOptionSpec(
         key=f"{CK}.divine_strike_{domain}{suffix}", phase="after_hit", rolls=("attack",), once_per_turn=True, group=group,
-        extra_dice=_strike_dice, available=_weapon_hit,
+        extra_dice=_strike_dice, available=_weapon_hit, extra_damage_type=damage_type or suffix.removeprefix("_") or None,
         label={"it": f"Colpo Divino: danni {type_it} in più", "en": f"Divine Strike: extra {type_en} damage"})
 
 
@@ -274,13 +296,13 @@ BLESSED_HEALER = RollOptionSpec(
     available=lambda c: (c.casting_level or 0) >= 1)
 
 AVATAR_OF_BATTLE = RollOptionSpec(
-    key=f"{CK}.avatar_of_battle", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+    key=f"{CK}.avatar_of_battle", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
     label={"it": "Avatar della Battaglia: il colpo è di un'arma non magica?",
            "en": "Avatar of Battle: is the hit from a nonmagical weapon?"},
     available=lambda c: c.damage_type in _PHYSICAL)
 
 DAMPEN_ELEMENTS = RollOptionSpec(
-    key=f"{CK}.dampen_elements", phase="damage_in", rolls=("damage_taken",), multiplier=0.5, slot="reaction",
+    key=f"{CK}.dampen_elements", phase="damage_in", rolls=("damage_taken",), grants_resistance=True, slot="reaction",
     label={"it": "Mitigare Elementi: reazione, resistenza a questo danno", "en": "Dampen Elements: reaction, resistance to this damage"},
     available=lambda c: c.damage_type in _ELEMENTS)
 
@@ -497,7 +519,7 @@ FEATURES = (
     feature("divine_strike_trickery", CK, ED, 8, "Colpo Divino / Divine Strike (Inganno 8, pag. 61)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da veleno in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra poison damage."),
-            subclass="trickery", roll_options=(_divine_strike("trickery", "da veleno", "poison"),)),
+            subclass="trickery", roll_options=(_divine_strike("trickery", "da veleno", "poison", "poison"),)),
 
     feature("cloak_of_shadows", CK, ED, 6,
             "Incanalare Divinità: Manto di Ombre / Channel Divinity: Cloak of Shadows (Inganno 6, pag. 61)",
@@ -572,9 +594,8 @@ FEATURES = (
             ("Un trucchetto da druido a scelta e competenza in Addestrare Animali, Natura o Sopravvivenza.",
              "One druid cantrip of your choice and proficiency in Animal Handling, Nature or Survival."),
             subclass="nature",
-            choices=(ChoiceSpec(group="nature_skill", levels={1: 1},
-                                options=lambda _c: ["animal_handling", "nature", "survival"],
-                                label=skill_label, grants="proficient"),
+            choices=(ChoiceSpec(group="nature_skill", levels={1: 1}, options=_nature_skill_options, label=skill_label,
+                                grants="proficient", owned=_nature_skill_owned, import_options=lambda _c: list(_NATURE_SKILLS)),
                      ChoiceSpec(group="nature_cantrip", levels={1: 1}, options=_no_options, spell_pick="extra", spell_level=0, spell_list="druid"))),
     feature("nature_bonus_proficiency", CK, ED, 1, "Competenza Bonus / Bonus Proficiency (Natura 1, pag. 62)",
             ("Competenza Bonus (Natura)", "Bonus Proficiency (Nature)"),
@@ -640,7 +661,7 @@ FEATURES = (
     feature("divine_strike_tempest", CK, ED, 8, "Colpo Divino / Divine Strike (Tempesta 8, pag. 63)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da tuono in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra thunder damage."),
-            subclass="tempest", roll_options=(_divine_strike("tempest", "da tuono", "thunder"),)),
+            subclass="tempest", roll_options=(_divine_strike("tempest", "da tuono", "thunder", "thunder"),)),
 
     feature("stormborn", CK, ED, 17, "Nato dalla Tempesta / Stormborn (Tempesta 17, pag. 63)",
             ("Nato dalla Tempesta", "Stormborn"),
@@ -684,5 +705,5 @@ FEATURES = (
     feature("divine_strike_life", CK, ED, 8, "Colpo Divino / Divine Strike (Vita 8, pag. 63)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni radiosi in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra radiant damage."),
-            subclass="life", roll_options=(_divine_strike("life", "radiosi", "radiant"),)),
+            subclass="life", roll_options=(_divine_strike("life", "radiosi", "radiant", "radiant"),)),
 )

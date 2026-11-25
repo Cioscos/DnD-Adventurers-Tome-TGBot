@@ -78,7 +78,6 @@ async def test_talento_abile_su_abilita_gia_data_dal_background(client):
                     copre=["carta:2014/backgrounds.md#Regole generali dei background (pag. 125)",
                            "carta:2014/backgrounds.md#Forestiero / Outlander (pag. 133)",
                            "POST /characters/{char_id}/choices/{choice_id}/resolve"])
-@pytest.mark.xfail(strict=True, reason="CB-3113: difforme dal manuale, confermato")
 async def test_accolito_della_natura_su_abilita_gia_data_dal_background(client):
     r = await client.post("/characters", json={
         "name": "Forestiero", "rules_edition": "2014", "ability_scores": SCORES,

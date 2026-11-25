@@ -102,7 +102,7 @@ class SpellcastingInfo(BaseModel):
     prepared_count: int = 0
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
-    ritual_only_spell_ids: list[int] = []  # concessi da un privilegio come soli rituali (Cercatore di Spiriti)
+    ritual_only_spell_ids: list[int] = []  # un privilegio li fa lanciare come rituali: solo così (Cercatore di Spiriti) o anche con slot (Patto della Catena 2014)
     has_wizard: bool = False
     casters: list[SpellCasterStats] = []
     limits: list[ClassSpellLimits] = []

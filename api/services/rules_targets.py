@@ -15,12 +15,14 @@ from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.encounter import GmConditionApply, InternalConditionApply
-from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, item_concentration, upsert_effect
+from api.services.condition_effects import (
+    ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, expire_effect, item_concentration, upsert_effect,
+)
 from api.services.effects import apply_conditions
 from api.services.history import add_history
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
-from core.rules.states import RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune
+from core.rules.states import EXCLUSIVE_TARGETS, RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -195,6 +197,22 @@ async def drop_pending_effects(db: AsyncSession, encounter_id: int) -> None:
     await db.flush()
 
 
+async def _release_previous_target(db: AsyncSession, char: Character, effect_key: str, slug: str, target: Combatant) -> None:
+    """Un bersaglio alla volta (Creare Servitore): la condizione data al precedente, se viene ancora da ``char``, cade."""
+    ref = ["character", target.character_id] if target.kind == "pc" else ["combatant", target.id]
+    held = (char.settings or {}).get(EXCLUSIVE_TARGETS) or {}
+    old = held.get(effect_key)
+    if old and old != ref:
+        kind, tid = old
+        eff = (await db.execute(select(ConditionEffect).where(
+            ConditionEffect.character_id == (tid if kind == "character" else None),
+            ConditionEffect.combatant_id == (tid if kind == "combatant" else None),
+            ConditionEffect.slug == slug, ConditionEffect.source_character_id == char.id))).scalars().first()
+        if eff is not None:
+            await expire_effect(db, eff, f"Terminata (nuovo bersaglio di {char.name}): {{label}}", None)
+    char.settings = {**(char.settings or {}), EXCLUSIVE_TARGETS: {**held, effect_key: ref}}
+
+
 async def apply_target_effect(
     db: AsyncSession, char: Character, enc: Encounter, mine: Combatant, target: Combatant, effect_key: str,
 ) -> tuple[bool, PendingSave | None]:
@@ -223,6 +241,8 @@ async def apply_target_effect(
     char.turn_state = turn
     if not slug:
         return False, None
+    if effect.get("exclusive"):
+        await _release_previous_target(db, char, effect_key, slug, target)
     expiry, anchor_id = _expiry(effect, enc)
     anchor_id = anchor_id or mine.id  # shortcut: con «turno in corso» la fonte registrata è chi agisce, non chi ha usato il privilegio
     if not with_save:

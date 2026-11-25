@@ -94,7 +94,6 @@ async def test_un_paladino_o_ranger_di_1_livello_non_cambia_gli_slot_del_cavalie
 
 @pytest.mark.caccia(id="CB-1762", fonte="2014 · Guerriero · Magia da Guerra · pag. 75", zona="regola:2014/fighter", voce="interazione",
                     copre=["carta:2014/classes/fighter.md#Magia da Guerra / War Magic (Cavaliere Mistico 7, pag. 75)", "POST /characters/{char_id}/spells/{spell_id}/use", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-1762: difforme dal manuale, confermato")
 async def test_magia_da_guerra_vale_dopo_un_trucchetto_di_un_altra_classe(client):
     cid = await _guerriero(client, 7, "eldritch_knight")
     await _classe(client, cid, "wizard", 1, 6)
@@ -119,7 +118,6 @@ async def test_il_cavaliere_mistico_puo_prendere_un_talento_che_chiede_di_lancia
 
 @pytest.mark.caccia(id="CB-1764", fonte="2014 · Guerriero · Indomito · pag. 72; Tiri salvezza contro la morte · pag. 197", zona="regola:2014/fighter", voce="regola",
                     copre=["carta:2014/classes/fighter.md#Indomito / Indomitable (Guerriero 9, pag. 72)", "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-1764: difforme dal manuale, confermato")
 async def test_indomito_ripete_un_tiro_salvezza_contro_la_morte_fallito(client, test_session_factory):
     cid = await _guerriero(client, 9)
     await _pf(test_session_factory, cid, 0)
@@ -150,7 +148,6 @@ async def test_una_manovra_si_sostituisce_solo_quando_se_ne_imparano_di_nuove(cl
     ("battle_master", 3, "fighter.maneuver_trip"), ("battle_master", 3, "fighter.maneuver_precision"),
     ("battle_master", 3, "fighter.maneuver_lunging"), ("battle_master", 3, "fighter.maneuver_sweeping"),
     ("eldritch_knight", 10, "fighter.eldritch_strike")])
-@pytest.mark.xfail(strict=True, reason="CB-1766: difforme dal manuale, confermato")
 async def test_le_opzioni_di_un_attacco_con_arma_valgono_anche_per_il_colpo_senz_armi(client, sottoclasse, livello, opzione):
     cid = await _guerriero(client, livello, sottoclasse)
     if sottoclasse == "battle_master":

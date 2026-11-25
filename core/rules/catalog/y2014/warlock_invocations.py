@@ -64,13 +64,8 @@ REPELLING = RollOptionSpec(
     effect=_say("Il bersaglio è spinto fino a 3 m in linea retta lontano da te.", "The target is pushed up to 10 ft straight away from you."),
     target_effect=lambda _c, _i: TargetEffect(note="repelling_blast"))
 
-LIFEDRINKER = RollOptionSpec(
-    key=f"{CK}.lifedrinker", phase="after_hit", rolls=("attack",), available=_is_pact_weapon,
-    bonus=lambda c, _i: max(1, _mod(c, "charisma")),
-    label={"it": "Succhiavita: danni necrotici extra pari al Carisma (minimo 1) con l'arma del patto",
-           "en": "Lifedrinker: extra necrotic damage equal to your Charisma modifier (minimum 1) with the pact weapon"},
-    effect=lambda c, _i: {"it": f"Danni necrotici extra: {max(1, _mod(c, 'charisma'))}.",
-                          "en": f"Extra necrotic damage: {max(1, _mod(c, 'charisma'))}."})
+# Passivo nel 2014 (pag. 119): ogni colpo con l'arma del patto, senza scelta (nel 2024 è facoltativo)
+LIFEDRINKER = Modifier("damage", lambda c: max(1, _mod(c, "charisma")), when=_is_pact_weapon, source=f"feature:{CK}.lifedrinker")
 
 
 def _mage_armor_cast(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -109,7 +104,7 @@ VIGOR_USE = OnUse(slot="action", rolls="1d4", temp_hp=lambda _c, rolled: rolled 
 
 
 def _shadows_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "rest_short", "rest_long", "manual"),
+    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "act", "rest_short", "rest_long", "manual"),
                      data={"others": [f"{CK}.one_with_shadows"]})
 
 
@@ -199,7 +194,7 @@ _ROWS = (
     _inv("book_of_ancient_secrets", "Libro degli Antichi Segreti", "Book of Ancient Secrets", "Suppliche Occulte, Patto del Tomo, pag. 118", 2,
          ("Trascrivi nel Libro delle Ombre due rituali di 1° livello di qualsiasi lista: fuori dai conosciuti. Impugnando il libro lanci come rituale anche i tuoi rituali da warlock.",
           "Inscribe two 1st-level rituals from any list in your Book of Shadows, outside your known spells. While holding it you also cast your warlock rituals as rituals."),
-         boon="tome", ritual_casting=True,
+         boon="tome", ritual_casting=True, granted_ritual_only=True,  # i due rituali trascritti: solo come rituali (pag. 118)
          choices=(ChoiceSpec(group="book_rituals", levels={2: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
                              spell_ritual=True),)),
     _will("beast_speech", "Lingue delle Bestie", "Beast Speech", "Suppliche Occulte, pag. 119", 2, "speak-with-animals",
@@ -226,7 +221,7 @@ _ROWS = (
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", "Suppliche Occulte, livello 12, Patto della Lama, pag. 119", 12,
          ("Quando colpisci con l'arma del patto infliggi danni necrotici extra pari al Carisma (minimo 1).",
           "When you hit with the pact weapon you deal extra necrotic damage equal to your Charisma modifier (minimum 1)."),
-         boon="blade", roll_options=(LIFEDRINKER,)),
+         boon="blade", modifiers=(LIFEDRINKER,)),
     _will("whispers_of_the_grave", "Sussurri dalla Tomba", "Whispers of the Grave", "Suppliche Occulte, livello 9, pag. 119", 9,
           "speak-with-dead", "parlare con i morti", "speak with dead"),
     _once("bewitching_whispers", "Sussurri Stregati", "Bewitching Whispers", "Suppliche Occulte, livello 7, pag. 119", 7, "compulsion",
