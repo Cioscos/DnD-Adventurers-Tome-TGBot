@@ -151,6 +151,9 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: cls.level}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
+    # la nuova ha già ciò che richiede, senza la vecchia (Suppliche 2024, pag. 153); l'errore annulla la sessione
+    if ch.batch_ok and not ch.batch_ok(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level), [new_key]):
+        raise HTTPException(422, detail={"code": "option_prerequisite"})
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
         for spell in char.spells:
             if spell.name == old_key:

@@ -33,7 +33,6 @@ VENGEANCE = "warlock.searing_vengeance"
                                           "carta:2024/classes/warlock.md#Dono dei Protettori / Gift of the Protectors (Suppliche Occulte, livello 9+, Patto del Tomo, pag. 156)",
                                           "POST /characters/{char_id}/classes/{class_id}/options/replace"])
 @pytest.mark.parametrize("nuova", ["thirsting_blade", "eldritch_smite", "lifedrinker", "investment_of_the_chain_master", "gift_of_the_protectors"])
-@pytest.mark.xfail(strict=True, reason="CB-2661: difforme dal manuale, confermato")
 async def test_la_sostituzione_non_da_una_supplica_senza_il_patto_che_richiede(client, nuova):
     cid = await _caster24(client, 9, "devils_sight", "eldritch_mind", "armor_of_shadows", "misty_visions", "fiendish_vigor",
                           "mask_of_many_faces", "otherworldly_leap")
