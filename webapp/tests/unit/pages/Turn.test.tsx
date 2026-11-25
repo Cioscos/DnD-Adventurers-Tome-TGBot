@@ -489,6 +489,17 @@ describe('Turn page', () => {
       await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration', 1, { target_character_id: 32 }))
     })
 
+    it('the «on you» switch is already the target: no ally is asked', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [{ ...inspiration, use_toggles: [{ key: 'self', label: { it: 'A te', en: 'You' } }] }] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await userEvent.click(within((await screen.findByText(/Ispirazione Bardica/)).closest('li') as HTMLElement).getByRole('switch'))
+      await userEvent.click(within(screen.getByText(/Ispirazione Bardica/).closest('li') as HTMLElement).getByText('character.turn.use'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration', 1, { self: true }))
+      sessionAllies.mockReset().mockResolvedValue([])
+    })
+
     it('uses it without a target for a creature that has no sheet at the table', async () => {
       getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
       sessionAllies.mockResolvedValueOnce([{ id: 31, name: 'Brun', die: null }])

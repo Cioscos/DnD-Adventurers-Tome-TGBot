@@ -201,9 +201,9 @@ async def test_warding_flare_returns_on_a_short_rest_only_from_level_6(client):
 async def test_improved_warding_flare_shows_2d6_plus_wisdom_temporary_hp(client, monkeypatch):
     monkeypatch.setattr("api.services.rules_states.random.randint", lambda a, b: 4)
     low, high = await _dom(client, 5, "light", wisdom=16), await _dom(client, 6, "light", wisdom=16)
-    assert (await _use(client, low, "cleric.warding_flare")).json()["given"] == 0
+    assert (await _use(client, low, "cleric.warding_flare")).json()["given"] is None
     r = await _use(client, high, "cleric.warding_flare")
-    assert r.json()["given"] == 4 + 4 + 3 and (await _full(client, high))["temp_hp"] == 0  # all'attaccante, non a te
+    assert r.json()["given"] == 4 + 4 + 3 and (await _full(client, high))["temp_hp"] == 0  # senza bersaglio resta il valore da dare
 
 
 async def test_corona_of_light_is_a_ten_round_state_ended_without_an_action(client):

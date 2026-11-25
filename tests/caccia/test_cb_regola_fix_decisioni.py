@@ -326,3 +326,42 @@ async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_dell_ira_di_un_comp
     assert (await client.delete(f"/characters/{barbaro}/active-states/rage")).status_code == 200
     as_user(PLAYER_ID)
     assert (await _scheda(client, eroe))["temp_hp"] == resta
+
+
+@pytest.mark.caccia(id="CB-4643", fonte="2024 · Chierico · Colpi Benedetti Migliorati, Incantesimi Potenti · pag. 71 (PF temporanei a sé o a un'altra creatura entro 18 m)",
+                    zona="regola:2024/cleric", voce="regola",
+                    copre=["carta:2024/classes/cleric.md#Colpi Benedetti Migliorati / Improved Blessed Strikes (Chierico 14, pag. 71)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_incantesimi_potenti_migliorati_possono_dare_i_pf_temporanei_a_se(client):
+    from tests.integration.rules.test_task46_fix1 import POTENT, _cantrip, _potent
+    cid = await _potent(client)
+    trucchetto = await _cantrip(client, cid)
+    url = f"/characters/{cid}/spells/{trucchetto}/roll_damage"
+    r = await client.post(url, json={"main_rolls": [4, 3, 2], "options": [POTENT, f"{POTENT}_self"]})
+    assert r.status_code == 409, r.status_code  # a sé o a un'altra creatura, non a entrambi
+    r = await client.post(url, json={"main_rolls": [4, 3, 2], "options": [f"{POTENT}_self"]})
+    assert r.status_code == 200, r.text
+    assert (await _scheda(client, cid))["temp_hp"] == 6  # 2 x Saggezza (+3)
+
+
+@pytest.mark.caccia(id="CB-4644", fonte="2024 · Chierico · Lampo di Interdizione Migliorato · pag. 75 (PF temporanei al bersaglio dell'attacco, anche il chierico)",
+                    zona="regola:2024/cleric", voce="regola",
+                    copre=["carta:2024/classes/cleric.md#Lampo di Interdizione Migliorato / Improved Warding Flare (Luce 6, pag. 75)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_lampo_di_interdizione_migliorato_da_i_pf_temporanei_al_chierico_bersaglio(client, test_session_factory):
+    from tests.integration._encounter_helpers import GM_ID, seed_session
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    from tests.integration.rules.test_2024_cleric_domains import _dom
+    lampo = "cleric.warding_flare"
+    _sid, eroe = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _dom(client, 6, "light", wisdom=16)
+    await _seat(test_session_factory, cid)
+    riga = next(a for a in (await _scheda(client, cid))["abilities"] if a["feature_key"] == lampo)
+    assert [x["key"] for x in riga["use_toggles"]] == ["self"]
+    # il bersaglio dell'attacco è uno solo: lui o un altro
+    r = await client.post(f"/characters/{cid}/features/{lampo}/use", json={"params": {"self": True, "target_character_id": eroe}})
+    assert r.status_code == 422, r.status_code
+    r = await client.post(f"/characters/{cid}/features/{lampo}/use", json={"params": {"self": True}})
+    assert r.status_code == 200 and r.json()["given"] is None, r.text
+    assert 5 <= (await _scheda(client, cid))["temp_hp"] <= 15  # 2d6 + Saggezza (+3)

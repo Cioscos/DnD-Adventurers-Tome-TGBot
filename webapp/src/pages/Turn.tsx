@@ -223,9 +223,12 @@ export default function Turn() {
       setRemovalPick(null)
     },
   })
+  /** L'interruttore «a te» acceso è già il bersaglio: nessun altro da scegliere. */
+  const onSelf = (ab: Ability) => !!ab.use_toggles?.some((x) => x.key === 'self') && !!toggles[ab.id]?.self
   /** La modalità scelta è rivolta a un altro: il pulsante dice «Usa su…», il passo dopo è la scelta del bersaglio. */
   const usesOnAlly = (ab: Ability) => {
     const mode = useChoices[ab.id]?.mode
+    if (onSelf(ab)) return false
     return !!ab.gives_to_ally || !!(mode && ab.ally_modes?.includes(mode))
   }
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
@@ -244,7 +247,7 @@ export default function Turn() {
       setRemovalPick({ ...args, allies })
       return
     }
-    if (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode))) {
+    if (!onSelf(args.ability) && (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode)))) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
         setAllyPick({ ...args, allies, max: args.ability.ally_max ?? 1 })
