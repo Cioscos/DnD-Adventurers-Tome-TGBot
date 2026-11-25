@@ -325,6 +325,10 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.choices and not variant.text and not (_stateful(variant, data) or variant.temp_hp or variant.heal):
         return SpellEffectsRead(applied=[])  # solo una scelta (il tipo di danno): viaggia con il tiro di danno, nulla da dire al GM
     if not chars or not (_stateful(variant, data) or variant.temp_hp or variant.heal):  # nessun personaggio: l'effetto lo applica il GM
+        ended = [s for s in caster.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{effect.key}"] if variant.ends_on_recast else []
+        if ended:  # rilanciato su un PNG: i bersagli di prima lo perdono lo stesso
+            caster.active_states = [s for s in caster.active_states if s not in ended]
+            settle_closed(caster, ended)
         return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
     if not _stateful(variant, data):  # istantaneo: solo PF, nessuno stato né orologio
         for target in chars:
