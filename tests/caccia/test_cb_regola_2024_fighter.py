@@ -108,7 +108,6 @@ async def test_indomito_2024_ripete_un_tiro_salvezza_contro_la_morte_fallito(cli
 
 @pytest.mark.caccia(id="CB-2362", fonte="2024 · Guerriero · Azione Impetuosa · pag. 91; Movimento Telecinetico · pag. 98", zona="regola:2024/fighter", voce="interazione",
                     copre=["carta:2024/classes/fighter.md#Azione Impetuosa / Action Surge (Guerriero 2, pag. 91)", "carta:2024/classes/fighter.md#Movimento Telecinetico / Telekinetic Movement (Potere Psionico, Guerriero Psionico 3, pag. 98)", "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/turn/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2362: difforme dal manuale, confermato")
 async def test_l_azione_in_piu_di_azione_impetuosa_non_paga_il_movimento_telecinetico(client):
     cid = await _guerriero(client, 3, "psi_warrior", intelligence=16)
     r = await client.post(f"/characters/{cid}/turn/use", json={"slot": "action"})  # l'azione del turno è già spesa

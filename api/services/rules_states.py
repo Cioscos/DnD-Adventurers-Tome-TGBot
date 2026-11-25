@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
-    attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
+    action_taken, attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import ally_target, load_receiver
@@ -366,6 +366,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                                params) if on_use.slot_by else on_use.slot
     if turn_slot and is_incapacitated(char) and feature_key not in surprise_exit_features(char):
         raise _err(status.HTTP_409_CONFLICT, "incapacitated")
+    # 2024: l'azione in più (Azione Impetuosa pag. 91, Velocità) non può essere l'azione Magia, come per i lanci (spells.py).
+    # shortcut: l'azione Magia si riconosce dal riassunto della carta («Magic action...»); un campo di OnUse se il testo non basta
+    if (turn_slot == "action" and spec.edition == "2024" and spec.summary["en"].startswith("Magic action")
+            and action_taken(turn := get_turn(char)) and turn["extra_actions"] > 0):
+        raise _err(status.HTTP_409_CONFLICT, "surge_no_magic")
     # uno stato che finisce con l'incapacità non parte da incapacitato (2024 Difesa Superiore p.103, Sintonia Elementale p.106)
     if (isinstance(on_use.state, StateSpec) and "incapacitated" in on_use.state.ends_on
             and any((char.conditions or {}).get(c) for c in INCAPACITATING)):
