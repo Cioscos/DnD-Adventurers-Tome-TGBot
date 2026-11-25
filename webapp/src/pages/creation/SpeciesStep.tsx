@@ -8,12 +8,9 @@ import Pressable from '@/components/ui/Pressable'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { localized, type Lang } from '@/lib/srd/catalog'
 import SpeciesChoices from '@/components/character/SpeciesChoices'
-import { raceBonuses, type RaceEntry, type Species2024Entry, type SubraceEntry } from '@/lib/species'
+import { LANGUAGE_KEYS, languageName, raceBonuses, SKILL_KEYS, type RaceEntry, type Species2024Entry, type SpeciesChoice } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
-/** `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17: dove la razza ne ha, è obbligatoria).
- *  `picks`: le caratteristiche a scelta che prendono +1 (Mezzelfo, 2014 pag. 39). */
-export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null | undefined; picks?: string[] }
 export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
@@ -28,6 +25,8 @@ interface Props {
   onSpecies24?: (s: Species24State) => void
   /** Abilità già date da classe e background: non sceglibili come abilità della specie. */
   takenSkills?: string[]
+  /** Lingue (nomi) già conosciute: non sceglibili come lingua della razza. */
+  takenLanguages?: string[]
   /** Talento d'Origine non ripetibile del background: non sceglibile per Versatile. */
   takenFeats?: string[]
 }
@@ -48,13 +47,38 @@ function speciesSpeed(e: Species2024Entry, options: Record<string, string>): num
   return e.speed_ft + (e.key === '2024_goliath' || (e.key === '2024_elf' && options.lineage === 'wood') ? 5 : 0)
 }
 
-export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills, takenFeats }: Props) {
+/** Scelte della razza 2014: `max` opzioni, quelle in `taken` non si possono prendere. */
+function RacePicks({ title, options, value, max, taken = [], label, onChange }: {
+  title: string; options: string[]; value: string[]; max: number; taken?: string[]; label: (key: string) => string; onChange: (value: string[]) => void
+}) {
+  if (max === 0) return null
+  return (
+    <div role="group" aria-label={title}>
+      <p className="mb-1.5 text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim tabular-nums">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((k) => (
+          <Pressable
+            key={k}
+            aria-pressed={value.includes(k)}
+            disabled={!value.includes(k) && (value.length >= max || taken.includes(k))}
+            onClick={() => onChange(value.includes(k) ? value.filter((p) => p !== k) : [...value, k])}
+            className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
+              ${value.includes(k) ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'} disabled:opacity-40`}
+          >
+            {label(k)}
+          </Pressable>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills, takenLanguages = [], takenFeats }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
   const [picking, setPicking] = useState(false)
-  const { race, sub, picks = [] } = choice
-  const toPick = race?.ability_choices ?? 0
+  const { race, sub, picks = [], skills = [], languages = [] } = choice
   const e24 = edition === '2024' ? species24?.entry ?? null : null
   const bonuses = raceBonuses(race, sub, picks)
 
@@ -101,26 +125,17 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
         </div>
       )}
 
-      {edition === '2014' && race && toPick > 0 && (
-        <div role="group" aria-label={t('character.create.ability_choices', { n: picks.length, max: toPick })}>
-          <p className="mb-1.5 text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim tabular-nums">
-            {t('character.create.ability_choices', { n: picks.length, max: toPick })}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {Object.keys(ABBR).filter((k) => !(k in race.ability_bonuses)).map((k) => (
-              <Pressable
-                key={k}
-                aria-pressed={picks.includes(k)}
-                disabled={!picks.includes(k) && picks.length >= toPick}
-                onClick={() => onChoice({ ...choice, picks: picks.includes(k) ? picks.filter((p) => p !== k) : [...picks, k] })}
-                className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
-                  ${picks.includes(k) ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'} disabled:opacity-40`}
-              >
-                {t(`common.abilities.${ABBR[k]}`)} +1
-              </Pressable>
-            ))}
-          </div>
-        </div>
+      {edition === '2014' && race && (
+        <>
+          <RacePicks title={t('character.create.ability_choices', { n: picks.length, max: race.ability_choices })} value={picks} max={race.ability_choices ?? 0}
+            options={Object.keys(ABBR).filter((k) => !(k in race.ability_bonuses))} label={(k) => `${t(`common.abilities.${ABBR[k]}`)} +1`}
+            onChange={(v) => onChoice({ ...choice, picks: v })} />
+          <RacePicks title={t('character.create.skill_choices', { n: skills.length, max: race.skill_choices })} value={skills} max={race.skill_choices ?? 0}
+            options={SKILL_KEYS} taken={takenSkills} label={(k) => t(`character.skills.${k}`)} onChange={(v) => onChoice({ ...choice, skills: v })} />
+          <RacePicks title={t('character.create.language_choices', { n: languages.length, max: race.language_choices })} value={languages} max={race.language_choices ?? 0}
+            options={LANGUAGE_KEYS.filter((k) => !race.languages.includes(k))} taken={LANGUAGE_KEYS.filter((k) => takenLanguages.includes(languageName(k, lang)))}
+            label={(k) => languageName(k, lang)} onChange={(v) => onChoice({ ...choice, languages: v })} />
+        </>
       )}
 
       {edition === '2014' && race && (

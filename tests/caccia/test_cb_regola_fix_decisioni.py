@@ -824,3 +824,19 @@ async def test_il_rilancio_di_un_attacco_con_incantesimo_tiene_la_manovra_usata_
     assert r.status_code == 409  # una sola manovra per attacco
     # l'attacco dopo è un altro tiro: nessun bonus
     assert (await _raggio(client, cid, dardo, die=9)).json()["to_hit_total"] == 9 + primo["to_hit_bonus"]
+
+
+@pytest.mark.caccia(id="CB-4882", fonte="decisione D-049 (tests/caccia/decisioni.md): abilità e lingua del mezzelfo salvate, l'abilità non si ripete nella classe; 2014 · Razze · Mezzelfo · pag. 39",
+                    zona="regola:2014/razze", voce="persistenza",
+                    copre=["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "POST /characters"])
+async def test_le_scelte_del_mezzelfo_sono_salvate_e_non_si_ripetono_nella_classe(client):
+    corpo = {"name": "Lia", "rules_edition": "2014", "skills": {"religion": True, "stealth": True},
+             "species": {"name": "Mezzelfo", "languages": ["Comune", "Elfico", "Draconico"], "skills": ["religion", "stealth"],
+                         "ability_bonuses": {"cha": 2, "str": 1, "dex": 1}}}
+    r = await client.post("/characters", json={**corpo, "initial_class": {"class_name": "cleric", "level": 1, "skill_choices": ["religion", "history"]}})
+    assert (r.status_code, r.json()["detail"]) == (422, "class_skill_taken")
+    r = await client.post("/characters", json={**corpo, "initial_class": {"class_name": "cleric", "level": 1, "skill_choices": ["medicine", "history"]}})
+    assert r.status_code == 201, r.text
+    scheda = await _scheda(client, r.json()["id"])
+    assert {k for k, v in scheda["skills"].items() if v} == {"religion", "stealth", "medicine", "history"}
+    assert scheda["languages"] == ["Comune", "Elfico", "Draconico"]

@@ -38,8 +38,11 @@ function voci(x: unknown): string[] {
   return []
 }
 
+/** Le scelte del mezzelfo: due caratteristiche, due abilità, una lingua. */
+const MEZZELFO = ['common.abilities.strength +1', 'common.abilities.dexterity +1', 'character.skills.religion', 'character.skills.stealth', 'Draconico']
+
 /** Creazione 2014 dal wizard (chierico, razza dal catalogo, tutto il resto saltato): gli argomenti passati a create. */
-async function creaConRazza(nome: string, sottorazza: string | null, scelte: string[] = []): Promise<unknown[]> {
+async function creaConRazza(nome: string, sottorazza: string | null, scelte: string[] = [], nellaClasse?: () => Promise<void>): Promise<unknown[]> {
   create.mockReset()
   create.mockResolvedValue({ id: 9 })
   const user = userEvent.setup()
@@ -58,10 +61,11 @@ async function creaConRazza(nome: string, sottorazza: string | null, scelte: str
   else if (altra) await user.click(altra)
   for (const c of scelte) {
     expect(screen.getByRole('button', { name: 'common.next →' })).toBeDisabled()
-    await clic(`common.abilities.${c} +1`)
+    await clic(c)
   }
   await avanti()
   await clic(/dnd.classes.cleric/) // la classe viene dopo la specie (CB-4555)
+  await nellaClasse?.()
   await clic('character.skills.history')
   await clic('character.skills.medicine')
   await avanti()
@@ -103,8 +107,44 @@ describe('caccia: regola 2014 razze', () => {
 
   // caccia: {"id": "CB-3070", "fonte": "2014 · Razze · Mezzelfo: Carisma +2 e altri due punteggi a scelta +1 ciascuno · pag. 39", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "route:/"]}
   it('mezzelfo: oltre a Carisma +2 riceve +1 a due altre caratteristiche', async () => {
-    const mandate = await creaConRazza('Mezzelfo', null, ['strength', 'dexterity'])
+    const mandate = await creaConRazza('Mezzelfo', null, MEZZELFO)
     expect(mandate[3]).toMatchObject({ species: { ability_bonuses: { cha: 2, str: 1, dex: 1 } } })
+  })
+
+  // caccia: {"id": "CB-4880", "fonte": "decisione D-049 (tests/caccia/decisioni.md): la creazione chiede due abilità e una lingua a scelta; 2014 · Razze · Mezzelfo, Versatilità nelle Abilità e Linguaggi · pag. 39", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "route:/"]}
+  it('mezzelfo: due abilità e una lingua a scelta, obbligatorie e senza doppioni', async () => {
+    const mandate = await creaConRazza('Mezzelfo', null, MEZZELFO, async () => {
+      // nella classe le due abilità sono già prese
+      expect(screen.getByRole('button', { name: 'character.skills.religion' })).toBeDisabled()
+    })
+    expect(mandate[3]).toMatchObject({
+      skills: { religion: true, stealth: true }, species: { skills: ['religion', 'stealth'], languages: ['Comune', 'Elfico', 'Draconico'] },
+    })
+  })
+
+  // caccia: {"id": "CB-4881", "fonte": "decisione D-049 (tests/caccia/decisioni.md): l'abilità del background non si sceglie per il mezzelfo e cambiando background la scelta doppia torna da fare; 2014 · Razze · Mezzelfo · pag. 39", "zona": "regola:2014/razze", "voce": "interazione", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "route:/"]}
+  it('mezzelfo: niente abilità già data dal background', async () => {
+    const user = userEvent.setup()
+    const clic = async (name: string | RegExp) => user.click(await screen.findByRole('button', { name }))
+    const premuto = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
+    renderWithProviders(createElement(CharacterSelect))
+    await clic(/character.select.new/)
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await clic('common.next →')
+    await clic('common.next →')
+    await clic(/character.create.species_pick/)
+    await user.click(await screen.findByText('Mezzelfo'))
+    expect(screen.queryByRole('button', { name: 'Elfico' })).toBeNull()
+    for (const c of MEZZELFO) await clic(c)
+    await clic('common.back')
+    await clic(/background_pick/)
+    await user.click(await screen.findByText('Accolito')) // Intuizione e Religione
+    await clic('common.next →')
+    expect([premuto('character.skills.religion'), premuto('character.skills.stealth')]).toEqual(['false', 'true'])
+    expect(screen.getByRole('button', { name: 'character.skills.religion' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'common.next →' })).toBeDisabled()
+    await clic('character.skills.perception')
+    expect(screen.getByRole('button', { name: 'common.next →' })).toBeEnabled()
   })
 
   // caccia: {"id": "CB-3071", "fonte": "2014 · Razze · Mezzelfo, Retaggio Fatato (pag. 39) e Gnomo, Astuzia Gnomesca (pag. 36-37): vantaggio a tiri salvezza, come le note di Elfo, Nano e Halfling", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "carta:2014/races.md#Gnomo / Gnome - tratti base (pag. 36-37)", "route:/"]}

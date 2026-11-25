@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/useToast'
 import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
 import OriginFeatStep from '@/pages/creation/OriginFeatStep'
-import SpeciesStep, { type SpeciesChoice, type Species24State } from '@/pages/creation/SpeciesStep'
+import SpeciesStep, { type Species24State } from '@/pages/creation/SpeciesStep'
 import BackgroundStep2024 from '@/pages/creation/BackgroundStep2024'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
@@ -41,8 +41,8 @@ import CatalogPicker from '@/components/catalog/CatalogPicker'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import {
-  creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies,
-  speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
+  creationExtras, backgroundLanguages, languageName, backgroundSkills as mapBackgroundSkills, buildSpecies,
+  raceChoicesMissing, speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice, type SpeciesChoice,
 } from '@/lib/species'
 import { featByKey } from '@/lib/feats'
 import { localized } from '@/lib/srd/catalog'
@@ -151,7 +151,7 @@ export default function CharacterSelect() {
   const wealth = wealthPick === true
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
-  const speciesPayload = species.race ? buildSpecies(species.race, species.sub ?? null, lang, species.picks) : null
+  const speciesPayload = species.race ? buildSpecies(species.race, species.sub ?? null, lang, species) : null
   const scoreBonuses: Record<string, number> = (is2024 ? bg24?.increases : speciesPayload?.ability_bonuses) ?? {}
 
   const charactersQuery = useQuery({
@@ -313,7 +313,7 @@ export default function CharacterSelect() {
   }
   const changeSpecies = (c: SpeciesChoice) => {
     setSpecies(c)
-    if (c.race) dropTakenClassSkills(buildSpecies(c.race, c.sub ?? null, lang).skills)
+    if (c.race) dropTakenClassSkills(buildSpecies(c.race, c.sub ?? null, lang, c).skills)
   }
   /** Opzioni della specie senza il talento di Versatile che il background dà già (D-035). */
   const withoutTakenFeat = ({ origin_feat, ...rest }: Record<string, string>, feat: string | null) =>
@@ -782,7 +782,7 @@ export default function CharacterSelect() {
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <SpeciesStep choice={species} onChoice={changeSpecies} freeText={race} onFreeText={setRace}
                 edition={edition} species24={species24} onSpecies24={changeSpecies24}
-                takenSkills={bg24?.entry.skills} takenFeats={takenFeats(bg24?.entry.origin_feat ?? originFeat)} />
+                takenSkills={is2024 ? bg24?.entry.skills : backgroundSkills} takenLanguages={languages} takenFeats={takenFeats(bg24?.entry.origin_feat ?? originFeat)} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -791,8 +791,7 @@ export default function CharacterSelect() {
                 onPrimary={goNext}
                 primaryDisabled={is2024
                   ? !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0
-                  : !!species.race && ((species.race.subraces.length > 0 && species.sub === undefined)
-                    || (species.picks?.length ?? 0) !== (species.race.ability_choices ?? 0))}
+                  : raceChoicesMissing(species)}
                 primaryHaptic="medium"
               />
             </m.div>
@@ -984,7 +983,10 @@ export default function CharacterSelect() {
             const skills = mapBackgroundSkills(e.skill_proficiencies as string[] | undefined)
             setBackgroundSkills(skills)
             dropTakenClassSkills(skills)
-            setLanguages((prev) => [...new Set([...prev, ...backgroundLanguages(e.languages as string[] | undefined, lang)])])
+            const langs = backgroundLanguages(e.languages as string[] | undefined, lang)
+            setLanguages((prev) => [...new Set([...prev, ...langs])])
+            // le scelte del mezzelfo che il background dà già tornano da fare
+            setSpecies((c) => ({ ...c, skills: c.skills?.filter((s) => !skills.includes(s)), languages: c.languages?.filter((l) => !langs.includes(languageName(l, lang))) }))
             setPickBackground(false)
           }}
         />

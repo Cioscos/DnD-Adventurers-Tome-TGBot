@@ -414,6 +414,8 @@
     "cha": 2
    },
    "ability_choices": 2,
+   "skill_choices": 2,
+   "language_choices": 1,
    "size": "medium",
    "languages": [
     "common",
