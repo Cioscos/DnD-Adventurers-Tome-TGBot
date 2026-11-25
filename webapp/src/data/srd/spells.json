@@ -9704,6 +9704,8 @@
    "damage_dice": "2d8",
    "damage_type": "bludgeoning",
    "higher_levels_dice": "1d8",
+   "extra_damage_dice": "4d6",
+   "extra_damage_type": "cold",
    "classes": [
     "druid",
     "sorcerer",
@@ -11669,6 +11671,8 @@
    "damage_dice": "20d6",
    "damage_type": "fire",
    "higher_levels_dice": null,
+   "extra_damage_dice": "20d6",
+   "extra_damage_type": "bludgeoning",
    "classes": [
     "sorcerer",
     "wizard"
