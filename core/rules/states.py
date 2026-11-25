@@ -271,6 +271,7 @@ SUSPENDED_BACK = "conditions_suspended_back"
 # sul ricevente: {condizione tornata: id di chi la sospendeva}, tolta se la condizione cambia (allora un annullo non la sospende)
 RETURNED_FROM = "conditions_returned_from"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
+EXCLUSIVE_TARGETS = "exclusive_targets"  # settings: {chiave dell'effetto: ["combatant", 3] | ["character", 7]}, l'ultimo bersaglio (``TargetEffect.exclusive``)
 
 
 TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}

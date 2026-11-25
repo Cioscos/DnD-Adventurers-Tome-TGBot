@@ -289,7 +289,7 @@ THOUGHT_REFLECTION = RollOptionSpec(
 
 CREATE_THRALL_USE = OnUse(
     slot="action", state=StateSpec("create_thrall", ends_on=("manual",), data={"others": [f"{CK}.create_thrall"]}),
-    target_effect=lambda _c, _p: TargetEffect(condition="charmed"))
+    target_effect=lambda _c, _p: TargetEffect(condition="charmed", exclusive=True))  # un nuovo servitore libera il precedente (pag. 118)
 
 
 # ---------------------------------------------------------------------------

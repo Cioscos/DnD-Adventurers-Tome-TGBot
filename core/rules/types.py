@@ -181,6 +181,8 @@ class TargetEffect:
     note: str | None = None
     # La condizione cade con la concentrazione di chi la applica (le punizioni: Punizione Collerica, Colpo Accecante...)
     ends_with_concentration: bool = False
+    # Un bersaglio alla volta: applicarlo a un altro toglie la condizione, se viene ancora da chi lo usa, al precedente (Creare Servitore)
+    exclusive: bool = False
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):

@@ -117,7 +117,6 @@ async def _goblin(client, sid, gid) -> dict:
 @pytest.mark.caccia(id="CB-2067", fonte="2014 · Warlock · Creare Servitore · pag. 118", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Creare Servitore / Create Thrall (Grande Antico 14, pag. 118)",
                            "POST /characters/{char_id}/target-effects", "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2067: difforme dal manuale, confermato")
 async def test_un_nuovo_servitore_libera_il_precedente(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)
