@@ -199,7 +199,7 @@ async def test_toccato_dalle_fate_passo_velato_gratis_una_sola_volta(client):
 async def test_fondersi_con_le_ombre_rende_invisibile(client):
     ch = await _pg(client, "fighter", 19)
     await _preso(client, ch["id"], "2024_boon_night_spirit", "dexterity")
-    r = await client.post(f"/characters/{ch['id']}/features/feat.2024_boon_night_spirit/use", json={})
+    r = await client.post(f"/characters/{ch['id']}/features/feat.2024_boon_night_spirit/use", json={"params": {"mode": "blend"}})
     assert r.status_code == 200, r.text
     assert (await _scheda(client, ch["id"]))["conditions"].get("invisible"), (await _scheda(client, ch["id"]))["conditions"]
 

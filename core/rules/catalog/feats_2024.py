@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import DAMAGE_TYPES, canonical_damage_type
 from core.data.feats import LIST_ABILITY, MI_ABILITIES, MI_LISTS
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.item_bonuses import item_meta
@@ -15,7 +15,7 @@ from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import D20_TESTS, _abilities, _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
 from core.rules.catalog.y2024.fighter import STYLE_ROWS
-from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
+from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, Uses
 from core.rules.weapons import MASTERY_OPTIONS, has_property, weapon_key
 from core.utils.session_view import armor_category
 
@@ -259,13 +259,22 @@ def last_stand_state() -> StateSpec:
 
 
 # Forma d'ombra (pag. 211): in luce fioca o oscurità resistenza a tutto tranne psichico e radioso, senza azione e anche
-# da visibile; la luce la dichiara il giocatore al danno (D1).
-# shortcut: la resistenza dell'opzione vale per ogni parte del colpo, anche una psichica o radiosa; rivederlo se serve
-SHADOWY_FORM = RollOptionSpec(
-    key=f"{_NIGHT}_shadowy_form", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
-    available=lambda c: bool(c.damage_type) and c.damage_type not in ("psychic", "radiant"),
-    label=_both("Forma d'ombra: sei in luce fioca o oscurità? Resistenza a questo danno",
-                "Shadowy Form: are you in dim light or darkness? Resistance to this damage"))
+# da visibile. Un interruttore che il giocatore accende e spegne secondo la luce (D1): la scheda mostra le resistenze e un
+# colpo misto le applica tipo per tipo.
+_SHADOWY_FORM = f"{_NIGHT}_shadowy_form"
+_NIGHT_MODES = {
+    "blend": _both("Fondersi con le ombre: Invisibile (azione Bonus)", "Merge with Shadows: Invisible (Bonus Action)"),
+    "form": _both("Forma d'ombra: sei in luce fioca o oscurità (nessuna azione)",
+                  "Shadowy Form: you are in dim light or darkness (no action)"),
+}
+
+
+def _night_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    if params.get("mode") == "form":
+        return StateSpec(_SHADOWY_FORM)
+    # Fondersi con le ombre: Invisibile fino a subito dopo un'azione, azione Bonus o Reazione; attacco e lancio come il Manto
+    # d'Ombre, il resto si chiude a mano
+    return StateSpec(_NIGHT, ends_on=("attack", "cast", "manual"), condition="invisible")
 
 
 _FATE = "feat.2024_boon_fate"
@@ -312,11 +321,12 @@ _register(
     _f24("boon_skill"),  # competenze e Maestria le dà ``complete_feat``, che segna quelle nuove (la rimozione le toglie)
     _f24("boon_speed", modifiers=(Modifier("speed", 30),)),
     _f24("boon_spell_recall"),
-    # Fondersi con le ombre: Invisibile fino a subito dopo un'azione, azione Bonus o Reazione; attacco e lancio come il Manto
-    # d'Ombre, il resto si chiude a mano
     _f24("boon_night_spirit", passive=False, action_type="bonus_action",
-         on_use=OnUse(slot="bonus", state=StateSpec(_NIGHT, ends_on=("attack", "cast", "manual"), condition="invisible")),
-         roll_options=(SHADOWY_FORM,)),
+         on_use=OnUse(slot_by=lambda _c, p: None if p.get("mode") == "form" else "bonus", state=_night_state,
+                      choices=(UseChoice("mode", _both("Effetto", "Effect"), lambda _c: list(_NIGHT_MODES),
+                                         lambda k: _NIGHT_MODES[k]),)),
+         modifiers=tuple(Modifier(f"resistance:{t}", 0, when=lambda c: state_on(c, _SHADOWY_FORM))
+                         for t in DAMAGE_TYPES if t not in ("psychic", "radiant"))),
     _f24("boon_truesight", modifiers=(Modifier("sense:truesight", 60),)),
     needs={"feat.2024_boon_energy_resistance": ("damage_types",), "feat.2024_boon_skill": ("expertise",)},
 )

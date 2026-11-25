@@ -67,17 +67,17 @@ async def test_skill_boon(client):
 
 
 async def test_night_spirit_state_resistances(client):
-    # PHB 2024 pag. 211: l'azione Bonus dà Invisibile (Fondersi con le ombre); la resistenza di Forma d'ombra non costa
-    # azioni e si dichiara al danno, tranne psichico e radioso
+    # PHB 2024 pag. 211: l'azione Bonus dà Invisibile (Fondersi con le ombre) e niente resistenze; Forma d'ombra è un
+    # interruttore senza azione (luce dichiarata dal giocatore), resistenze tranne psichico e radioso
     b = await _boon(client, "night_spirit", "dexterity")
-    r = await client.post(f"/characters/{b['id']}/features/feat.2024_boon_night_spirit/use", json={})
+    r = await client.post(f"/characters/{b['id']}/features/feat.2024_boon_night_spirit/use", json={"params": {"mode": "blend"}})
     assert r.status_code == 200, r.text
-    assert (await _full(client, b["id"]))["conditions"].get("invisible")
-    form = "feat.2024_boon_night_spirit_shadowy_form"
-    for t in ("fire", "slashing", "necrotic"):
-        assert form in await _roll_keys(client, b["id"], "damage_taken", damage_type=t)
-    for t in ("psychic", "radiant"):
-        assert form not in await _roll_keys(client, b["id"], "damage_taken", damage_type=t)
+    full = await _full(client, b["id"])
+    assert full["conditions"].get("invisible") and not full["computed"]["resistances"]
+    r = await client.post(f"/characters/{b['id']}/features/feat.2024_boon_night_spirit/use", json={"params": {"mode": "form"}})
+    assert r.status_code == 200, r.text
+    res = set((await _full(client, b["id"]))["computed"]["resistances"])
+    assert {"fire", "slashing", "necrotic"} <= res and "psychic" not in res and "radiant" not in res
 
 
 # --- Ultima resistenza, Cure extra, Reindirizzamento, Colpo travolgente -------------------------------------------------
