@@ -712,7 +712,10 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
             indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.ritual and chosen in s.classes)
             if len(indexes) != 2:
                 raise _bad("feat_options_invalid")
-            saved.update({"rituals": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
+            own = {x for sp in char.spells for x in (sp.srd_index, sp.name)}
+            new = [(sp, i) for sp, i in zip(spells, indexes) if not {i, sp.name} & own]  # quelli già sulla scheda restano com'erano
+            saved.update({"rituals": indexes,
+                          "granted": _add_feat_spells(session, char, [sp for sp, _ in new], [i for _, i in new])})
         elif "spell" in needs:  # Iniziato alla Magia: due trucchetti e un incantesimo di 1º livello della lista
             indexes = _checked_spells(char, spells, lambda s: chosen in s.classes)
             if len(indexes) != 3 or sorted(sp.level for sp in spells) != [0, 0, 1]:

@@ -369,3 +369,26 @@ async def test_chi_entra_a_scontro_avviato_non_e_nel_proprio_turno(client, test_
     assert r.status_code == 200, r.text
     come_utente(555)
     assert "ranger.foe_slayer_attack" not in await _roll_keys(client, cid, "attack", item_id=spada)
+
+
+@pytest.mark.caccia(id="CB-4788", fonte="2014 · Talenti · Incantatore Rituale / Ritual Caster · pag. 168", zona="regola:2014/talenti", voce="interazione",
+                    copre=["carta:2014/feats.md#Incantatore Rituale / Ritual Caster (pag. 168)",
+                           "GET /characters/{char_id}/spells/{spell_id}/cast-check"])
+async def test_un_rituale_gia_conosciuto_senza_classe_resta_lanciabile_con_lo_slot(client):
+    cid = await _crea(client, "2014", ("wizard", 5, None))
+    # la scheda di un mago di una sola classe salva gli incantesimi senza classe
+    r = await client.post(f"/characters/{cid}/spells", json={**_spell("Allarme", 1, "alarm"), "is_ritual": True})
+    assert r.status_code == 201, r.text
+    riga = next(a for a in _feat_rows((await _take(client, cid, "ritual_caster")).json(), "ritual_caster"))
+    r = await _complete(client, cid, riga["id"], {"list": "wizard"}, [
+        {**_spell("Allarme", 1, "alarm"), "is_ritual": True}, {**_spell("Identificare", 1, "identify"), "is_ritual": True}])
+    assert r.status_code == 200, r.text
+    incantesimi = {s["srd_index"]: s["id"] for s in r.json()["spells"]}
+    preparati = {s["srd_index"]: s["always_prepared"] for s in r.json()["spells"]}
+    assert preparati == {"alarm": False, "identify": True}  # il libro dei rituali non lo prepara per il mago
+
+    async def avvisi(chiave: str) -> list[str]:
+        return (await client.get(f"/characters/{cid}/spells/{incantesimi[chiave]}/cast-check")).json()
+
+    assert "ritual_only" not in await avvisi("alarm")  # è nel suo libro degli incantesimi
+    assert "ritual_only" in await avvisi("identify")  # solo nel libro dei rituali

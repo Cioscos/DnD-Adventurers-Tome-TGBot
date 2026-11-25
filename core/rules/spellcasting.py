@@ -234,10 +234,11 @@ def granted_ritual_only(char: Any, spell: Any) -> bool:
     """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), o scelto
     con una sua scelta (i rituali del Libro degli Antichi Segreti 2014), alla classe a cui è assegnato: chi lo ha da
     un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri.
-    Anche i rituali del libro di Incantatore Rituale 2014 (pag. 168), se non sono pure di una classe."""
+    Anche i rituali del libro di Incantatore Rituale 2014 (pag. 168), se non sono pure di una classe o già sulla scheda."""
     srd_index = getattr(spell, "srd_index", None)
     if spell.class_id is None and srd_index and any(
-            a.feature_key == "feat.ritual_caster" and srd_index in ((a.options or {}).get("rituals") or [])
+            a.feature_key == "feat.ritual_caster"
+            and srd_index in ((a.options or {}).get("granted", (a.options or {}).get("rituals")) or [])
             for a in char.abilities):
         return True
     return _granted_by(char, spell, "granted_ritual_only") or any(
