@@ -155,7 +155,9 @@ _CONDITION_OPTIONS = (
         key="war_blessing:add", phase="after_roll", after="add", rolls=("attack",), bonus=lambda _c, _i: 10,
         cost=Cost(state_key=WAR_GODS_BLESSING),
         label={"it": "Benedizione del Dio della Guerra: somma 10 al tiro per colpire", "en": "War God's Blessing: add 10 to the attack roll"},
-        available=lambda ctx: has_state(ctx.char, WAR_GODS_BLESSING),
+        # il minuto della Benedizione 2024 (pag. 77) ha la stessa chiave e nessun bonus
+        available=lambda ctx: any(s.get("key") == WAR_GODS_BLESSING and (s.get("data") or {}).get("attack_bonus")
+                                  for s in ctx.char.active_states or []),
     ),
     RollOptionSpec(
         key="trickster:advantage", phase="before", rolls=("skill",), mode="advantage",
