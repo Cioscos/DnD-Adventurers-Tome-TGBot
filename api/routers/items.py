@@ -270,6 +270,7 @@ async def update_item(
     # Snapshot equipped state for the homebrew event below. Captured BEFORE the
     # setattr loop so we can detect a True→False / False→True transition.
     was_equipped = item.is_equipped
+    was_shield = item.is_equipped and item.item_type == "shield"
 
     data = body.model_dump(exclude_unset=True)
     refuse_null(Item, data)
@@ -319,6 +320,8 @@ async def update_item(
     # Anche il bonus o il tipo corretto di uno scudo già imbracciato vale subito per la CA (2014 pag. 144-145).
     if "is_equipped" in data or "equipment_slot" in data or (item.is_equipped and {"item_metadata", "item_type"} & data.keys()):
         apply_equip_ac(char, item, displaced)
+        if was_shield and item.item_type != "shield" and not char.shield_armor_class_override:
+            char.shield_armor_class = 0  # corretto in un altro tipo di oggetto: non è più uno scudo
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     await _apply_con_hp(session, char, old_con_mod)

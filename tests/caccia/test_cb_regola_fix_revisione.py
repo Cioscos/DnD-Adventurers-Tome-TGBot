@@ -6,7 +6,7 @@ import pytest
 
 from sqlalchemy import select
 
-from core.db.models import Character, SpellSlot
+from core.db.models import Character, SessionParticipant, SessionRole, SpellSlot
 from core.rules.catalog.granted_spells import granted_spell
 from tests.caccia.test_cb_regola_2024_fighter import _guerriero, _manovre, _scheda, _usa
 from tests.caccia.test_cb_regola_fix_lancio_core import _pg
@@ -318,3 +318,16 @@ async def test_azione_impetuosa_non_paga_i_lanci_e_i_privilegi_ad_azione_magia(c
                          "compagno": ("ranger.primal_companion", {"params": {"pay": "slot", "kind": "land", "slot_level": "1"}})}[caso]
         r = await _usa(client, cid, chiave, **corpo)
     assert r.status_code == 409 and r.json()["detail"]["code"] == "surge_no_magic", r.text
+
+
+@pytest.mark.caccia(id="CB-4786", fonte="2014 · Equipaggiamento · Armature, Scudi · pag. 144-145", zona="regola:2014/equipaggiamento", voce="persistenza",
+                    copre=["PATCH /characters/{char_id}/items/{item_id}"])
+async def test_uno_scudo_imbracciato_che_diventa_un_arma_non_da_piu_ca(client):
+    cid = await _crea(client, "2014", ("fighter", 1, None))
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Scudo", "item_type": "shield", "item_metadata": {"ac_bonus": 2}})
+    iid = r.json()["items"][0]["id"]
+    r = await client.patch(f"/characters/{cid}/items/{iid}", json={"is_equipped": True, "equipment_slot": "off_hand"})
+    assert r.json()["shield_armor_class"] == 2
+    r = await client.patch(f"/characters/{cid}/items/{iid}", json={"item_type": "weapon", "item_metadata": {"damage_dice": "1d4"}})
+    assert r.status_code == 200, r.text
+    assert r.json()["shield_armor_class"] == 0
