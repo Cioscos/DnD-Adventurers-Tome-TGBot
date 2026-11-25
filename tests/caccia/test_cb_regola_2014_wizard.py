@@ -110,7 +110,6 @@ async def _bersaglio(client, cid, gid, chiave):
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Interdizione Arcana / Arcane Ward (Abiurazione 2, pag. 85)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2111: difforme dal manuale, confermato")
 async def test_interdizione_ricaricata_dal_livello_a_cui_si_lancia(client):
     cid = await _mago(client, 6, "abjuration", intelligence=16)  # interdizione massima 2 x 6 + 3 = 15
     await _pf(client, cid, 100)

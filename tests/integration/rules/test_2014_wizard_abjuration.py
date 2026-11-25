@@ -143,7 +143,7 @@ async def test_every_abjuration_recharges_the_ward_by_twice_the_spell_level_up_t
     await _cast_at(client, cid, await _abjuration(client, cid, "Protezione dal bene e dal male", level=2), 2)
     assert _ward(await _full(client, cid))["data"]["hp"] == 4  # 2 x 2
     await _cast_at(client, cid, first, 3)
-    assert _ward(await _full(client, cid))["data"]["hp"] == 6  # il livello è quello dell'incantesimo, non dello slot
+    assert _ward(await _full(client, cid))["data"]["hp"] == 10  # 4 + 2 x 3: con uno slot di 3° lo scudo è di 3° livello (2014 pag. 201)
     for n in range(2):
         await _cast_at(client, cid, await _abjuration(client, cid, f"Prova {n}", level=3), 3)
     assert _ward(await _full(client, cid))["data"]["hp"] == 15  # mai oltre il massimo

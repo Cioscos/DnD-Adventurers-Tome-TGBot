@@ -95,11 +95,12 @@ def concentration_safe(char: Any) -> bool:
 
 def after_cast(char: Any, spell: Any, slot_level: int | None = None) -> None:
     """Hook dei privilegi attivi dopo un lancio; ognuno controlla il livello che gli serve (un trucchetto di illusione apre
-    Illusioni Duttili, ma non crea un'interdizione). Il livello che conta è quello dell'incantesimo nel 2014 e quello dello
-    slot speso nel 2024 (``None`` se il lancio è un rituale o gratuito: «con uno slot»)."""
+    Illusioni Duttili, ma non crea un'interdizione). Il livello che conta è quello a cui si lancia nel 2014 (con uno slot
+    superiore l'incantesimo ne assume il livello, pag. 201; il proprio se è un rituale o gratuito) e quello dello slot speso
+    nel 2024 (``None`` se il lancio è un rituale o gratuito: «con uno slot»)."""
     from core.rules.spellcasting import spell_school  # import locale: spellcasting importa il catalogo come questo modulo
     school = spell_school(char, spell)
-    level = spell.level if character_edition(char) != "2024" else slot_level
+    level = max(spell.level, slot_level or 0) if character_edition(char) != "2024" else slot_level
     for spec, row in active_features(char):
         hook = HOOKS.get(spec.key)
         if hook is not None:
