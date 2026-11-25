@@ -351,7 +351,7 @@ def _tactic(key: str, title: str, name: tuple[str, str], summary: tuple[str, str
 
 def _choice_row(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], options: tuple[str, ...]):
     return _sub("hunter", key, level, title, name, summary, no_row=True,
-                choices=(ChoiceSpec(group=key, levels={level: 1}, options=lambda _c: list(options), replaceable=True),),
+                choices=(ChoiceSpec(group=key, levels={level: 1}, options=lambda _c: list(options), replaceable=True, replace_per_rest=True),),
                 covered_by=f"ChoiceSpec {key} di questa riga e le righe delle opzioni; test_hunters_prey_is_chosen_at_level_3_and_only_the_chosen_one_works")
 
 

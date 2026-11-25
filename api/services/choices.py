@@ -124,6 +124,17 @@ def class_options_state(char: Character, cls: CharacterClass, group: str) -> dic
             "available": _entries(char, cls, group, _available(char, cls, ch)[0])}
 
 
+_PER_REST = ":rest"
+
+
+def forget_rest_swaps(char: Character) -> None:
+    """Un riposo concluso, breve o lungo, ridà il cambio alle scelte ``replace_per_rest``."""
+    swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+    kept = {k: v for k, v in swaps.items() if not k.endswith(_PER_REST)}
+    if kept != swaps:
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: kept}
+
+
 def replace_class_option(session: AsyncSession, char: Character, cls: CharacterClass,
                          group: str, old_key: str, new_key: str) -> None:
     """Sostituisce un'opzione scelta con un'altra del catalogo; solo se la ChoiceSpec è `replaceable`."""
@@ -143,6 +154,12 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         if used >= int(ch.replace_per_long_rest):
             raise HTTPException(409, detail={"code": "replace_after_long_rest"})
         char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: {"at": char.last_long_rest_at or "", "n": used + 1}}}
+    if ch.replace_per_rest:  # un cambio, poi serve un riposo breve o lungo: ogni riposo concluso toglie la voce (forget_rest_swaps)
+        swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+        slot = f"{cls.id}:{group}{_PER_REST}"
+        if slot in swaps:
+            raise HTTPException(409, detail={"code": "replace_after_rest"})
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: {"at": "rest"}}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi

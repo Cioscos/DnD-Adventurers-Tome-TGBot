@@ -89,7 +89,6 @@ async def test_preda_superiore_vale_anche_senza_arma_sulla_creatura_marcata(clie
                            "POST /characters/{char_id}/classes/{class_id}/options/replace"])
 @pytest.mark.parametrize("level,group,first,second", [(3, "hunters_prey", "colossus_slayer", "horde_breaker"),
                                                       (7, "defensive_tactics", "escape_the_horde", "multiattack_defense")])
-@pytest.mark.xfail(strict=True, reason="CB-2514: difforme dal manuale, confermato")
 async def test_l_opzione_del_cacciatore_non_si_cambia_due_volte_senza_riposo(client, level, group, first, second):
     cid = await _sub(client, level, "hunter")
     assert (await _resolve(client, cid, group, [first])).status_code == 200

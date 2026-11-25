@@ -48,6 +48,8 @@ class ChoiceSpec:
     # Con ``replace_per_long_rest``: i cambi si contano a parte, non con gli altri gruppi della classe (Aspetto della Natura
     # Selvaggia accanto alla Padronanza delle Armi del barbaro); senza, la classe ha un solo contatore (Maestria negli Incantesimi)
     replace_own_count: bool = False
+    # Con ``replaceable``: un cambio, poi serve un riposo breve o lungo (Preda del Cacciatore 2024, «dopo un riposo breve o lungo»)
+    replace_per_rest: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None

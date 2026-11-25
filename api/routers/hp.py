@@ -936,6 +936,8 @@ async def rest(
                      f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
     reset_zero_hp_uses(char)
+    from api.services.choices import forget_rest_swaps  # import locale: choices importa i modelli del riposo
+    forget_rest_swaps(char)
     if rest_type == "long":
         char.last_long_rest_at = _now()
         char.temp_hp = 0
