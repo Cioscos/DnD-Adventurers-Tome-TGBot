@@ -607,6 +607,10 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         if any(s not in SKILL_ABILITY_MAP for s in skills) or any(t not in TOOLS for t in tools):
             raise _bad("feat_options_invalid")
         current = dict(char.skills or {})
+        # 2014 pag. 125: una competenza già posseduta non si riprende, se ne sceglie un'altra (il 2024 è una domanda aperta)
+        if not key.startswith("feat.2024_") and (any(current.get(s) for s in skills)
+                                                 or any((char.tool_proficiencies or {}).get(t) for t in tools)):
+            raise _bad("feat_options_invalid")
         for s in skills:
             current[s] = "expert" if current.get(s) == "expert" else True
         char.skills = current

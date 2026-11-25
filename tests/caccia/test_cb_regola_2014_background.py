@@ -58,7 +58,6 @@ async def test_abilita_della_seconda_classe_gia_data_dal_background(client, clas
                     zona="regola:2014/background", voce="interazione",
                     copre=["carta:2014/backgrounds.md#Regole generali dei background (pag. 125)",
                            "POST /characters/{char_id}/feats", "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3112: difforme dal manuale, confermato")
 async def test_talento_abile_su_abilita_gia_data_dal_background(client):
     pg = await _pg_accolito(client, livello=4)
     r = await client.post(f"/characters/{pg['id']}/feats", json={"feat_key": "skilled", "ability": None})

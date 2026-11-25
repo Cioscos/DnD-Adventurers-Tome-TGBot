@@ -180,7 +180,8 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             {hint(t('character.feats.picks_hint', { n: 3 - picks.length }))}
             <div className="flex flex-wrap gap-2">
-              {SKILL_KEYS.map((s) => (
+              {/* 2014 pag. 125: un'abilità già posseduta non si riprende (il server la rifiuta) */}
+              {SKILL_KEYS.filter((s) => !is2014 || !proficient(s)).map((s) => (
                 <Pressable key={s} onClick={() => setPicks(toggled(picks, s, 3))} aria-pressed={picks.includes(s)} className={chip(picks.includes(s))}>
                   {t(`character.skills.${s}`)}
                 </Pressable>
