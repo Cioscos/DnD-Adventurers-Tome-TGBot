@@ -15,6 +15,7 @@ from core.data.damage_types import spell_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.actions import parse_casting_time, parse_duration_rounds
 from core.rules.catalog._common import feature, save_spell, state_on
+from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.states import begin_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
@@ -185,7 +186,7 @@ def _twinned_ok(ctx: RuleContext) -> bool:
     spell = ctx.spell
     if spell is None or (spell.srd_index or "") in TWINNED_EXCLUDED or (spell.name or "").strip().lower() in TWINNED_EXCLUDED_NAMES:
         return False
-    return not (spell.range_area or "").strip().lower().startswith(_SELF)
+    return attack_rays(ctx.char, spell) == 1 and not (spell.range_area or "").strip().lower().startswith(_SELF)
 
 
 def _twinned_cost(ctx: RuleContext) -> int:

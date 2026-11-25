@@ -20,6 +20,7 @@ from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
 from core.rules.catalog.spells import hurled_lit, spell_effect
+from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import CLASS_CANTRIPS, FREE_KNOWN_KEY, active_choice_specs
 from core.rules.modifiers import modifiers_for
@@ -94,6 +95,7 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if spell.effect and spell.effect.get("lit"):  # acceso: l'uso è scagliarlo, con l'azione
             spell.effective_casting_time = "1 action" if "action" in (spell.casting_time or "").lower() else "1 azione"
         spell.healing_preview = healing_preview(char, spell, stats)
+        spell.rays = rays if (rays := attack_rays(char, spell)) > 1 else None
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

@@ -285,6 +285,8 @@ export interface Spell {
   is_healing?: boolean
   /** Formula della cura per livello di slot, con modificatore e privilegi (`{ 2: "4d8+7" }`). */
   healing_preview?: Record<number, string> | null
+  /** Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°): assente se il tiro è uno solo. */
+  rays?: number | null
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
   extra_damage_dice?: string | null
@@ -1041,11 +1043,16 @@ export interface SpellAttackResult {
   cast_option_result?: OptionResult
   /** Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio. */
   twinned_attack?: { die: number; dice: number[]; mode: string; total: number; is_critical: boolean; is_fumble: boolean }
+  /** Il raggio di questo tiro (1…`rays`), per gli incantesimi con un tiro per colpire per raggio. */
+  ray?: number
+  rays?: number
   character: CharacterFull
   homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
 export interface SpellAttackRequest extends Partial<RollChoice> {
+  /** Il raggio seguente del lancio già fatto: nessun nuovo lancio. */
+  ray?: boolean
   slot_id?: number
   slot_level: number | null
   confirm?: string[]

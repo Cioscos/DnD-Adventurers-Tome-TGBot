@@ -30,15 +30,20 @@ async def test_magia_da_battaglia_non_segue_un_lancio_rituale(client):
 @pytest.mark.caccia(id="CB-3912", fonte="2014 · Incantesimi · Deflagrazione Occulta (un tiro per colpire per ogni raggio) · pag. 229",
                     zona="regola:2014/incantesimi-D-F", voce="regola",
                     copre=["carta:2014/spells.md#Deflagrazione Occulta", "POST /characters/{char_id}/spells/{spell_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3912: difforme dal manuale, rinviato (un tiro e un danno per raggio cambiano la UX del lancio)")
 async def test_deflagrazione_occulta_tira_per_colpire_una_volta_per_raggio(client, dadi):
-    # Q-2014-incantesimi-d-f-1: «effettuando un tiro per colpire separato per ogni raggio», anche sullo stesso bersaglio
+    # Q-2014-incantesimi-d-f-1: «effettuando un tiro per colpire separato per ogni raggio», anche sullo stesso bersaglio.
+    # Un raggio per richiesta (D-037): ognuno col suo bersaglio, le sue opzioni, il suo rilancio e il suo danno.
     cid = await _pg(client, "warlock", 5)  # due raggi
     sid = await _impara(client, cid, "eldritch-blast")
     dadi(20, 1)  # il primo raggio fa 20 naturale, il secondo 1: nessuno dei due decide per l'altro
-    r = await client.post(f"/characters/{cid}/spells/{sid}/attack", json={})
-    assert r.status_code == 200, r.text
-    assert sorted(r.json()["dice"]) == [1, 20]  # oggi un solo d20 vale per tutti i raggi: critico o mancato tutto insieme
+    tiri = []
+    for corpo in ({}, {"ray": True}):
+        r = await client.post(f"/characters/{cid}/spells/{sid}/attack", json=corpo)
+        assert r.status_code == 200, r.text
+        tiri.append((r.json()["to_hit_die"], r.json()["is_critical"], r.json()["is_fumble"], r.json()["ray"], r.json()["rays"]))
+    assert tiri == [(20, True, False, 1, 2), (1, False, True, 2, 2)]
+    r = await client.post(f"/characters/{cid}/spells/{sid}/attack", json={"ray": True})
+    assert (r.status_code, r.json()["detail"]["code"]) == (409, "no_ray_left")
 
 
 @pytest.mark.caccia(id="CB-3913", fonte="2024 · Chierico · Dominio della Guerra · Benedizione del Dio della Guerra (termina prima se lo si rilancia) · pag. 77",

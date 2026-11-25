@@ -211,7 +211,7 @@ def test_catalogo_2014_dati_meccanici_come_le_carte(indice, livello, lancio, com
     ("fire-bolt", "wizard", 4, 1, 10), ("fire-bolt", "wizard", 5, 2, 10), ("fire-bolt", "wizard", 10, 2, 10),
     ("fire-bolt", "wizard", 11, 3, 10), ("fire-bolt", "wizard", 16, 3, 10), ("fire-bolt", "wizard", 17, 4, 10),
     ("sacred-flame", "cleric", 5, 2, 8), ("acid-splash", "sorcerer", 11, 3, 6), ("thorn-whip", "druid", 17, 4, 6),
-    ("eldritch-blast", "warlock", 20, 4, 10),
+    ("eldritch-blast", "warlock", 20, 1, 10),  # quattro raggi, ognuno col suo danno (CB-3912, D-037)
 ])
 async def test_i_trucchetti_crescono_al_5_11_17_livello(client, indice, classe, livello, dadi, facce):
     cid = await _pg(client, classe, livello)
@@ -228,7 +228,7 @@ async def test_deflagrazione_occulta_in_multiclasse_conta_il_livello_del_persona
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 4, "hit_die": 10})
     assert r.status_code == 201, r.text
     sid = await _impara(client, cid, "eldritch-blast")
-    assert len((await _danni(client, cid, sid))["main_rolls"]) == 2  # personaggio di 5° livello: due raggi
+    assert next(s for s in (await _scheda(client, cid))["spells"] if s["id"] == sid)["rays"] == 2  # personaggio di 5° livello: due raggi
 
 
 @pytest.mark.caccia(id="CB-3268", fonte="2014 · Incantesimi · Disintegrazione (10d6 + 40, niente a TS superato, +3d6 per slot) · pag. 230",

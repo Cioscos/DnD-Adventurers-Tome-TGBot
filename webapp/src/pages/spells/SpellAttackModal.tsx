@@ -9,8 +9,10 @@ import {
 import ResultDialog from '@/components/ui/ResultDialog'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import Button from '@/components/ui/Button'
+import RollButton from '@/components/ui/RollButton'
 import D20Faces from '@/components/ui/D20Faces'
 import { classLabel } from '@/lib/classLabel'
+import type { RollMode } from '@/api/client'
 import type { SpellAttackResult } from '@/types'
 
 type Props = {
@@ -27,6 +29,11 @@ type Props = {
   onInspirationReroll?: () => void | Promise<void>
   /** Riga dei privilegi usati dopo aver visto il d20. */
   afterRollRow?: React.ReactNode
+  /** Il danno di questo raggio è tirato, o è dichiarato mancato: resta solo il raggio seguente. */
+  rayDone?: boolean
+  /** C'è un altro raggio dello stesso lancio (Deflagrazione Occulta): ognuno ha il suo tiro per colpire. */
+  onNextRay?: (mode: RollMode) => void
+  isRollingRay?: boolean
 }
 
 /** Esito del tiro per colpire di un incantesimo d'attacco (modellato su WeaponAttackModal). */
@@ -41,6 +48,9 @@ export default function SpellAttackModal({
   wasRerolled = false,
   onInspirationReroll,
   afterRollRow,
+  rayDone = false,
+  onNextRay,
+  isRollingRay = false,
 }: Props) {
   const { t } = useTranslation()
   const { spell_name, to_hit_die, dice, mode, to_hit_bonus, to_hit_total, is_critical, is_fumble, caster_class } = result
@@ -48,7 +58,7 @@ export default function SpellAttackModal({
   const bonusStr = `${to_hit_bonus >= 0 ? '+' : '-'}${Math.abs(to_hit_bonus)}`
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
   // Raddoppiato: il 1 naturale di un bersaglio non toglie il tiro dei danni all'altro.
-  const showDamage = canRollDamage && (!is_fumble || (!!result.twinned_attack && !result.twinned_attack.is_fumble))
+  const showDamage = !rayDone && canRollDamage && (!is_fumble || (!!result.twinned_attack && !result.twinned_attack.is_fumble))
   const showInspirationButton = inspirationAvailable && !wasRerolled && onInspirationReroll != null
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -62,6 +72,9 @@ export default function SpellAttackModal({
       })
     : null
 
+  const ray = result.ray && result.rays ? { n: result.ray, total: result.rays } : null
+  const nextRayLabel = ray && t(rayDone || is_fumble ? 'character.spells.next_ray' : 'character.spells.next_ray_missed', { n: ray.n + 1, total: ray.total })
+
   return (
     <ResultDialog
       open
@@ -73,7 +86,7 @@ export default function SpellAttackModal({
       title={
         <span className="inline-flex items-center justify-center gap-1.5">
           <Swirl size={14} className="text-dnd-gold-bright" />
-          {spell_name}
+          {spell_name}{ray && ` · ${t('character.spells.ray_of', ray)}`}
         </span>
       }
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
@@ -88,7 +101,17 @@ export default function SpellAttackModal({
               {t('character.spells.attack_roll_damage')}
             </Button>
           )}
-          <Button variant={showDamage ? 'secondary' : 'primary'} fullWidth onClick={onClose}>
+          {onNextRay && nextRayLabel && (
+            <RollButton
+              onRoll={onNextRay}
+              pending={isRollingRay}
+              ariaLabel={nextRayLabel}
+              className="w-full min-h-12 px-4 rounded-xl text-sm font-medium bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:opacity-60"
+            >
+              {nextRayLabel}
+            </RollButton>
+          )}
+          <Button variant={showDamage || onNextRay ? 'secondary' : 'primary'} fullWidth onClick={onClose}>
             {t('common.close')}
           </Button>
         </div>

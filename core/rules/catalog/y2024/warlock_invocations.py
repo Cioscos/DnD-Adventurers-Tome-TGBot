@@ -16,7 +16,7 @@ from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.paladin import _drops_to_zero
 from core.rules.catalog.y2014.warlock import PACT_WEAPONS, _create_pact_weapon, _is_pact, _weapon_label
 from core.rules.catalog.y2014.warlock_invocations import (
-    MAGE_ARMOR_AC, MAGE_ARMOR_CAST, PACT_WEAPON, _beams, _is_pact_weapon, _mod, _say,
+    BLAST, MAGE_ARMOR_AC, MAGE_ARMOR_CAST, PACT_WEAPON, _is_pact_weapon, _mod, _say, is_blast,
 )
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses,
@@ -48,7 +48,8 @@ def _names(index: str) -> set[str]:
 def is_cantrip(spell: Any, index: str) -> bool:
     """L'incantesimo è questo trucchetto: dallo `srd_index` o, se scritto a mano, dal nome."""
     return spell is not None and ((getattr(spell, "srd_index", None) or "").lower() == index
-                                  or (getattr(spell, "name", None) or "").strip().lower() in _names(index))
+                                  or (getattr(spell, "name", None) or "").strip().lower() in _names(index)
+                                  or (index == BLAST and is_blast(spell)))
 
 
 def knows_cantrip(char: Any, cls: Any, index: str) -> bool:
@@ -72,8 +73,7 @@ def _chosen(ctx: RuleContext) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _agonizing(index: str, key: str) -> Modifier:
-    return Modifier("damage", lambda c: _mod(c, "charisma") * (_beams(c) if index == "eldritch-blast" else 1),  # un tiro per raggio solo per Deflagrazione Occulta
-                    when=lambda c: is_cantrip(c.spell, index),
+    return Modifier("damage", lambda c: _mod(c, "charisma"), when=lambda c: is_cantrip(c.spell, index),
                     source=f"feature:{CK}.{key}")
 
 

@@ -168,13 +168,14 @@ async def test_agonizing_blast_adds_charisma_to_every_beam(client, level, beams)
     blast = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "eldritch-blast")
     other = await _spell(client, cid, "Raggio", 0, attack_save="ATK", damage_dice="1d10", damage_type="fire")
     assert (await _blast_damage(client, cid, other, main_rolls=[4] * beams))["total"] == 4 * beams
-    assert (await _blast_damage(client, cid, blast["id"], main_rolls=[4] * beams))["total"] == 4 * beams + 4 * beams
+    assert (await _blast_damage(client, cid, blast["id"], main_rolls=[4]))["total"] == 4 + 4  # ogni raggio ha il suo danno (D-037)
+    assert blast["rays"] == (beams if beams > 1 else None)
 
 
 async def test_agonizing_blast_needs_the_invocation(client):
     cid = await _caster(client, 5, "beast_speech", "misty_visions", "eldritch_sight", blast=True, charisma=18)
     blast = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "eldritch-blast")
-    assert (await _blast_damage(client, cid, blast["id"], main_rolls=[4, 4]))["total"] == 8
+    assert (await _blast_damage(client, cid, blast["id"], main_rolls=[4]))["total"] == 4
 
 
 async def test_agonizing_blast_is_found_from_the_italian_name_too(client):

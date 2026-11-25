@@ -41,8 +41,11 @@ const STEP_VARIANTS = {
 const INITIAL_UPCAST_ONLY = new Set(['witch-bolt'])
 const damageOnCast = (spell: Spell) =>rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
 
-type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode }
-type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
+/** `ray`: il raggio seguente dello stesso lancio, senza lanciare di nuovo. */
+type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode; ray?: boolean }
+/** `hit`: dichiarato a segno, il d20 non si ritocca più. `rayDone`: il raggio è risolto (danno tirato) e ne resta un altro. */
+type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean; hit?: boolean; rayDone?: boolean }
+const raysLeft = (result: SpellAttackResult) => (result.rays ?? 0) > (result.ray ?? 0)
 
 export interface CastFlow {
   /** Avvia il flusso di lancio per un incantesimo (identico a "Usa" nella pagina Spells). */
@@ -139,14 +142,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
       const pick = useEffectPickStore.getState().picked[cast.spell.id]
-      // Scagliare una fiamma accesa non è un lancio: nessuna opzione di lancio da chiedere
-      const prepared = cast.spell.effect?.lit
+      // Scagliare una fiamma accesa o tirare il raggio seguente non è un lancio: nessuna opzione di lancio da chiedere
+      const prepared = cast.ray || cast.spell.effect?.lit
         ? { confirm: [], options: [], option_inputs: {} }
         : await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id }, 'before', { cancellable: true })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode, choice), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
-        slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, confirm: prepared.confirm,
+        slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, ...(cast.ray ? { ray: true } : {}), confirm: prepared.confirm,
         cast_options: prepared.options, cast_option_inputs: prepared.option_inputs, ...pick,
         ...(typeof roll === 'object' ? roll : { die: roll }),
       })
@@ -389,7 +392,20 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setPendingSlotId(attackState.slot?.id)
     setDamageAfterAttack({ critical: attackState.result.is_critical })
     setRollDamageSpell(attackState.spell)
-    setAttackState(null)
+    setAttackState(raysLeft(attackState.result) ? { ...attackState, hit: true } : null)  // con altri raggi l'esito torna, chiuso il foglio dei danni
+  }
+
+  /** Il raggio non colpisce: torna ciò che si paga solo se il tiro riesce, e si passa al seguente. */
+  const nextRay = async (mode: RollMode) => {
+    if (!attackState) return
+    if (!attackState.rayDone) await refundMiss()
+    const { spell, slot, ritual } = attackState
+    attackMutation.mutate({ spell, slot, ritual, mode, ray: true })
+  }
+  const refundMiss = async () => {
+    const turn = await api.characters.turnState(charId).catch(() => null)
+    if (Object.keys(turn?.turn.last_roll?.refundable ?? {}).length === 0) return
+    await api.characters.lastRollRefund(charId).catch(() => toast.warning(t('character.roll_options.refund_failed')))
   }
 
   /** Incantesimo attivo che fa danni anche nei turni dopo (Guardiani spirituali, Raggio di luna): si ritira senza slot. */
@@ -483,6 +499,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 asRitual={pendingRitual}
                 slotAlreadyConsumed={damageAfterAttack !== null}
                 initialCritical={damageAfterAttack?.critical ?? false}
+                onRolled={() => setAttackState((prev) => prev && { ...prev, rayDone: true })}
                 onClose={closeCastSheet}
                 onBack={castingSpell ? closeDamage : undefined}
               />
@@ -550,7 +567,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
         </div>
       </Sheet>
 
-      {attackState && (
+      {attackState && step === null && (
         <SpellAttackModal
           charId={charId}
           result={attackState.result}
@@ -558,11 +575,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
             && (!attackState.result.is_fumble || (!!attackState.result.twinned_attack && !attackState.result.twinned_attack.is_fumble))}
           onRollDamage={openDamageAfterAttack}
           onClose={() => setAttackState(null)}
-          inspirationAvailable={canRerollInspiration(char)}
+          inspirationAvailable={canRerollInspiration(char) && !attackState.hit}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
           onInspirationReroll={() => attackRerollMutation.mutate(attackState.spell)}
-          afterRollRow={(
+          rayDone={attackState.rayDone}
+          onNextRay={raysLeft(attackState.result) ? (mode) => void nextRay(mode) : undefined}
+          isRollingRay={attackMutation.isPending}
+          afterRollRow={!attackState.hit && (
             <AfterRollOptions
               charId={charId}
               query={{ roll: 'attack', spell_id: attackState.spell.id }}

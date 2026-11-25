@@ -316,7 +316,7 @@ async def test_agonizing_blast_adds_charisma_to_every_beam_of_the_chosen_cantrip
                "ascendant_step", "whispers_of_the_grave")
     others = [o["key"] for o in choice["options"] if o["key"] in fillers][:choice["count"] - 1]
     assert (await _resolve(client, cid, "invocations", ["agonizing_blast__eldritch_blast", *others])).status_code == 200
-    assert (await _damage(client, cid, blast, main_rolls=[4] * beams))["total"] == 8 * beams
+    assert (await _damage(client, cid, blast, main_rolls=[4]))["total"] == 8  # ogni raggio ha il suo danno (D-037)
     assert (await _damage(client, cid, chill, main_rolls=[4] * beams))["total"] == 4 * beams
 
 

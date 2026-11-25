@@ -569,5 +569,7 @@ class SpellAttackResult(BaseModel):
     cast_option_result: OptionResult | None = absent_when_none()
     option_result: OptionResult | None = absent_when_none()  # le opzioni confermate prima del tiro: i dadi extra arrivano al danno
     twinned_attack: dict | None = absent_when_none()  # Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio
+    ray: int | None = absent_when_none()  # il raggio di questo tiro (1…``rays``), per gli incantesimi con un tiro per raggio
+    rays: int | None = absent_when_none()
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

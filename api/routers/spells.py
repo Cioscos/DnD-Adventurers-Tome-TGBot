@@ -53,6 +53,7 @@ from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.cleric import BLESSED_HEALER
 from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, QUICKENED_KEY, SP, SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -98,6 +99,7 @@ class ConcentrationSaveRequest(BaseModel):
 
 router = APIRouter(prefix="/characters", tags=["spells"])
 SPELL_ATTACK_DICE = "spell_attack_dice"  # turn_state: i dadi extra confermati su un attacco con incantesimo, per il suo danno
+SPELL_RAYS = "spell_rays"  # turn_state: {spell_id, ray, rays} del lancio che ha un tiro per colpire per raggio
 
 
 def _prepared_cap_error(count: int, cap: int, per_class: bool) -> HTTPException:
@@ -693,8 +695,14 @@ async def spell_attack(
 
     cast_block = spell_fx = None
     lit = hurled_lit(char, spell.srd_index, spell.name)
+    cast_rays = get_turn(char).get(SPELL_RAYS) or {}
+    cast_rays = cast_rays if cast_rays.get("spell_id") == spell.id else {}
     if body.with_inspiration:
         spend_inspiration_attack(char, spell_id=spell.id)
+    elif body.ray:  # il raggio seguente dello stesso lancio: un altro tiro per colpire, niente da pagare
+        if not cast_rays or cast_rays["ray"] >= cast_rays["rays"]:
+            raise HTTPException(status_code=409, detail={"code": "no_ray_left"})
+        cast_rays = {**cast_rays, "ray": cast_rays["ray"] + 1}
     elif lit is not None:  # Produrre Fiamma 2024: non è un lancio, si scaglia la fiamma accesa con un'azione Magia
         if not lit:
             raise HTTPException(status_code=409, detail={"code": "flame_not_lit"})
@@ -721,6 +729,8 @@ async def spell_attack(
         _end_cast(char, cast_opts)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
+        rays = attack_rays(char, spell)
+        cast_rays = {"spell_id": spell.id, "ray": 1, "rays": rays} if rays > 1 else {}
     await release_concentration_effects(session, char)
 
     caster = spell_stats(char, spell)
@@ -738,11 +748,15 @@ async def spell_attack(
     attack_block = option_result(opts, option_rolls, option_total)
     carry = get_turn(char)
     carry.pop(SPELL_ATTACK_DICE, None)
+    carry.pop(SPELL_RAYS, None)
+    if cast_rays:
+        carry[SPELL_RAYS] = cast_rays
     if option_rolls:
         carry[SPELL_ATTACK_DICE] = {"spell_id": spell.id, "dice": pairs(opts.rolled_dice), "block": attack_block.model_dump(mode="json")}
     char.turn_state = carry
 
-    text = f"Attacco incantesimo {spell.name}: {d20_history_label(outcome)}+{bonus}={total}" + (
+    which = f" (raggio {cast_rays['ray']} di {cast_rays['rays']})" if cast_rays else ""
+    text = f"Attacco incantesimo {spell.name}{which}: {d20_history_label(outcome)}+{bonus}={total}" + (
         " (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else ""
     )
     if body.with_inspiration:
@@ -773,6 +787,8 @@ async def spell_attack(
     character.spell_effects = spell_fx
     return SpellAttackResult(
         twinned_attack=twinned,
+        ray=cast_rays.get("ray"),
+        rays=cast_rays.get("rays"),
         spell_name=spell.name,
         to_hit_die=die,
         dice=outcome.dice,
@@ -804,6 +820,7 @@ def _end_cast(char: Character, opts: Any = None) -> None:
     meta = [k for k in (opts.keys if opts is not None else []) if k.startswith("sorcerer.metamagic_")]
     changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None,  # nuovo lancio: Invocazione Potente si riapre
                    turn.pop(AFFINITY_USED, None) is not None,  # e Affinità Elementale
+                   turn.pop(SPELL_RAYS, None) is not None,  # i raggi rimasti del lancio prima sono persi
                    turn.pop(SPELL_ATTACK_DICE, None) is not None])  # e i dadi extra di un attacco precedente (forse mancato) non contano
     if meta or turn.get("cast_metamagic"):
         turn["cast_metamagic"], changed = meta, True
@@ -960,7 +977,7 @@ async def roll_spell_damage(
     if not m:
         raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
     base_count = int(m.group(1))
-    if spell.level == 0:
+    if spell.level == 0 and attack_rays(char, spell) == 1:  # con più raggi il tiro è il danno di uno solo
         base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0

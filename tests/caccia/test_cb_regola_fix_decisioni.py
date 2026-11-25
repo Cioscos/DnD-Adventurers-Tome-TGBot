@@ -451,3 +451,93 @@ async def test_cambiare_i_preparati_lontano_dal_riposo_lungo_si_conferma(client,
     r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
     assert r.status_code == 200, r.text
     assert (await prepara(False)).status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# D-037: Deflagrazione/Esplosione Occulta, un tiro per colpire e un danno per raggio
+# ---------------------------------------------------------------------------
+
+async def _deflagrazione(client, cid) -> int:
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Deflagrazione Occulta", "level": 0, "srd_index": "eldritch-blast", "attack_save": "ATK",
+                                                              "damage_dice": "1d10", "damage_type": "force", "casting_time": "1 azione"})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def _raggio(client, cid, sid, **corpo):
+    return await client.post(f"/characters/{cid}/spells/{sid}/attack", json=corpo)
+
+
+async def _danno(client, cid, sid, **corpo) -> dict:
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_damage", json=corpo)
+    assert r.status_code == 200, r.text[:300]
+    return r.json()
+
+
+@pytest.mark.caccia(id="CB-4681", fonte="decisione D-037 (tests/caccia/decisioni.md): 1d10 e Carisma per raggio, col suo critico; 2014 · Deflagrazione Occulta · pag. 229, Deflagrazione Agonizzante · pag. 118; 2024 · pag. 267, 155",
+                    zona="regola:2014/incantesimi-D-F", voce="interazione",
+                    copre=["carta:2014/spells.md#Deflagrazione Occulta", "carta:2024/spells.md#Esplosione occulta",
+                           "carta:2014/classes/warlock.md#Deflagrazione Agonizzante / Agonizing Blast (Suppliche Occulte, trucchetto deflagrazione occulta, pag. 118)",
+                           "carta:2024/classes/warlock.md#Deflagrazione Agonizzante / Agonizing Blast (Suppliche Occulte, livello 2+, trucchetto Warlock che infligge danno, pag. 155)",
+                           "POST /characters/{char_id}/spells/{spell_id}/attack", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_ogni_raggio_ha_il_suo_danno_il_suo_critico_e_il_carisma_di_agonizzante(client, edizione):
+    cid = await _pg(client, edizione, "warlock", 11, charisma=18)  # tre raggi
+    sid = await _deflagrazione(client, cid)
+    scelta = next(c for c in (await _scheda(client, cid))["pending_choices"] if c.get("group") == "invocations")
+    nota = "agonizing_blast" if edizione == "2014" else "agonizing_blast__eldritch_blast"
+    altre = ["armor_of_shadows", "devils_sight", "misty_visions", "mask_of_many_faces", "fiendish_vigor", "otherworldly_leap", "ascendant_step"]
+    altre = [k for k in altre if k in {o["key"] for o in scelta["options"]}]
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": [nota, *altre][:scelta["count"]]})
+    assert r.status_code == 200, r.text[:300]
+    danni = []
+    for die, corpo in ((12, {}), (20, {"ray": True}), (12, {"ray": True})):
+        r = await _raggio(client, cid, sid, die=die, **corpo)
+        assert r.status_code == 200, r.text[:300]
+        dadi = [7] * (2 if r.json()["is_critical"] else 1)
+        danni.append((await _danno(client, cid, sid, main_rolls=dadi, is_critical=r.json()["is_critical"]))["total"])
+    assert danni == [7 + 4, 14 + 4, 7 + 4]
+
+
+@pytest.mark.caccia(id="CB-4682", fonte="decisione D-037 (tests/caccia/decisioni.md): Malocchio/Sortilegio per ogni raggio che colpisce; 2014 · Sortilegio · pag. 279; 2024 · Malocchio · pag. 285",
+                    zona="regola:2014/incantesimi-S-Z", voce="interazione",
+                    copre=["carta:2014/spells.md#Sortilegio", "carta:2024/spells.md#Malocchio", "POST /characters/{char_id}/spells/{spell_id}/attack",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_il_malocchio_vale_per_ogni_raggio_contro_il_bersaglio_maledetto(client, edizione):
+    cid = await _pg(client, edizione, "warlock", 11)
+    sid = await _deflagrazione(client, cid)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Hex", "level": 1, "srd_index": "hex", "is_concentration": True, "is_prepared": True})
+    slot = next(s for s in (await _scheda(client, cid))["spell_slots"])
+    r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"slot_id": slot["id"], "slot_level": slot["level"], "choices": {"ability": "wisdom"}})
+    assert r.status_code == 200, r.text[:300]
+    dadi_hex = []
+    for corpo in ({"options": ["spell:hex:damage"]}, {"ray": True, "options": ["spell:hex:damage"]}, {"ray": True}):  # il terzo su un altro bersaglio
+        assert (await _raggio(client, cid, sid, die=15, **corpo)).status_code == 200
+        danno = await _danno(client, cid, sid, main_rolls=[5])
+        dadi_hex.append(len((danno.get("option_result") or {}).get("extra_rolls") or []))
+    assert dadi_hex == [1, 1, 0]
+
+
+@pytest.mark.caccia(id="CB-4683", fonte="decisione D-037 (tests/caccia/decisioni.md): i raggi sono dello stesso lancio; 2014 · Deflagrazione Occulta · pag. 229; 2024 · Esplosione occulta · pag. 267, Ispirazione Eroica · pag. 11",
+                    zona="regola:2024/incantesimi-D-F", voce="limiti",
+                    copre=["carta:2024/spells.md#Esplosione occulta", "carta:2014/spells.md#Deflagrazione Occulta", "POST /characters/{char_id}/spells/{spell_id}/attack"])
+async def test_i_raggi_seguenti_non_sono_un_altro_lancio_e_il_rilancio_vale_per_uno(client):
+    cid = await _pg(client, "2024", "warlock", 5)
+    sid = await _deflagrazione(client, cid)
+    senza_lancio = await _raggio(client, cid, sid, die=10, ray=True)
+    assert (senza_lancio.status_code, senza_lancio.json()["detail"]["code"]) == (409, "no_ray_left")
+    assert (await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})).status_code == 200
+    assert (await _raggio(client, cid, sid, die=2)).json()["ray"] == 1
+    rilancio = (await _raggio(client, cid, sid, die=17, with_inspiration=True)).json()
+    assert (rilancio["to_hit_die"], rilancio["ray"], rilancio["rays"]) == (17, 1, 2)
+    secondo = (await _raggio(client, cid, sid, die=9, ray=True)).json()
+    assert (secondo["to_hit_die"], secondo["ray"]) == (9, 2)
+    assert (await _raggio(client, cid, sid, die=10, ray=True)).status_code == 409
+    assert (await _raggio(client, cid, sid, die=10)).json()["ray"] == 1  # un lancio nuovo
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _raggio(client, cid, sid, die=10, ray=True)).status_code == 409  # i raggi sono di quel turno
+    dardo = (await client.post(f"/characters/{cid}/spells", json={"name": "Dardo di Fuoco", "level": 0, "srd_index": "fire-bolt", "attack_save": "ATK",
+                                                                   "damage_dice": "1d10", "damage_type": "fire"})).json()["id"]
+    altro = (await _raggio(client, cid, dardo, die=10)).json()
+    assert "ray" not in altro and len((await _danno(client, cid, dardo))["main_rolls"]) == 2  # gli altri trucchetti non cambiano

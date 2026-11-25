@@ -58,6 +58,8 @@ interface SpellDamageSheetProps {
   slotAlreadyConsumed?: boolean
   /** 20 naturale al tiro per colpire: i dadi raddoppiano. Il critico viene solo da lì (regole 5e). */
   initialCritical?: boolean
+  /** Danno tirato: con più raggi il prossimo si può tirare. */
+  onRolled?: () => void
   onClose: () => void
   /** Torna alla scelta dello slot; assente se non c'è un passo precedente. */
   onBack?: () => void
@@ -73,6 +75,7 @@ export default function SpellDamageSheet({
   asRitual = false,
   slotAlreadyConsumed = false,
   initialCritical = false,
+  onRolled,
   onClose,
   onBack,
 }: SpellDamageSheetProps) {
@@ -162,7 +165,7 @@ export default function SpellDamageSheet({
           const toSecond = second?.sides === main.sides && (both || (upcastType && upcastType === spell.extra_damage_type)) ? gained : 0
           // di un tipo che non è il principale lasciano il tiro, anche senza seconda parte (Fame di Hadar 2024: l'acido si applica a mano)
           const moved = !both && upcastType && upcastType !== canonicalDamageType(spell.damage_type) ? gained : 0
-          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
+          const scaled = (spell.level === 0 && !spell.rays ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
@@ -206,6 +209,7 @@ export default function SpellDamageSheet({
       haptic.success()
       refreshAfterOptions(qc, charId, data.option_result)
       setResult(data)
+      onRolled?.()
     },
     onError: (err) => {
       const code = apiErrorCode(err)

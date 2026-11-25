@@ -20,7 +20,7 @@ ED, CK = "2014", "warlock"
 INVOCATIONS = "invocations"
 BOON_GROUP = "pact_boon"
 BLAST = "eldritch-blast"
-BLAST_NAMES = ("deflagrazione occulta", "eldritch blast")
+BLAST_NAMES = ("deflagrazione occulta", "esplosione occulta", "eldritch blast")
 PACT_WEAPON = "pact_weapon"  # item_metadata: l'arma creata dal Patto della Lama
 INVISIBLE_UNTIL_ACT = "one_with_shadows"
 
@@ -29,6 +29,13 @@ def is_blast(spell: Any) -> bool:
     """Deflagrazione occulta: dallo `srd_index` o, per un incantesimo scritto a mano, dal nome."""
     return spell is not None and ((getattr(spell, "srd_index", None) or "") == BLAST
                                   or (getattr(spell, "name", None) or "").strip().lower() in BLAST_NAMES)
+
+
+def attack_rays(char: Any, spell: Any) -> int:
+    """I raggi dell'incantesimo, ciascuno con il suo tiro per colpire e il suo danno (2014 pag. 229, 2024 pag. 267; D-037)."""
+    from core.game.stats import cantrip_dice_multiplier  # import locale: stats usa il catalogo
+    attack = (getattr(spell, "attack_save", None) or "").strip().upper() == "ATK"
+    return cantrip_dice_multiplier(char.total_level) if attack and spell.level == 0 and is_blast(spell) else 1
 
 
 def _mod(ctx: RuleContext, ability: str) -> int:
@@ -49,12 +56,7 @@ def _is_pact_weapon(ctx: RuleContext) -> bool:
 # Effetti delle suppliche
 # ---------------------------------------------------------------------------
 
-def _beams(ctx: RuleContext) -> int:
-    from core.game.stats import cantrip_dice_multiplier  # import locale
-    return cantrip_dice_multiplier(ctx.char.total_level)
-
-
-AGONIZING = Modifier("damage", lambda c: _mod(c, "charisma") * _beams(c), when=lambda c: is_blast(c.spell),
+AGONIZING = Modifier("damage", lambda c: _mod(c, "charisma"), when=lambda c: is_blast(c.spell),  # il danno è di un raggio
                      source=f"feature:{CK}.agonizing_blast")
 
 REPELLING = RollOptionSpec(
