@@ -115,7 +115,6 @@ async def test_vendetta_ardente_somma_anche_un_carisma_negativo(client):
 
 @pytest.mark.caccia(id="CB-2677", fonte="2024 · Warlock · Arcanum Mistico · pag. 155", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Arcanum Mistico / Mystic Arcanum (Warlock 11, pag. 155)", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2677: difforme dal manuale, confermato")
 async def test_arcanum_mistico_2024_si_sceglie_dalla_lista_del_warlock(client):
     full = await _full(client, await _warlock24(client, 17))
     liste = {grado: _choice(full, f"arcanum_{grado}")["spell_pick"]["list"] for grado in (6, 7, 8, 9)}
