@@ -114,7 +114,7 @@ export default function Conditions() {
   // Interdizione della Natura: affascinato o spaventato che chiede da dove viene (elementale o folletto = immune).
   const [wardAsk, setWardAsk] = useState<'charmed' | 'frightened' | null>(null)
   // U36: Trattenuto/Afferrato con una CD: ci si libera con una prova (e l'azione), non solo col TS ripetuto.
-  const [escapeFrom, setEscapeFrom] = useState<{ slug: string; dc: number } | null>(null)
+  const [escapeFrom, setEscapeFrom] = useState<{ slug: string; dc: number; id?: number | null } | null>(null)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -495,7 +495,7 @@ export default function Conditions() {
                 {expiry && <p className="text-xs text-dnd-text-muted">{expiry}</p>}
                 {save && <p className="text-xs text-dnd-text-muted tabular-nums">{save}</p>}
                 {(e.slug === 'restrained' || e.slug === 'grappled') && e.save_dc != null && (
-                  <Button variant="secondary" size="sm" className="mt-1.5" onClick={() => setEscapeFrom({ slug: e.slug, dc: e.save_dc! })}>
+                  <Button variant="secondary" size="sm" className="mt-1.5" onClick={() => setEscapeFrom({ slug: e.slug, dc: e.save_dc!, id: e.id })}>
                     {t('character.conditions.effect.escape')}
                   </Button>
                 )}
@@ -676,7 +676,7 @@ export default function Conditions() {
         loading={mutation.isPending}
       />
       {escapeFrom && (
-        <EscapeSheet charId={charId} slug={escapeFrom.slug} dc={escapeFrom.dc} onClose={() => setEscapeFrom(null)} />
+        <EscapeSheet charId={charId} slug={escapeFrom.slug} dc={escapeFrom.dc} effectId={escapeFrom.id} onClose={() => setEscapeFrom(null)} />
       )}
     </Layout>
   )

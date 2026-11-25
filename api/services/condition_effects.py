@@ -457,7 +457,7 @@ async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list
     char_names = dict((await db.execute(select(Character.id, Character.name).where(
         Character.id.in_(char_ids)))).all()) if char_ids else {}
     return [ConditionEffectRead(
-        slug=e.slug, expiry_anchor=e.expiry_anchor, expiry_edge=e.expiry_edge,
+        id=e.id, slug=e.slug, expiry_anchor=e.expiry_anchor, expiry_edge=e.expiry_edge,
         expiry_count=e.expiry_count, save_ability=e.save_ability, save_dc=e.save_dc,
         save_edge=e.save_edge,
         source_name=comb_names.get(e.source_combatant_id) or char_names.get(e.source_character_id),

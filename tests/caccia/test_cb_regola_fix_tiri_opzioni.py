@@ -140,3 +140,28 @@ async def test_2014_il_paladino_prende_l_aura_di_protezione_piu_forte_di_un_comp
     r = await client.post(f"/characters/{debole}/death_saves/roll", json={"die": 7, "options": ["aura:protection"]})
     assert r.status_code == 200, r.text
     assert r.json()["outcome"] == "success", r.json()  # 7 + 5 = 12
+
+
+# ---------------------------------------------------------------------------
+# Revisione: istanze multiple della stessa condizione, rilanci e dado del Valore
+# ---------------------------------------------------------------------------
+
+@pytest.mark.caccia(id="CB-4236", fonte="2024 · Condizioni · pag. 29 (ogni istanza ha la sua durata); fuga contro la CD dell'effetto (U36)", zona="regola:2024/generali",
+                    voce="interazione", copre=["carta:2024/general.md#Condizioni / Conditions (pag. 29)",
+                                               "POST /characters/{char_id}/conditions/{slug}/escape"])
+async def test_liberarsi_chiude_solo_la_presa_battuta(client, test_session_factory):
+    sid, pg, goblin1, goblin2 = await _scontro(client, test_session_factory, "2024")
+    for fonte, cd in ((goblin1, 25), (goblin2, 5)):
+        r = await client.post(f"/sessions/{sid}/encounter/combatants/{pg['id']}/conditions", json={
+            "slug": "grappled", "save": {"ability": "strength", "dc": cd, "edge": "end"}, "source_combatant_id": fonte["id"]})
+        assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    cid = pg["character_id"]
+    facile = next(e for e in (await client.get(f"/characters/{cid}")).json()["condition_effects"] if e["save_dc"] == 5)
+    r = await client.post(f"/characters/{cid}/conditions/grappled/escape?skill=athletics&effect_id={facile['id']}", json={"die": 10})
+    assert r.status_code == 200, r.text
+    assert (r.json()["dc"], r.json()["escaped"]) == (5, True), r.json()
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    # liberato dalla presa del goblin 2: quella del goblin 1, con la sua CD, lo tiene ancora afferrato
+    assert scheda["conditions"].get("grappled") is True
+    assert [(e["source_name"], e["save_dc"]) for e in scheda["condition_effects"]] == [(goblin1["name"], 25)]
