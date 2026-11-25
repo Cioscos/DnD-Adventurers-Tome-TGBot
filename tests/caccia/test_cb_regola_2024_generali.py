@@ -103,14 +103,14 @@ async def test_lo_stesso_incantesimo_rilanciato_piu_debole_non_toglie_quello_piu
                                                "carta:2024/general.md#Lanciare senza slot / Casting Without Slots (pag. 235-236)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("chi", ["warlock_a_volonta", "ranger_marchio_gratuito"])
-@pytest.mark.xfail(strict=True, reason="CB-2864: difforme dal manuale, confermato")
 async def test_un_lancio_senza_slot_dopo_uno_con_slot_non_chiede_conferme(client, chi):
     if chi == "warlock_a_volonta":
         cid = await _caster24(client, 2, "armor_of_shadows")
     else:
         cid = await _pg(client, "ranger", 2)
-    prova = (await client.post(f"/characters/{cid}/spells", json={"name": "Prova", "level": 1, "casting_time": "1 azione",
-                                                                  "is_prepared": True})).json()
+    prova = (await client.post(f"/characters/{cid}/spells", json={
+        "name": "Prova", "level": 1, "is_prepared": True,  # l'altra azione del turno resta per il lancio senza slot
+        "casting_time": "1 azione bonus" if chi == "warlock_a_volonta" else "1 azione"})).json()
     assert (await client.post(f"/characters/{cid}/spells/{prova['id']}/use", json={"slot_level": 1})).status_code == 200
     if chi == "warlock_a_volonta":
         senza_slot = (await _spells_by_index(client, cid))["mage-armor"]

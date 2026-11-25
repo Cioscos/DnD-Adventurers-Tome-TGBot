@@ -997,8 +997,8 @@ export const api = {
         body: JSON.stringify(body),
       }),
     /** Regole che il lancio violerebbe, da confermare prima di tirare i dadi. */
-    castCheck: (charId: number, spellId: number, ritual: boolean) =>
-      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}`),
+    castCheck: (charId: number, spellId: number, ritual: boolean, slotless?: boolean) =>
+      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}${slotless === undefined ? '' : `&slotless=${slotless}`}`),
     /** Tempo e oro per copiare un incantesimo nel Libro del Mago (dimezzati da un «Sapiente»). */
     spellbookCost: (charId: number, level: number, school: string | null, mode: SpellCopyMode) =>
       request<SpellCopyCost>(`/characters/${charId}/spellbook/cost?level=${level}&mode=${mode}${school ? `&school=${encodeURIComponent(school)}` : ''}`),

@@ -72,9 +72,9 @@ export function askCastConfirm(code: string): Promise<boolean> {
   })
 }
 
-async function castWarnings(charId: number, spellId: number, ritual: boolean): Promise<string[]> {
+async function castWarnings(charId: number, spellId: number, ritual: boolean, slotless?: boolean): Promise<string[]> {
   try {
-    return (await api.spells.castCheck(charId, spellId, ritual)) ?? []
+    return (await api.spells.castCheck(charId, spellId, ritual, slotless)) ?? []
   } catch {
     return []  // il lancio ricontrolla sul server
   }
@@ -96,8 +96,8 @@ export async function confirmTurnRules(charId: number, spellId: number): Promise
 }
 
 /** Prima dei dadi: conferme delle regole violate, poi opzioni del lancio. `CastCancelled` se il giocatore rinuncia. */
-export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false) {
-  const confirm = await castWarnings(charId, spellId, ritual)
+export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false, ki = false) {
+  const confirm = await castWarnings(charId, spellId, ritual, freeCast || ki)
   const asked = turnRulesConfirmed?.spellId === spellId ? turnRulesConfirmed.codes : []
   turnRulesConfirmed = null  // vale per un lancio solo
   for (const code of confirm) {
@@ -123,7 +123,7 @@ export const useEffectPickStore = create<{ picked: Record<number, Pick<SpellUseB
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
   const removal = useRemovalStore.getState().chosen[spellId]
   const pick = useEffectPickStore.getState().picked[spellId]
-  const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
+  const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast, !!body.ki)
   useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
   const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}), ...(pick && body.targets === undefined ? pick : {}) })
   const lang = uiLang(i18n.language)

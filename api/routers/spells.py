@@ -304,7 +304,7 @@ def _consume_cast(
             )
     slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(
         char, spell, slot_id, slot_level, pact_only=invocation is not None)
-    missing = [w for w in cast_warnings(char, spell, ritual, slotless=bool(free_cast)) if w not in (confirm or [])]
+    missing = [w for w in cast_warnings(char, spell, ritual, slotless=free_cast or ki) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
@@ -637,13 +637,19 @@ async def cast_check(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     ritual: bool = False,
+    slotless: bool | None = None,
 ) -> list[str]:
-    """Le regole che questo lancio violerebbe, da confermare prima di tirare i dadi. Il lancio le ricontrolla."""
+    """Le regole che questo lancio violerebbe, da confermare prima di tirare i dadi. Il lancio le ricontrolla.
+    ``slotless`` non indicato: come si paga non è ancora scelto, e chi può lanciare senza slot non conferma il secondo."""
     char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
-    return cast_warnings(char, spell, ritual)
+    if slotless is None:
+        pact = pact_cast(char, spell)
+        slotless = (free_cast_state(char, spell) is not None or at_will(char, spell) or ki_cast_info(char, spell) is not None
+                    or (pact is not None and pact.kind == "arcanum"))
+    return cast_warnings(char, spell, ritual, slotless=slotless)
 
 
 @router.post("/{char_id}/spells/{spell_id}/attack", response_model=SpellAttackResult)

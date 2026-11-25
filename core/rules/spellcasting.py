@@ -16,7 +16,7 @@ from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.schools import normalize_school  # noqa: F401  (ri-esportata: la usano i chiamanti storici)
-from core.rules.states import casting_blocked_by, free_cast_state, has_state
+from core.rules.states import casting_blocked_by, has_state
 from core.rules.types import Edition
 
 
@@ -433,23 +433,21 @@ def _form_materials(char: Any, spell: Any) -> str | None:
     return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
 
 
-def _turn_warning(char: Any, spell: Any, slotless: bool | None = None) -> str | None:
+def _turn_warning(char: Any, spell: Any, slotless: bool = False) -> str | None:
     kind = casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
-        free = free_cast_state(char, spell) if slotless is not False else None  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
-        if free is not None and (free.get("data") or {}).get("free_cast_slot", "action") is None:
-            return None
-        return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
+        # il limite è sullo slot speso (pag. 236): un lancio senza slot non ne spende un secondo
+        return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") and not slotless else None
     if kind == "bonus":
         # ogni incantesimo di livello già lanciato, anche senza slot (pag. 202)
         return "bonus_spell" if any(turn.get(k) for k in ("spell_slot_cast", "leveled_cast", "bonus_spell_cast")) else None
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
-def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = None) -> list[str]:
+def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool = False) -> list[str]:
     """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char, spell):
