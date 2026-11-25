@@ -244,7 +244,8 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
             full = _SHORT_ABILITY.get(k, k)
             if full not in scores:
                 raise bad(f"Unknown ability bonus: {k}")
-            scores[full] += v
+            if body.rules_edition != "2024":  # 2024: le specie non danno aumenti, solo il background (pag. 177; pag. 38)
+                scores[full] += v
         for k, v in sp.roll_notes.items():
             if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
                 raise bad(f"Invalid roll note: {k}")
@@ -372,8 +373,8 @@ async def create_character(
             row.options = {**(row.options or {}), "list": bg.feat_list}
     if origin_feat or body.species_2024:  # tratti (Robustezza nanica) e talento (Robusto) contano nei PF massimi
         await sync_cataloged_features(session, char, lang)
-        if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)
-            char.current_hit_points = effective_hp_max(char)
+    if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto, razza 2014)
+        char.current_hit_points = effective_hp_max(char)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See refresh_char_full for the full rationale.
@@ -698,6 +699,8 @@ async def update_xp(
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
+        if body.set is None:  # guadagnare PE non toglie livelli (2024 pag. 366-367); sul 'set' decide Q-2024-generali-b-1
+            new_level = max(new_level, old_level)
         if new_level != old_level or body.hp_rolls:
             cls.level = new_level
             lost_rolls = stored_rolls(char).get(cls.id, {})  # read before record_rolls drops them

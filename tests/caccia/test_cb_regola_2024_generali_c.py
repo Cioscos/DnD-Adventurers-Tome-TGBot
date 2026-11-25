@@ -53,7 +53,6 @@ async def _turno(client, cid) -> dict:
                            "POST /characters/{char_id}/spells/{spell_id}/use", "PATCH /characters/{char_id}/conditions",
                            "POST /characters/{char_id}/items/{item_id}/cast"])
 @pytest.mark.parametrize("effetto,terra,volo", [("afferrato", 0, 0), ("esaurimento", 20, 50), ("passo_lungo", 40, 70)])
-@pytest.mark.xfail(strict=True, reason="CB-2961: difforme dal manuale, confermato")
 async def test_la_velocita_di_volo_fissa_cambia_come_la_velocita(client, effetto, terra, volo):
     cid = await _pg(client, "sorcerer", 5)
     classe = (await _scheda(client, cid))["classes"][0]["id"]
@@ -131,7 +130,6 @@ async def test_chi_e_stordito_non_usa_una_reazione_sul_danno(client):
                     zona="regola:2024/generali", voce="regola",
                     copre=["carta:2024/general.md#Heroic Inspiration (Ispirazione Eroica) (pag. 368)",
                            "POST /characters/{char_id}/death_saves/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2965: difforme dal manuale, confermato")
 async def test_il_rilancio_del_ts_contro_la_morte_chiede_l_ispirazione(client):
     cid = await _pg(client, "fighter", 1)
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
@@ -139,7 +137,7 @@ async def test_il_rilancio_del_ts_contro_la_morte_chiede_l_ispirazione(client):
     assert r.json()["heroic_inspiration"] is False
     r = await client.post(f"/characters/{cid}/death_saves/roll", json={"with_inspiration": True, "dice": [15]})
     assert r.status_code == 409, r.text[:200]
-    assert (await _scheda(client, cid))["death_saves"]["successes"] == 0
+    assert ((await _scheda(client, cid))["death_saves"] or {}).get("successes", 0) == 0  # mai tirato: nessun conteggio salvato
 
 
 # ---------------------------------------------------------------------------------------------------------------------

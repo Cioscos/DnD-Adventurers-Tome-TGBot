@@ -118,7 +118,6 @@ async def test_i_danni_extra_della_rivelazione_celeste_hanno_il_tipo_della_forma
 
 @pytest.mark.caccia(id="CB-3515", fonte="2024 · Specie · Regole comuni · pag. 177: le specie non danno aumenti di caratteristica", zona="regola:2024/razze",
                     voce="edizioni", copre=["carta:2024/races.md#Nano / Dwarf (pag. 188)", "POST /characters"])
-@pytest.mark.xfail(strict=True, reason="CB-3515: difforme dal manuale, confermato")
 async def test_un_personaggio_2024_non_riceve_aumenti_di_caratteristica_dalla_razza(client):
     r = await client.post("/characters", json={"name": "B", "rules_edition": "2024", "ability_scores": {"constitution": 14},
                                                "species": {"name": "Nano", "ability_bonuses": {"con": 2}},

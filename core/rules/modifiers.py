@@ -237,6 +237,19 @@ def _heavy_weapon(ctx: RuleContext) -> list[Modifier]:
     return [Modifier("disadvantage", 1, source="weapon:heavy")] if weak else []
 
 
+_DWARVEN_TOUGHNESS = {"robustezza nanica", "dwarven toughness"}  # nome del tratto in races.json (it/en)
+
+
+def _race_2014(ctx: RuleContext) -> list[Modifier]:
+    """Le razze 2014 del wizard sono righe di testo: Robustezza Nanica dà +1 PF massimo per livello (pag. 28)."""
+    if ctx.edition != "2014" or ctx.roll != "hp_max":
+        return []
+    from core.rules.catalog.feats import _abilities  # righe solo se caricate: niente lazy load asincrono
+    if not any(not a.feature_key and (a.name or "").strip().lower() in _DWARVEN_TOUGHNESS for a in _abilities(ctx.char)):
+        return []
+    return [Modifier("hp_max", sum(c.level or 0 for c in ctx.char.classes or []), source="race:dwarven_toughness")]
+
+
 def _half_prof(ctx: RuleContext) -> int:
     """Mezza competenza per difetto su prove e TS, solo dove il personaggio non è già competente.
     La passiva parte dal bonus di abilità, che la comprende già."""
@@ -254,7 +267,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     pairs: list[tuple[Modifier, RuleContext, str]] = [
         (m, ctx, m.source) for m in compute_condition_effects(ctx.char, ctx.edition, ctx)
     ]
-    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_encumbrance_modifiers(ctx), *_heavy_weapon(ctx)]]
+    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_encumbrance_modifiers(ctx), *_heavy_weapon(ctx), *_race_2014(ctx)]]
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]

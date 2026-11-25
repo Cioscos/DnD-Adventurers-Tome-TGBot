@@ -116,7 +116,6 @@ async def test_iniziativa_dello_scontro_in_forma_selvatica_usa_la_destrezza_dell
                            "carta:2014/general.md#Forza / Strength (pag. 175-176)",
                            "carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-2763: difforme dal manuale, confermato")
 async def test_un_arma_a_distanza_da_lancio_lanciata_usa_la_destrezza(client):
     cid = await _pg(client, "fighter", 1, strength=8, dexterity=16)
     r = await client.post(f"/characters/{cid}/items", json={"name": "Rete", "item_type": "weapon", "item_metadata": {

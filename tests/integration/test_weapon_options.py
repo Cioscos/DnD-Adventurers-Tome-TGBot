@@ -107,11 +107,12 @@ async def test_no_warning_when_list_empty(client):
     assert (await _attack(client, cid, wid)).json()["proficiency_warning"] is False
 
 
-async def test_thrown_ranged_non_finesse_uses_strength(client):
+async def test_thrown_weapon_ability_follows_weapon_type(client):
+    # 2014 pag. 147 (Lancio): la Forza della mischia vale solo per le armi da mischia. Il Giavellotto è
+    # un'arma da mischia (Armi Semplici da Mischia); la Rete è a distanza e lanciata resta sulla Destrezza (pag. 176).
     cid = await _char(client, strength=16, dexterity=8)  # FOR +3, DES -1
-    wid = await _weapon(
-        client, cid, "Giavellotto", weapon_type="ranged", properties=["prop_thrown"]
-    )
-    # Ranged attacks normally use DEX; thrown must switch to STR.
-    assert (await _attack(client, cid, wid)).json()["to_hit_bonus"] == 1  # -1 DES + PB 2
-    assert (await _attack(client, cid, wid, attack_mode="thrown")).json()["to_hit_bonus"] == 5
+    javelin = await _weapon(client, cid, "Giavellotto", properties=["prop_thrown"])
+    net = await _weapon(client, cid, "Rete", weapon_type="ranged", properties=["prop_special", "prop_thrown"])
+    assert (await _attack(client, cid, javelin, attack_mode="thrown")).json()["to_hit_bonus"] == 5  # +3 FOR + PB 2
+    assert (await _attack(client, cid, net)).json()["to_hit_bonus"] == 1  # -1 DES + PB 2
+    assert (await _attack(client, cid, net, attack_mode="thrown")).json()["to_hit_bonus"] == 1

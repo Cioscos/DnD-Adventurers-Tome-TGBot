@@ -87,19 +87,19 @@ async def test_nano_2014_in_armatura_pesante_senza_forza_non_perde_velocita(clie
                     zona="regola:2014/razze", voce="limiti",
                     copre=["carta:2014/races.md#Nano delle Colline / Hill Dwarf (pag. 28)", "POST /characters", "GET /characters/{char_id}"])
 @pytest.mark.parametrize("livello", [1, 20])
-@pytest.mark.xfail(strict=True, reason="CB-3062: difforme dal manuale, confermato")
 async def test_nano_delle_colline_2014_ha_un_pf_massimo_in_piu_per_livello(client, livello):
     pg = await _crea(client, species=_specie("dwarf", "hill-dwarf"), ability_scores={"constitution": 8},  # +2 di razza: Cos 10
                      initial_class={"class_name": "fighter", "level": livello, "hit_die": 10})
     senza_tratto = 10 + 6 * (livello - 1)  # d10, Cos 10: 10 al 1°, 6 ai successivi
-    assert (await _scheda(client, pg["id"]))["computed"]["hp_max_effective"] == senza_tratto + livello
+    scheda = await _scheda(client, pg["id"])
+    assert scheda["computed"]["hp_max_effective"] == senza_tratto + livello
+    assert scheda["current_hit_points"] == senza_tratto + livello  # nasce a PF pieni
 
 
 @pytest.mark.caccia(id="CB-3072", fonte="2014 · Razze · Nano delle Colline, Robustezza Nanica: +1 PF ogni volta che sale di livello, anche in un'altra classe · pag. 28",
                     zona="regola:2014/razze", voce="interazione",
                     copre=["carta:2014/races.md#Nano delle Colline / Hill Dwarf (pag. 28)", "POST /characters",
                            "POST /characters/{char_id}/classes", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-3072: difforme dal manuale, confermato")
 async def test_nano_delle_colline_2014_multiclasse_un_pf_in_piu_per_ogni_livello_preso_dopo(client):
     massimi = []
     for specie, cos in ((_specie("human"), 9), (_specie("dwarf", "hill-dwarf"), 8)):  # Cos 10 per entrambi dopo la razza

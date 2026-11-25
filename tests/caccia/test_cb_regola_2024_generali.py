@@ -178,7 +178,6 @@ async def test_livelli_di_incantesimo_e_di_slot_fuori_dalla_scala_rifiutati(clie
 @pytest.mark.caccia(id="CB-2868", fonte="2024 · Regole di gioco · Punteggi di caratteristica, massimo 30 · pag. 10", zona="regola:2024/generali",
                     voce="limiti", copre=["carta:2024/general.md#Punteggi di caratteristica / Ability Scores (pag. 10)",
                                           "POST /characters/{char_id}/items", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2868: difforme dal manuale, confermato")
 async def test_il_punteggio_effettivo_non_supera_30(client):
     cid = await _pg(client, strength=30)
     meta = {"ability_modifiers": [{"ability": "strength", "kind": "relative", "value": 2}]}
