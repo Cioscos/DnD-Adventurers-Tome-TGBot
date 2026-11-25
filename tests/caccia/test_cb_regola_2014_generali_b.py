@@ -127,7 +127,6 @@ async def test_finiti_i_due_effetti_che_rendono_invisibili_la_condizione_cade(cl
 @pytest.mark.caccia(id="CB-2813", fonte="2014 · Lancio di incantesimi · Tempo di Lancio, Azione Bonus · pag. 202", zona="regola:2014/generali",
                     voce="interazione", copre=["carta:2014/general.md#Tempo di Lancio / Casting Time (pag. 202)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use", "GET /characters/{char_id}/spells/{spell_id}/cast-check"])
-@pytest.mark.xfail(strict=True, reason="CB-2813: difforme dal manuale, confermato")
 async def test_dopo_un_incantesimo_di_livello_senza_slot_quello_bonus_va_confermato(client):
     cid = await _caster(client, 2, "armor_of_shadows")
     armatura = (await _spells_by_index(client, cid))["mage-armor"]

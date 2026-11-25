@@ -198,7 +198,8 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool, ritual: bool) ->
     # Incantesimo Rapido 2024: cosa era già stato lanciato prima di questo lancio; conta ogni incantesimo di 1° livello o più,
     # anche pagato a punti stregoneria o gratis (``leveled_cast``), non solo con uno slot
     turn["cast_prior_slot"] = turn["spell_slot_cast"] or bool(turn.get("leveled_cast"))
-    turn["leveled_cast"] = bool(turn.get("leveled_cast")) or spell.level >= 1
+    # 2014: un rituale (10 minuti in più) non è un incantesimo del turno
+    turn["leveled_cast"] = bool(turn.get("leveled_cast")) or (spell.level >= 1 and not (ritual and character_edition(char) == "2014"))
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
     # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale). Un rituale o un tempo di 1 minuto o più

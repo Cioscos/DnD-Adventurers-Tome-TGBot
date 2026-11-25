@@ -444,7 +444,8 @@ def _turn_warning(char: Any, spell: Any, slotless: bool | None = None) -> str | 
             return None
         return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
     if kind == "bonus":
-        return "bonus_spell" if turn.get("spell_slot_cast") or turn.get("bonus_spell_cast") else None
+        # ogni incantesimo di livello già lanciato, anche senza slot (pag. 202)
+        return "bonus_spell" if any(turn.get(k) for k in ("spell_slot_cast", "leveled_cast", "bonus_spell_cast")) else None
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
