@@ -54,7 +54,7 @@ _PESI_ARMI_2024 = {  # indice del catalogo 2024 -> peso in lb della tabella dell
 
 @pytest.mark.caccia(id="CB-3611", fonte="2024 · Equipaggiamento · Tabella armi (colonna Peso) · pag. 215", zona="regola:2024/equipaggiamento",
                     voce="regola", copre=["carta:2024/equipment.md#Tabella armi / Weapons (pag. 215)"])
-@pytest.mark.parametrize("indice", [pytest.param(i, marks=pytest.mark.xfail(strict=True, reason="CB-3611: difforme dal manuale, confermato")) if i == "warhammer" else i for i in sorted(_PESI_ARMI_2024)])
+@pytest.mark.parametrize("indice", sorted(_PESI_ARMI_2024))
 def test_peso_delle_armi_del_catalogo_2024(indice):
     # il Martello da guerra pesa 5 lb nel 2024 (2 lb era il peso del 2014)
     assert _catalogo()[indice]["weight_lb"] == _PESI_ARMI_2024[indice]

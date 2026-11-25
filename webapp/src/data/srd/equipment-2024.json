@@ -839,7 +839,7 @@
     "en": "Warhammer",
     "it": "Martello da guerra"
    },
-   "weight_lb": 2,
+   "weight_lb": 5,
    "damage_dice": "1d8",
    "damage_type": "bludgeoning",
    "weapon_category": "martial",
