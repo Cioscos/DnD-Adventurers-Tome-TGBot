@@ -93,7 +93,6 @@ async def test_il_rituale_del_libro_delle_ombre_e_preparato(client):
                     voce="interazione", copre=["carta:2024/classes/warlock.md#Astuzia Magica / Magical Cunning (Warlock 2, pag. 154)",
                                                "carta:2024/classes/warlock.md#Resilienza Celestiale / Celestial Resilience (Patrono Celestiale 10, pag. 161)",
                                                "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2665: difforme dal manuale, confermato")
 async def test_astuzia_magica_a_slot_pieni_da_i_pf_della_resilienza_celestiale(client):
     cid = await _make(client, "celestial", 10, charisma=16)
     assert all(s["used"] == 0 for s in await _pact_slots(client, cid))
