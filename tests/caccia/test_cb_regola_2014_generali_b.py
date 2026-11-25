@@ -111,7 +111,6 @@ async def test_chi_non_puo_agire_non_lancia_e_non_spende_lo_slot(client, condizi
 @pytest.mark.caccia(id="CB-2812", fonte="2014 · Condizioni · Regole generali · pag. 290 (ogni effetto ha la sua durata)", zona="regola:2014/generali",
                     voce="interazione", copre=["carta:2014/general.md#Regole generali / General (pag. 290)",
                                                "POST /characters/{char_id}/features/{feature_key}/use", "DELETE /characters/{char_id}/active-states/{key}"])
-@pytest.mark.xfail(strict=True, reason="CB-2812: difforme dal manuale, confermato")
 async def test_finiti_i_due_effetti_che_rendono_invisibili_la_condizione_cade(client):
     cid = await _pg(client, "monk", 18, "Via dell'Ombra")
     r = await client.post(f"/characters/{cid}/features/monk.cloak_of_shadows/use", json={"params": {"light": "dim_or_dark"}})

@@ -33,7 +33,9 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
         previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
         wanted = (spec.condition, *spec.also_conditions)
         before = state_conditions(previous) if previous else {}
-        was = {c: before.get(c, bool((char.conditions or {}).get(c))) for c in wanted}
+        # accesa da un altro stato: c'era già solo se c'era già per quello (ogni effetto ha la sua durata, 2014 pag. 290)
+        imposed = {c: w for s in get_states(char) if s.get("key") != spec.key for c, w in state_conditions(s).items()}
+        was = {c: before.get(c, imposed.get(c, bool((char.conditions or {}).get(c)))) for c in wanted}
         state.update(condition=spec.condition, condition_was_on=was[spec.condition])
         if spec.also_conditions:
             state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
