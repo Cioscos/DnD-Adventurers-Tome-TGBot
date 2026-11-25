@@ -27,7 +27,7 @@ import { notifyMutationError } from '@/lib/mutationError'
 import DurationInput from '@/components/character/DurationInput'
 import { useTickRound } from '@/hooks/useTickRound'
 import { useTurnState } from '@/hooks/useTurnState'
-import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
+import { conditionRounds, formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import EscapeSheet from '@/components/EscapeSheet'
 
 const CONDITION_KEYS = [
@@ -278,9 +278,8 @@ export default function Conditions() {
     })
   }
 
-  const durations = Object.fromEntries((char.condition_effects ?? [])
-    .filter((e) => e.expiry_count != null).map((e) => [e.slug, e.expiry_count as number]))
-  const hasDurations = Object.keys(durations).length > 0 || char.settings?.concentration_rounds_left != null
+  const durations = conditionRounds(char.condition_effects ?? [])
+  const hasDurations = (char.condition_effects ?? []).some((e) => e.expiry_count != null) || char.settings?.concentration_rounds_left != null
 
   const effectRows = (char.condition_effects ?? [])
     .filter((e) => conditions[e.slug])
