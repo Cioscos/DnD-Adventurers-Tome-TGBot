@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from core.rules.catalog._common import feature
+from core.rules.catalog.y2014.cleric import spell_dc
 from core.rules.types import RuleContext
 
 ED, CK = "2014", "wizard"
@@ -13,7 +14,7 @@ def mod(ctx: RuleContext, ability: str) -> int:
 
 
 def dc(ctx: RuleContext) -> int:
-    return 8 + ctx.char.proficiency_bonus + mod(ctx, "intelligence")
+    return spell_dc(ctx, "intelligence")
 
 
 def say(it: str, en: str):

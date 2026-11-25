@@ -15,6 +15,7 @@ from core.data.damage_types import spell_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.actions import parse_casting_time, parse_duration_rounds
 from core.rules.catalog._common import feature, save_spell, state_on
+from core.rules.catalog.y2014.cleric import spell_dc
 from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.states import begin_state
 from core.rules.types import (
@@ -65,7 +66,7 @@ def _cha(ctx: RuleContext) -> int:
 
 
 def _dc(ctx: RuleContext) -> int:
-    return 8 + ctx.char.proficiency_bonus + _cha(ctx)
+    return spell_dc(ctx, "charisma")
 
 
 def _meta(key: str) -> str:

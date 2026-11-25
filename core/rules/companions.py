@@ -93,11 +93,14 @@ def chain_master_stats(char, comp) -> CompanionStats | None:
     """Il famiglio (non un compagno di privilegio) di un warlock 2024 con l'Investitura: volo o nuoto 12 m, necrotico o radioso al posto
     dei danni fisici, la CD del warlock per i suoi TS e la resistenza in reazione."""
     from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
     if comp.kind != "familiar" or comp.feature_key or character_edition(char) != "2024":
         return None
-    if not any(spec.key == CHAIN_MASTER for spec, _row in active_features(char)):
+    row = next((row for spec, row in active_features(char) if spec.key == CHAIN_MASTER), None)
+    if row is None:
         return None
-    return CompanionStats(save_dc=8 + char.proficiency_bonus + effective_ability_mod(char, "charisma"), fly_or_swim_m=12,
+    dc = next((s.save_dc for s in caster_stats(char) if s.class_id == row.id), None)  # CD del warlock, oggetti compresi
+    return CompanionStats(save_dc=dc, fly_or_swim_m=12,
                           damage_types=("necrotic", "radiant"), can_resist=True)
 
 

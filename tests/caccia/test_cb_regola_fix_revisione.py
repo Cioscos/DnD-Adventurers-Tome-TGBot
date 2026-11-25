@@ -226,3 +226,27 @@ async def test_l_import_da_beyond_non_conta_due_volte_i_pf_per_livello(client, m
     scheda = await _importa(client, monkeypatch, edizione, talento, forzati)
     assert scheda["computed"]["hp_max_effective"] == massimo
     assert scheda["current_hit_points"] == massimo - 10  # i danni segnati su Beyond restano
+
+
+@pytest.mark.caccia(id="CB-4782", fonte="2014 · Warlock · Presenza Fatata · pag. 117; Stregone · Presenza Draconica · pag. 102; Mago · Sguardo Ipnotico · pag. 115: TS contro la CD incantesimi; 2024 · Warlock · Investitura del Padrone delle Catene · pag. 156",
+                    zona="regola:2014/warlock", voce="regola",
+                    copre=["POST /characters/{char_id}/features/{feature_key}/use",
+                           "GET /characters/{char_id}/target-effects/{feature_key}", "GET /characters/{char_id}/companions"])
+@pytest.mark.parametrize("caso", ["warlock", "stregone", "mago", "famiglio"])
+async def test_i_privilegi_contro_la_cd_incantesimi_contano_i_bonus_degli_oggetti(client, caso):
+    if caso == "famiglio":
+        cid, _ = await _chain(client)
+        await _amuleto(client, cid)
+        assert (await client.get(f"/characters/{cid}/companions")).json()[0]["save_dc"] == 14 + 1
+        return
+    if caso == "warlock":
+        cid, chiave, corpo = await _warlock(client, 5, "archfey", charisma=16), FEY, {"params": {"mode": "charmed"}}
+    elif caso == "stregone":
+        cid, chiave, corpo = await _draconic(client, 18, charisma=16), PRESENCE, {"params": {"mode": "awe"}}
+    else:
+        cid, chiave, corpo = await _wizard(client, 5, "enchantment", intelligence=16), GAZE, {}
+    await _amuleto(client, cid)
+    (cd,) = [c["save_dc"] for c in (await _scheda(client, cid))["spellcasting"]["casters"]]
+    r = await _usa(client, cid, chiave, **corpo)
+    assert r.status_code == 200, r.text
+    assert (await _effect(client, cid, chiave))["save_dc"] == cd

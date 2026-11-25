@@ -37,13 +37,13 @@ def destroy_threshold(level: int) -> str | None:
     return next((cr for lv, cr in sorted(_DESTROY_CR.items(), reverse=True) if level >= lv), None)
 
 
-def spell_dc(ctx: RuleContext) -> int:
-    """CD degli incantesimi della classe, oggetti compresi, come sulla scheda: Incanalare Divinità la usa (anche i circoli
-    del druido 2024)."""
+def spell_dc(ctx: RuleContext, ability: str = "wisdom") -> int:
+    """CD degli incantesimi della classe, oggetti compresi, come sulla scheda: la usano Incanalare Divinità, i circoli del
+    druido 2024 e i privilegi di warlock, stregone e mago (``ability``: se la classe non lancia)."""
     from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
     from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
     mine = next((s.save_dc for s in caster_stats(ctx.char) if ctx.class_row is not None and s.class_id == ctx.class_row.id), None)
-    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
+    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, ability)
 
 
 def _wisdom_mod(ctx: RuleContext) -> int:

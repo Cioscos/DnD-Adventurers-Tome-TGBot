@@ -10,7 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from core.rules.catalog._common import feature
-from core.rules.catalog.y2014.warlock_invocations import _mod, _say
+from core.rules.catalog.y2014.cleric import spell_dc
+from core.rules.catalog.y2014.warlock_invocations import _say
 from core.rules.catalog.y2024 import warlock_invocations as inv
 from core.rules.types import ChoiceSpec, OnUse, RollOptionSpec, RuleContext, Uses
 
@@ -21,8 +22,8 @@ _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/r
 
 
 def dc(ctx: RuleContext) -> int:
-    """CD degli incantesimi del warlock: 8 + competenza + Carisma."""
-    return 8 + ctx.char.proficiency_bonus + _mod(ctx, "charisma")
+    """CD degli incantesimi del warlock."""
+    return spell_dc(ctx, "charisma")
 
 
 def pact_slots(char: Any) -> list[Any]:

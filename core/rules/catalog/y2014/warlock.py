@@ -13,6 +13,7 @@ from typing import Any
 from core.data.damage_types import DAMAGE_TYPES
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014 import warlock_invocations as inv
+from core.rules.catalog.y2014.cleric import spell_dc
 from core.rules.catalog.y2014.warlock_invocations import BOON_GROUP, INVOCATIONS, PACT_WEAPON, PREREQUISITES, is_blast
 from core.rules.edition import character_edition
 from core.rules.types import (
@@ -35,7 +36,7 @@ def _mod(ctx: RuleContext, ability: str) -> int:
 
 
 def _dc(ctx: RuleContext) -> int:
-    return 8 + ctx.char.proficiency_bonus + _mod(ctx, "charisma")
+    return spell_dc(ctx, "charisma")
 
 
 def _till_my_next_turn() -> dict:

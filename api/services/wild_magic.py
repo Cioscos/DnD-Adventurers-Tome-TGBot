@@ -23,6 +23,7 @@ from core.rules.catalog.y2014.sorcerer import CK, SP, SURGE, TIDES
 from core.rules.catalog.y2014.sorcerer_wild_magic import SURGES, Surge
 from core.rules.catalog.y2024.sorcerer_wild_magic import SURGES as SURGES_2024
 from core.rules.edition import character_edition
+from core.rules.spellcasting import caster_stats
 from core.rules.states import begin_state, has_state
 from core.rules.types import StateSpec, parse_dice
 
@@ -137,7 +138,7 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
         rolls = _roll_dice(char, s.roll)
         out["extra_roll"] = {"dice": s.roll, "rolls": rolls, "total": sum(rolls)}
     if s.dc:
-        out["dc"] = 8 + char.proficiency_bonus + effective_ability_mod(char, "charisma")
+        out["dc"] = _spell_dc(char)
     spec = _state_for(s)
     if s.state_key == REPEAT:  # nato in questo turno: il primo tiro della ripetizione spetta al turno dopo
         mark_once(char, REPEAT)
@@ -145,6 +146,13 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
         out["state"] = begin_state(char, spec, f"{SURGE}:{s.lo}", s.name["it"])
     add_history(session, char.id, "wild_magic", f"Impulso di Magia Selvaggia {s.label}: {s.name['it']}")
     return out
+
+
+def _spell_dc(char) -> int:
+    """CD degli incantesimi dello stregone, oggetti compresi."""
+    owner = next((r for s, r in active_features(char) if s.key == SURGE), None)
+    mine = next((s.save_dc for s in caster_stats(char) if owner is not None and s.class_id == owner.id), None)
+    return mine if mine is not None else 8 + char.proficiency_bonus + effective_ability_mod(char, "charisma")
 
 
 def _restore_tides(char) -> bool:
