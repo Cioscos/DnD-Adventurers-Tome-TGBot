@@ -345,7 +345,6 @@ def _consume_cast(
     if slot is not None:
         mark_tides_due(char, spell)  # Maree del Caos 2024 spese: il lancio con slot apre la tabella
     end_on_action(char, "cast", spell)
-    after_cast(char, spell, slot.level if slot is not None else None)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
@@ -353,6 +352,8 @@ def _consume_cast(
     needs_concentration, rounds = slot_concentration(char, spell, level) if spell.is_concentration else (False, None)
     if needs_concentration and not no_concentration:
         start_concentration(char, spell.id, rounds, level=level)
+    # i privilegi delle scuole del Mago, dopo end_on_action e la fine della concentrazione di prima: le finestre nuove restano
+    after_cast(char, spell, slot.level if slot is not None else None)
     return pact_row
 
 

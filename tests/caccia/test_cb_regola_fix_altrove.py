@@ -3,6 +3,8 @@ import pytest
 
 from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg
 from tests.integration.rules.test_2014_bard import _roll_keys, _states, _use
+from tests.integration.rules.test_2014_wizard import _wizard
+from tests.integration.rules.test_2014_wizard_illusion_evocation import _illusion
 from tests.integration.rules.test_2024_cleric_domains import _dom, _spell_rows
 from tests.integration.test_magic_items import _item
 from tests.integration.test_magic_items import _item
@@ -43,3 +45,20 @@ async def test_lancio_da_oggetto_a_slot_alto_segue_lo_slot_per_concentrazione_e_
     durata = "Concentrazione, fino a 10 minuti" if indice == "major-image" else "Concentrazione, fino a 1 minuto"
     s = (await _da_oggetto(client, cid, name=nome, srd_index=indice, level=base, slot_level=slot, duration=durata))["settings"] or {}
     assert (s.get("concentration_rounds_left"), bool(s.get("concentration_item_spell"))) == (atteso, atteso is not None)
+
+
+async def _rilancia(client, cid, spell, **corpo):
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json=corpo)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.mark.caccia(id="CB-4704", fonte="2014 · Mago · Realtà Illusoria (finché l'incantesimo è attivo) · pag. 87; Alterare Ricordi (prima che l'incantesimo termini) · pag. 85",
+                    zona="regola:2014/wizard", voce="interazione",
+                    copre=["carta:2014/classes/wizard.md#Realtà Illusoria / Illusory Reality (Illusione 14, pag. 87)",
+                           "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_la_finestra_di_realta_illusoria_resta_con_una_illusione_a_concentrazione(client):
+    cid = await _wizard(client, 14, "illusion")
+    await _rilancia(client, cid, await _illusion(client, cid, is_concentration=True), slot_level=1)
+    r = await _use(client, cid, "wizard.illusory_reality", params={"object": "Ponte"})
+    assert r.status_code == 200, r.text
