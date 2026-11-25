@@ -45,3 +45,19 @@ async def test_al_7_livello_si_sostituisce_una_sola_manovra(client):
     assert (await client.post(url, json={"group": "maneuvers", "old_key": "trip", "new_key": "goading"})).status_code == 200
     r = await client.post(url, json={"group": "maneuvers", "old_key": "rally", "new_key": "riposte"})
     assert r.status_code >= 400, r.status_code
+
+
+@pytest.mark.caccia(id="CB-4393", fonte="2014 · Warlock · Succhiavita · pag. 119", zona="regola:2014/warlock", voce="regola",
+                    copre=["carta:2014/classes/warlock.md#Succhiavita / Lifedrinker (Suppliche Occulte, livello 12, Patto della Lama, pag. 119)",
+                           "POST /characters/{char_id}/attack/{attack_id}/damage"])
+@pytest.mark.parametrize("carisma,extra", [(18, 4), (6, 1)])
+async def test_succhiavita_aggiunge_il_danno_senza_spuntare_nulla(client, carisma, extra):
+    from tests.integration.rules.test_2014_fighter_eldritch_knight import _hit
+    from tests.integration.rules.test_2014_warlock_invocations import _blade, _caster
+    cid = await _caster(client, 12, "lifedrinker", boon="blade", charisma=carisma, strength=10)
+    lama = await _blade(client, cid)
+    colpo = await _hit(client, cid, lama)
+    # privilegio passivo (Q-2014-warlock-3): il danno necrotico c'è anche senza opzioni
+    r = await client.post(f"/characters/{cid}/attack/{colpo['attack_id']}/damage", json={"main_rolls": [4]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_bonus"] == extra

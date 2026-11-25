@@ -314,21 +314,22 @@ async def _blade(client, cid, form="longsword") -> int:
 
 @pytest.mark.parametrize("charisma,extra", [(18, 4), (10, 1), (6, 1)])
 async def test_lifedrinker_adds_necrotic_damage_equal_to_charisma_with_a_minimum_of_one(client, charisma, extra):
-    cid = await _caster(client, 12, "lifedrinker", boon="blade", charisma=charisma)
+    # 2014 pag. 119: Succhiavita è passiva, il danno extra arriva senza opzioni da spuntare (Q-2014-warlock-3)
+    cid = await _caster(client, 12, "lifedrinker", boon="blade", charisma=charisma, strength=10)
     blade = await _blade(client, cid)
-    assert "warlock.lifedrinker" in await _keys(client, cid, "attack", item_id=blade)
+    assert "warlock.lifedrinker" not in await _keys(client, cid, "attack", item_id=blade)
     plain = await _hit(client, cid, blade)
-    r = await client.post(f"/characters/{cid}/attack/{plain['attack_id']}/damage", json={"options": ["warlock.lifedrinker"], "main_rolls": [4]})
+    r = await client.post(f"/characters/{cid}/attack/{plain['attack_id']}/damage", json={"main_rolls": [4]})
     assert r.status_code == 200, r.text
-    base = await _hit(client, cid, blade)
-    r0 = await client.post(f"/characters/{cid}/attack/{base['attack_id']}/damage", json={"main_rolls": [4]})
-    assert r.json()["damage_bonus"] == r0.json()["damage_bonus"] + extra
+    assert r.json()["damage_bonus"] == extra
 
 
 async def test_lifedrinker_does_not_apply_to_other_weapons(client):
-    cid = await _caster(client, 12, "lifedrinker", boon="blade")
+    cid = await _caster(client, 12, "lifedrinker", boon="blade", strength=10)
     other = await _weapon(client, cid, "Ascia", "main_hand")
-    assert "warlock.lifedrinker" not in await _keys(client, cid, "attack", item_id=other)
+    r = await client.post(f"/characters/{cid}/attack/{(await _hit(client, cid, other))['attack_id']}/damage", json={"main_rolls": [4]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_bonus"] == 0
 
 
 async def _swing(client, cid, item_id=None):
