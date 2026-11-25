@@ -47,10 +47,10 @@ async def test_la_sostituzione_non_da_una_supplica_senza_il_patto_che_richiede(c
 @pytest.mark.caccia(id="CB-2662", fonte="2024 · Warlock · Lezioni dei Primi (Ripetibile) · pag. 156", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Lezioni dei Primi / Lessons of the First Ones (Suppliche Occulte, livello 2+, pag. 156)",
                            "POST /characters/{char_id}/choices/{choice_id}/resolve", "PATCH /characters/{char_id}/classes/{class_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2662: difforme dal manuale, confermato")
 async def test_lezioni_dei_primi_si_riprende_salendo_di_livello(client):
     cid = await _warlock24(client, 2, charisma=16)
-    r = await _resolve(client, cid, "invocations", ["lessons_of_the_first_ones", "devils_sight", "eldritch_mind"])
+    # «scegliendo ogni volta un talento di Origine diverso» (2024 pag. 156): ogni scelta nomina il suo talento
+    r = await _resolve(client, cid, "invocations", ["lessons_of_the_first_ones__alert", "devils_sight", "eldritch_mind"])
     assert r.status_code == 200, r.text
     klass = (await _full(client, cid))["classes"][0]
     r = await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 5})
@@ -58,6 +58,7 @@ async def test_lezioni_dei_primi_si_riprende_salendo_di_livello(client):
     offerte = await _offered(client, cid)
     assert "ascendant_step" in offerte  # la scelta del 5° livello è aperta
     assert any(k.startswith("lessons_of_the_first_ones") for k in offerte)
+    assert "lessons_of_the_first_ones__alert" not in offerte  # lo stesso talento non si riprende
 
 
 @pytest.mark.caccia(id="CB-2663", fonte="2024 · Warlock · Patto della Lama (arma legata) · pag. 156", zona="regola:2024/warlock", voce="regola",
