@@ -412,4 +412,5 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
 
 def item_spell(spell: dict) -> SimpleNamespace:
     """L'incantesimo concesso da un oggetto (un dict dei metadati) con la forma che il servizio si aspetta."""
-    return SimpleNamespace(name=spell.get("name"), srd_index=spell.get("srd_index"), level=int(spell.get("level") or 1))
+    return SimpleNamespace(name=spell.get("name"), srd_index=spell.get("srd_index"), level=int(spell.get("level") or 1),
+                           duration=spell.get("duration"))

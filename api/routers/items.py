@@ -55,7 +55,6 @@ from api.services.condition_effects import release_concentration_effects
 from api.services import weapon_bond
 from api.services.skills import check_bonus
 from api.services.item_charges import attunement_limit, charge_die, charge_note, has_use_magic_device, set_item_charges
-from core.game.actions import parse_duration_rounds
 from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
 from api.services.containers import move_items, reparent_contents
 from api.schemas.container import ItemMoveRequest
@@ -71,6 +70,7 @@ from core.rules.catalog._common import unarmored_unshielded
 from core.rules.catalog.feats_2014 import has_feat
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
+from core.rules.slot_concentration import slot_concentration
 from core.rules.roll_options import AppliedOptions, doubled_dice, option_names, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.spell_effects import enchanted_weapon
 from core.rules.spellcasting import _armor_block
@@ -1280,7 +1280,11 @@ async def cast_from_item(
         set_item_charges(item, current - cost)
     end_on_action(char, "cast", spell)  # come ogni lancio: il Manto di Ombre finisce
 
-    if variant.concentration if variant else spell.get("is_concentration"):
+    if variant:
+        concentrates, rounds = variant.concentration, variant.duration(fx_level)
+    else:  # come il lancio dalla scheda: Immagine Maggiore, Scagliare Maledizione e Dominare seguono lo slot
+        concentrates, rounds = slot_concentration(char, fx_spell, fx_level) if spell.get("is_concentration") else (False, None)
+    if concentrates:
         # Match by srd_index (when both set), then by case-insensitive name.
         name = spell["name"].lower()
         idx = spell.get("srd_index")
@@ -1288,7 +1292,6 @@ async def cast_from_item(
             next((s for s in char.spells if idx and s.srd_index == idx), None)
             or next((s for s in char.spells if s.name.lower() == name), None)
         )
-        rounds = variant.duration(fx_level) if variant else parse_duration_rounds(spell.get("duration"))
         if match:
             start_concentration(char, match.id, rounds)
         else:
