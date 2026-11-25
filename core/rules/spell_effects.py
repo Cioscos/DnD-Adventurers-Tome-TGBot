@@ -52,6 +52,8 @@ class SpellVariant:
     immune_conditions: tuple[str, ...] = ()  # condizioni che il bersaglio non può avere finché dura
     ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
     not_self: bool = False  # il bersaglio è un'altra creatura, mai chi lancia (Legame di Protezione 2024)
+    # chi porta ancora lo stato non ne è influenzato di nuovo (409 ``already_affected``): lo stato cade con il suo Riposo Lungo (Preghiera di Guarigione 2024)
+    once_per_long_rest: bool = False
     max_targets: Callable[[int], int] | None = None  # sostituisce ``target.count`` quando il numero di bersagli cambia con l'edizione (Saltare 2014)
     track: bool = False  # lo stato (e l'orologio di concentrazione) esiste anche senza modificatori: effetti solo descrittivi
     # PF al lancio, per ogni bersaglio: i temporanei (il maggiore vince) e la cura (limitata al massimo, Aiuto alza prima il massimo).

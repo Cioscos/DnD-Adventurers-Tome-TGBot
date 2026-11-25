@@ -1019,6 +1019,7 @@
           "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia.",
           "invalid_target": "Il bersaglio non è valido.",
           "self_only_spell": "Questo incantesimo vale solo per chi lo lancia: non si può dare ad altri.",
+          "already_affected": "Un bersaglio ha già ricevuto questo incantesimo: vale di nuovo solo dopo il suo Riposo Lungo.",
           "target_dead": "Il bersaglio è morto.",
           "invalid_choice": "La scelta non è valida.",
           "option_unavailable": "Quell'opzione non è disponibile per questo lancio."

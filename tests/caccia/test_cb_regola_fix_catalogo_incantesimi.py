@@ -2,7 +2,7 @@
 import pytest
 
 from core.db.models import Character
-from tests.integration._encounter_helpers import GM_ID, as_user
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 
 HAIL = "spell:hail_of_thorns:hit"
 
@@ -109,3 +109,27 @@ async def test_legame_di_protezione_2024_non_si_lancia_su_se_stessi(client, su_d
     # il foglio dei bersagli non offre «te stesso»
     effetto = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == legame)["effect"]
     assert effetto["not_self"] is True
+
+
+@pytest.mark.caccia(id="CB-4075", fonte="2024 · Incantesimi · Preghiera di Guarigione · pag. 307", zona="regola:2024/incantesimi-M-R", voce="ripetizione",
+                    copre=["carta:2024/spells.md#Preghiera di Guarigione", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "POST /characters/{char_id}/rest"])
+async def test_preghiera_di_guarigione_2024_non_vale_di_nuovo_prima_del_riposo_lungo_del_bersaglio(client, test_session_factory):
+    from tests.integration.rules.test_spell_effects_defenses import _sheet, _table
+    eroe, chierico, preghiera = await _table(client, test_session_factory, "Preghiera di Guarigione", "prayer-of-healing", 2,
+                                             hero_edition="2024", caster_edition="2024")
+    lancia = lambda: client.post(f"/characters/{chierico}/spells/{preghiera}/use",  # noqa: E731
+                                 json={"slot_level": 2, "targets": [eroe], "confirm": ["one_slot_per_turn"]})
+    as_user(GM_ID)
+    assert (await lancia()).status_code == 200
+    slot = lambda scheda: next(s["available"] for s in scheda["spell_slots"] if s["level"] == 2)  # noqa: E731
+    prima = slot(await _sheet(client, chierico, GM_ID))
+    as_user(GM_ID)
+    r = await lancia()
+    # «una creatura non può essere influenzata di nuovo finché non termina un Riposo Lungo»
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "already_affected", r.text[:300]
+    assert slot(await _sheet(client, chierico, GM_ID)) == prima
+    as_user(PLAYER_ID)  # il Riposo Lungo dell'eroe, non quello di chi lancia
+    assert (await client.post(f"/characters/{eroe}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
+    as_user(GM_ID)
+    assert (await lancia()).status_code == 200

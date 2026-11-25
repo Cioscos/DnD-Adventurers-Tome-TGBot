@@ -1019,6 +1019,7 @@
           "surge_no_magic": "The extra action from Action Surge cannot be the Magic action.",
           "invalid_target": "The target is not valid.",
           "self_only_spell": "This spell only affects its caster: it cannot be given to others.",
+          "already_affected": "A target already received this spell: it works on them again only after their Long Rest.",
           "target_dead": "The target is dead.",
           "invalid_choice": "The choice is not valid.",
           "option_unavailable": "That option is not available for this cast."

@@ -88,6 +88,13 @@ async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Ch
         raise _invalid("invalid_choice")
 
 
+def _check_again(effect: SpellEffect, variant: SpellVariant, chars: list[Character]) -> None:
+    """409 ``already_affected``: un bersaglio porta ancora lo stato di un incantesimo che non lo influenza di nuovo prima del suo Riposo Lungo."""
+    key = f"{SPELL_STATE_PREFIX}{effect.key}"
+    if variant.once_per_long_rest and any(s.get("key") == key for c in chars for s in c.active_states or []):
+        raise _invalid("already_affected", status.HTTP_409_CONFLICT)
+
+
 async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: int,
                    targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = ()):
     """``(effetto, variante, bersagli, scelte, fuori_serata)`` o ``None`` se l'incantesimo non è nel catalogo.
@@ -104,6 +111,7 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
         raise _invalid("invalid_target")  # solo su un'altra creatura (Legame di Protezione 2024)
     if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio
         await _check_weapon(session, variant, caster, chosen)
+        _check_again(effect, variant, [caster])
         return effect, variant, [caster], chosen, False
     if len(targets) != len(set(targets)) or len(targets) > effect.max_targets(edition, slot_level) + (TWINNED_KEY in options):  # Raddoppiato: una creatura in più
         raise _invalid("invalid_target")
@@ -116,6 +124,7 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
             if ally.is_dead:
                 raise _invalid("target_dead", status.HTTP_409_CONFLICT)
             chars.append(ally)
+    _check_again(effect, variant, chars)
     if not outside and chars:
         await _check_weapon(session, variant, chars[0], chosen)
     else:
