@@ -92,7 +92,6 @@ async def test_i_privilegi_di_circolo_usano_la_cd_degli_incantesimi_con_gli_ogge
 @pytest.mark.caccia(id="CB-2314", fonte="2024 · Druido · Incantesimi (preparati solo di livelli per cui si hanno slot) · pag. 79", zona="regola:2024/druid",
                     voce="limiti", copre=["carta:2024/classes/druid.md#Incantesimi / Spellcasting (Druido 1, pag. 79)", "POST /characters/{char_id}/spells"])
 @pytest.mark.parametrize("livello_druido,livello_incantesimo", [(1, 2), (2, 2), (4, 3), (16, 9)])
-@pytest.mark.xfail(strict=True, reason="CB-2314: difforme dal manuale, confermato")
 async def test_il_druido_2024_non_prepara_incantesimi_di_un_livello_senza_slot(client, livello_druido, livello_incantesimo):
     cid = await _druid24(client, livello_druido)  # il limite della tabella lascia posto fra i preparati
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Incantesimo alto", "level": livello_incantesimo, "is_prepared": True})

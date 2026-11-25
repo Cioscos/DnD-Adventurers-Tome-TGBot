@@ -88,7 +88,6 @@ async def test_paladino_di_primo_livello_non_ha_cd_degli_incantesimi(client):
                     zona="regola:2014/paladin", voce="regola",
                     copre=["carta:2014/classes/paladin.md#Incantesimi / Spellcasting (Paladino 2, pag. 97)",
                            "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-1863: difforme dal manuale, confermato")
 async def test_non_si_prepara_un_incantesimo_di_livello_senza_slot(client):
     cid = await _paladino(client, 2, charisma=16)  # slot solo di 1° livello, tetto dei preparati 3 + 1
     classe = (await _scheda(client, cid))["classes"][0]["id"]

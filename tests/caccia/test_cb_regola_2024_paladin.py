@@ -54,7 +54,6 @@ async def test_un_paladino_puo_scegliere_l_aura_di_protezione_piu_forte_di_un_co
                     zona="regola:2024/paladin", voce="regola",
                     copre=["carta:2024/classes/paladin.md#Incantesimi / Spellcasting (Paladino 1, pag. 109)",
                            "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-2462: difforme dal manuale, confermato")
 async def test_il_paladino_2024_non_prepara_un_incantesimo_di_livello_senza_slot(client):
     cid = await _paladin24(client, 4, charisma=16)  # slot solo di 1° livello, 5 preparati
     classe = (await _full(client, cid))["classes"][0]["id"]
