@@ -250,3 +250,17 @@ async def test_i_privilegi_contro_la_cd_incantesimi_contano_i_bonus_degli_oggett
     r = await _usa(client, cid, chiave, **corpo)
     assert r.status_code == 200, r.text
     assert (await _effect(client, cid, chiave))["save_dc"] == cd
+
+
+@pytest.mark.caccia(id="CB-4783", fonte="2024 · Talenti · Iniziato alla Magia · pag. 201; 2014 · Iniziato alla Magia · pag. 168: gli incantesimi del talento hanno CD e attacco degli incantesimi",
+                    zona="regola:2024/talenti", voce="interazione",
+                    copre=["PUT /characters/{char_id}/feats/{ability_id}/options", "GET /characters/{char_id}"])
+async def test_gli_incantesimi_di_un_talento_contano_i_bonus_degli_oggetti(client):
+    cid = await _crea(client, "2024", ("fighter", 4, None))
+    riga = _feat_rows((await _take(client, cid, "2024_magic_initiate")).json(), "2024_magic_initiate")[0]
+    r = await _complete(client, cid, riga["id"], {"list": "wizard", "ability": "intelligence"},
+                        [_spell("Luce", 0, "light"), _spell("Dardo di Fuoco", 0, "fire-bolt"), _spell("Charme", 1, "charm-person")])
+    assert r.status_code == 200, r.text
+    await _amuleto(client, cid)
+    charme = next(s for s in (await _scheda(client, cid))["spells"] if s["srd_index"] == "charm-person")
+    assert (charme["save_dc"], charme["attack_bonus"]) == (8 + 2 + 2 + 1, 2 + 2 + 1)

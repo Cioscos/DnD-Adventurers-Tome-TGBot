@@ -141,10 +141,16 @@ def caster_ability(row: Any) -> str:
     return stored or ("intelligence" if getattr(row, "subclass_key", None) in THIRD_SUBCLASSES else "")
 
 
+def _stats(char: Any, class_id: int | None, name: str, ability: str, dc_bonus: int = 0) -> CasterStats:
+    """CD e attacco con questa caratteristica, bonus degli oggetti compresi."""
+    attack = char.proficiency_bonus + effective_ability_mod(char, ability)
+    return CasterStats(class_id, name, ability, 8 + attack + dc_bonus + item_bonus_total(char.items, "spell_dc"),
+                       attack + item_bonus_total(char.items, "spell_attack"))
+
+
 def caster_stats(char: Any) -> list[CasterStats]:
     out: list[CasterStats] = []
     edition = character_edition(char)
-    pb = char.proficiency_bonus
     for row in char.classes:
         ability = caster_ability(row)
         if not ability:
@@ -153,10 +159,8 @@ def caster_stats(char: Any) -> list[CasterStats]:
         # anche con una caratteristica salvata; una classe custom conserva la propria.
         if normalize_class_name(row.class_name) is not None and caster_kind(row, edition) is None:
             continue
-        mod = effective_ability_mod(char, ability)
         innate = 1 if edition == "2024" and row_class_key(row) == "sorcerer" and has_state(char, "innate_sorcery") else 0  # Stregoneria Innata
-        out.append(CasterStats(row.id, row.class_name, ability, 8 + pb + mod + innate + item_bonus_total(char.items, "spell_dc"),
-                               pb + mod + item_bonus_total(char.items, "spell_attack")))
+        out.append(_stats(char, row.id, row.class_name, ability, innate))
     return out
 
 
@@ -174,8 +178,7 @@ def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
     key = getattr(spell, "srd_index", None)
     for spec, row in active_features(char):
         if spec.dc_ability and key and key in spec.granted_spells and getattr(spell, "class_id", row.id) in (None, row.id):
-            mod = effective_ability_mod(char, spec.dc_ability)
-            return CasterStats(row.id, row.class_name, spec.dc_ability, 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+            return _stats(char, row.id, row.class_name, spec.dc_ability)
     return None
 
 
@@ -189,8 +192,7 @@ def _feat_stats(char: Any, spell: Any) -> CasterStats | None:
                 else {"ability": (row.options or {}).get("spell_ability")} if spec.class_key == "species" else {})
         own = {*(opts.get("cantrips") or []), *(opts.get("spell") or []), *(opts.get("rituals") or []), *spec.granted_spells}
         if opts.get("ability") and names & own:  # anche gli incantesimi fissi del talento (Passo velato, Mano magica)
-            mod = effective_ability_mod(char, opts["ability"])
-            return CasterStats(None, "feat", opts["ability"], 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+            return _stats(char, None, "feat", opts["ability"])
     return None
 
 
