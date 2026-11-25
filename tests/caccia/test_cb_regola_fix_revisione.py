@@ -349,3 +349,23 @@ async def test_chiusa_la_serata_a_meta_scontro_non_e_piu_il_turno_di_un_altro(cl
     assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
     come_utente(PLAYER_ID)
     assert "ranger.foe_slayer_attack" in await _roll_keys(client, cid, "attack", item_id=spada)
+
+
+@pytest.mark.caccia(id="CB-4791", fonte="2014 · Ranger · Sterminatore di Nemici · pag. 105 (solo nei propri turni)", zona="regola:2014/ranger", voce="interazione",
+                    copre=["POST /sessions/{session_id}/encounter/sync-pcs", "GET /characters/{char_id}/roll-options"])
+async def test_chi_entra_a_scontro_avviato_non_e_nel_proprio_turno(client, test_session_factory, monkeypatch, come_utente):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    come_utente(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/start", json={})).status_code == 200  # turno del primo PG
+    come_utente(555)
+    cid = await _crea(client, "2014", ("ranger", 20, None))
+    spada = await _sword(client, cid)
+    async with test_session_factory() as s:
+        s.add(SessionParticipant(session_id=sid, user_id=555, character_id=cid, role=SessionRole.PLAYER, joined_at="2026-01-01T00:00:00+00:00"))
+        await s.commit()
+    come_utente(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/sync-pcs")
+    assert r.status_code == 200, r.text
+    come_utente(555)
+    assert "ranger.foe_slayer_attack" not in await _roll_keys(client, cid, "attack", item_id=spada)

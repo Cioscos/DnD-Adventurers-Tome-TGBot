@@ -410,6 +410,8 @@ async def sync_pcs(
     touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
+    if enc.status == "active":
+        await mark_turn_owner(db, enc)  # chi entra a scontro avviato sa subito che è il turno di un altro
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
