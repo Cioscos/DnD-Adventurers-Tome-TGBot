@@ -1603,9 +1603,11 @@
         "form_hint": "A Medium or smaller beast of CR 1/4 or lower. HP, AC, attack and damage follow your level and proficiency.",
         "form_errors": {
           "companion_exists": "You already have a living beast: a new one only when it dies.",
-          "feature_unavailable": "You need the Beast Master archetype.",
-          "beast_not_allowed": "The ranger's beast must be a Medium or smaller beast of CR 1/4 or lower: add it as a plain companion."
-        }
+          "feature_unavailable": "You need the Beast Master archetype."
+        },
+        "not_allowed_title": "Beast not allowed",
+        "not_allowed_body": "The ranger's beast must be a Medium or smaller beast of CR 1/4 or lower.",
+        "not_allowed_confirm": "Add anyway"
       },
       "title": "Extras",
       "add": "Add",

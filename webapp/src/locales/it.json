@@ -1602,9 +1602,11 @@
         "form_hint": "Una bestia Media o più piccola, GS 1/4 o meno. PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
         "form_errors": {
           "companion_exists": "Hai già una bestia viva: una nuova solo quando muore.",
-          "feature_unavailable": "Serve l'archetipo Signore delle Bestie.",
-          "beast_not_allowed": "La bestia del ranger dev'essere una bestia Media o più piccola, GS 1/4 o meno: aggiungila come compagno semplice."
-        }
+          "feature_unavailable": "Serve l'archetipo Signore delle Bestie."
+        },
+        "not_allowed_title": "Bestia non ammessa",
+        "not_allowed_body": "La bestia del ranger dev'essere una bestia Media o più piccola, GS 1/4 o meno.",
+        "not_allowed_confirm": "Aggiungi comunque"
       },
       "title": "Extra",
       "add": "Aggiungi",

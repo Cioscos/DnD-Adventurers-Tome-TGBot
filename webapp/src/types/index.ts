@@ -1282,7 +1282,7 @@ export interface HitDiceResult {
 }
 
 /** `spell_school`: l'incantesimo che ha creato l'evocato (Evocazioni Perduranti, Servitori Non Morti del Mago). */
-export type CompanionPayload = { spell_school?: 'conjuration' | 'necromancy' | null } & Partial<Pick<Companion,
+export type CompanionPayload = { spell_school?: 'conjuration' | 'necromancy' | null; force?: boolean } & Partial<Pick<Companion,
   'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active' | 'feature_key'>>
 
 export interface CompanionAttackResult {

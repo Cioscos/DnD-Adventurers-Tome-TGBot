@@ -87,7 +87,7 @@ async def test_l_attacco_della_bestia_non_prende_le_opzioni_d_attacco_del_ranger
     assert r.status_code == 409, r.text  # la Saggezza del ranger non va sul tiro per colpire della bestia
 
 
-@pytest.mark.caccia(id="CB-1913", fonte="2014 · Ranger · Signore delle Bestie · Compagno del Ranger: bestia Media o più piccola, GS 1/4 o meno · pag. 106",
+@pytest.mark.caccia(id="CB-1913", fonte="decisione D-042 (tests/caccia/decisioni.md): fuori regola si ammette solo confermando; 2014 · Ranger · Signore delle Bestie · Compagno del Ranger: bestia Media o più piccola, GS 1/4 o meno · pag. 106",
                     zona="regola:2014/ranger", voce="regola",
                     copre=["carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)",
                            "POST /characters/{char_id}/companions"])
@@ -98,7 +98,7 @@ async def test_la_bestia_compagna_rispetta_taglia_grado_di_sfida_e_tipo(client, 
     sb = beast(cr=cr, type_=kind, dex=15, con=10)
     sb["size"] = size
     r = await _companion(client, cid, statblock=sb)
-    assert r.status_code == 422, r.text
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "beast_not_allowed", r.text
 
 
 @pytest.mark.caccia(id="CB-1914", fonte="2014 · Ranger · Nascondersi in Piena Vista: muoversi, compiere un'azione o una reazione fa perdere il bonus · pag. 105",

@@ -4,12 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
 import SaveRollSheet from '@/components/SaveRollSheet'
+import Extras from '@/pages/Extras'
+import { ApiError } from '@/api/client'
 
-const { getChar, updateXP, rollSave } = vi.hoisted(() => ({ getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn() }))
+const { getChar, updateXP, rollSave, createComp } = vi.hoisted(() => ({ getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn(), createComp: vi.fn() }))
 
 vi.mock('@/api/client', () => ({
-  api: { characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave } } },
-  ApiError: class ApiError extends Error {},
+  api: { characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave } }, companions: { list: vi.fn(async () => []), create: createComp } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => async () => undefined, d20Arg: () => undefined }))
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useParams: () => ({ id: '5' }) }))
@@ -18,6 +20,7 @@ vi.mock('react-i18next', async (orig) => ({
 }))
 vi.mock('@/components/Layout', () => ({ default: (p: { children?: React.ReactNode }) => <div>{p.children}</div> }))
 vi.mock('@/pages/multiclass/LevelUpModal', () => ({ default: () => null }))
+vi.mock('@/pages/extras/CompanionForm', () => ({ default: (p: { onSubmit: (b: object) => void }) => <button onClick={() => p.onSubmit({ name: 'Orso' })}>invia</button> }))
 
 afterEach(() => { getChar.mockReset(); updateXP.mockReset() })
 
@@ -44,5 +47,17 @@ describe('caccia: decisioni', () => {
     await user.click(screen.getByRole('radio', { name: 'character.stats.dexterity' }))
     await user.click(screen.getByText('pendingSaves.roll'))
     await waitFor(() => expect(rollSave).toHaveBeenCalledWith(5, 1, undefined, false, 'dexterity'))
+  })
+
+  // caccia: {"id": "CB-4618", "fonte": "decisione D-042 (tests/caccia/decisioni.md): la bestia del ranger 2014 fuori regola si aggiunge solo confermando; pag. 106", "zona": "regola:2014/ranger", "voce": "interazione", "copre": ["carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)", "route:/char/:id/extras"]}
+  it('la bestia fuori regola chiede conferma e la conferma la aggiunge', async () => {
+    getChar.mockResolvedValue({ id: 5, classes: [], abilities: [], spell_slots: [], rules_edition: '2014' })
+    createComp.mockRejectedValueOnce(new ApiError(409, { code: 'beast_not_allowed' })).mockResolvedValue({})
+    renderWithProviders(<Extras />)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    await user.click(await screen.findByText('character.extras.add'))
+    await user.click(screen.getByText('invia'))
+    await user.click(await screen.findByText('character.extras.beast.not_allowed_confirm'))
+    await waitFor(() => expect(createComp).toHaveBeenLastCalledWith(5, { name: 'Orso', force: true }))
   })
 })

@@ -19,23 +19,40 @@ def _from_catalog(index: str, size: str, kind: str, cr: float) -> dict:
     return {"srd_index": index, "statblock": sb}
 
 
-@pytest.mark.caccia(id="CB-4351", fonte="2014 · Ranger · Signore delle Bestie · Compagno del Ranger: bestia Media o più piccola, GS 1/4 o meno · pag. 106",
+@pytest.mark.caccia(id="CB-4351", fonte="decisione D-042 (tests/caccia/decisioni.md): fuori regola 409, superabile con la conferma, anche sul PATCH; 2014 · Ranger · Signore delle Bestie · Compagno del Ranger: bestia Media o più piccola, GS 1/4 o meno · pag. 106",
                     zona="regola:2014/ranger", voce="limiti",
                     copre=["carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)",
-                           "POST /characters/{char_id}/companions"])
+                           "POST /characters/{char_id}/companions", "PATCH /characters/{char_id}/companions/{comp_id}"])
 @pytest.mark.parametrize("body,status", [
     (_from_catalog("wolf", "Medium", "beast", 0.25), 201),  # al limite: Media, GS 1/4
     (_from_catalog("cat", "tiny", "beast", 0), 201),  # import di D&D Beyond: taglia in minuscolo
-    (_from_catalog("brown-bear", "Large", "beast", 1), 422),
-    (_from_catalog("young-red-dragon", "Large", "dragon", 10), 422),
+    (_from_catalog("brown-bear", "Large", "beast", 1), 409),
+    ({**_from_catalog("brown-bear", "Large", "beast", 1), "force": True}, 201),  # confermata
+    (_from_catalog("young-red-dragon", "Large", "dragon", 10), 409),
     ({"statblock": {"actions": [{"name": "Morso", "attack_bonus": 4, "damage_dice": "1d6+2"}]}}, 201),  # a mano: nulla da verificare
 ])
-async def test_la_bestia_fuori_dai_limiti_e_rifiutata_e_quella_nei_limiti_accettata(client, body, status):
+async def test_la_bestia_fuori_dai_limiti_chiede_conferma_e_quella_nei_limiti_accettata(client, body, status):
     cid = await _master(client, 3)
     r = await _companion(client, cid, **body)
     assert r.status_code == status, r.text
-    if status == 422:
-        assert r.json()["detail"] == "beast_not_allowed"
+    if status == 409:
+        assert r.json()["detail"]["code"] == "beast_not_allowed"
+
+
+@pytest.mark.caccia(id="CB-4617", fonte="decisione D-042 (tests/caccia/decisioni.md): la bestia del ranger 2014 fuori regola chiede conferma anche sul PATCH con statblock; pag. 106",
+                    zona="regola:2014/ranger", voce="limiti",
+                    copre=["carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)",
+                           "PATCH /characters/{char_id}/companions/{comp_id}"])
+async def test_lo_statblock_della_bestia_cambiato_fuori_regola_chiede_conferma(client):
+    cid = await _master(client, 3)
+    comp = (await _companion(client, cid, **_from_catalog("wolf", "Medium", "beast", 0.25))).json()
+    orso = _from_catalog("brown-bear", "Large", "beast", 1)["statblock"]
+    url = f"/characters/{cid}/companions/{comp['id']}"
+    r = await client.patch(url, json={"statblock": orso})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "beast_not_allowed", r.text
+    r = await client.patch(url, json={"statblock": orso, "force": True})
+    assert r.status_code == 200 and r.json()["statblock"]["challenge_rating"] == 1, r.text
+    assert (await client.patch(url, json={"statblock": orso, "name": "Bruno"})).status_code == 200  # già confermata: non si richiede
 
 
 @pytest.mark.caccia(id="CB-4352", fonte="2024 · Druido · Regole della Forma Selvatica: Forza, Destrezza e Costituzione sono quelle della Bestia · pag. 81",

@@ -100,6 +100,12 @@ async def _refuse_second_beast(session: AsyncSession, char: Character, comp: Com
         raise HTTPException(status_code=422, detail="companion_exists")
 
 
+def _refuse_beast_out_of_rule(statblock: dict) -> None:
+    """Compagno del Ranger 2014 oltre taglia, GS o tipo: si ammette solo confermando (D-042), come la Forma Selvatica."""
+    if not rangers_beast_allowed(statblock):
+        raise HTTPException(status_code=409, detail={"code": "beast_not_allowed"})
+
+
 @router.get("/{char_id}/companions", response_model=list[CompanionRead])
 async def list_companions(
     char_id: int,
@@ -132,15 +138,15 @@ async def create_companion(
             raise HTTPException(status_code=422, detail="feature_unavailable")
         if any(c.feature_key == body.feature_key and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
-        if body.feature_key == BEAST_COMPANION and not rangers_beast_allowed(body.statblock):  # resta aggiungibile come compagno semplice
-            raise HTTPException(status_code=422, detail="beast_not_allowed")
+        if body.feature_key == BEAST_COMPANION and not body.force:
+            _refuse_beast_out_of_rule(body.statblock)
     limits = form_limits(char)
     if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
         raise HTTPException(status_code=409, detail={"code": "use_activate"})
     if body.kind == "wild_shape" and limits is not None and limits.known_forms is not None:
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
             raise HTTPException(status_code=422, detail="known_forms_limit")
-    data = body.model_dump()
+    data = body.model_dump(exclude={"force"})
     school = data.pop("spell_school", None)  # l'incantesimo che l'ha creato: i privilegi del Mago ne danno PF temporanei
     if school == "necromancy":  # Servitori Non Morti lo legge dallo statblock: PF e danni seguono il livello del mago
         data["statblock"] = {**data["statblock"], THRALL_KEY: True}
@@ -169,7 +175,7 @@ async def update_companion(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
     was_active = comp.is_active
-    changes = body.model_dump(exclude_unset=True)
+    changes = body.model_dump(exclude_unset=True, exclude={"force"})
     for required in ("kind", "name", "statblock", "max_hp", "armor_class", "temp_hp", "is_active", "current_hp"):
         if required in changes and changes[required] is None:
             raise HTTPException(status_code=422, detail=f"{required}_required")
@@ -178,6 +184,8 @@ async def update_companion(
         changes["statblock"] = {k: v for k, v in changes["statblock"].items() if k != "hit_dice_spent"}
         if kept is not None:
             changes["statblock"]["hit_dice_spent"] = kept
+        if comp.feature_key == BEAST_COMPANION and not body.force and changes["statblock"] != comp.statblock:
+            _refuse_beast_out_of_rule(changes["statblock"])
     limits = form_limits(char)
     if changes.get("kind") == "wild_shape" and comp.kind != "wild_shape" and limits is not None and limits.known_forms is not None:
         rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
