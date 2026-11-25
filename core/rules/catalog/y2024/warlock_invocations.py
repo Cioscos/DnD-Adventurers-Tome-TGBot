@@ -208,7 +208,7 @@ def _gaze_state(_ctx: RuleContext, _params: dict) -> StateSpec:
 
 GAZE_USE = OnUse(slot="bonus", state=_gaze_state)
 # I PF temporanei sono il massimo dei dadi (2d4 + 4): niente tiro
-VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 12)  # Vita Falsa 2024: 2d4+4, il massimo (p.271)
+VIGOR_USE = OnUse(slot="action", magic_action=True, temp_hp=lambda _c, _rolled: 12)  # Vita Falsa 2024: 2d4+4, il massimo (p.271)
 CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio attacca con la sua reazione
 
 

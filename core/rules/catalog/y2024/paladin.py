@@ -220,7 +220,7 @@ def _steed_cast(ctx: RuleContext, params: dict) -> None:
 
 
 STEED_USE = OnUse(
-    slot="action", effect=_steed_cast, texts=(UseText("name", _both("Nome del destriero", "Steed name"), max_len=80, optional=True),),
+    slot="action", magic_action=True, effect=_steed_cast, texts=(UseText("name", _both("Nome del destriero", "Steed name"), max_len=80, optional=True),),
     message=lambda _c, _p: _both("Lanci Trova Destriero senza slot: il destriero è fra i compagni (CA 12, 25 PF, 18 m).",
                                  "You cast Find Steed with no slot: the steed is among your companions (AC 12, 25 HP, 60 ft)."))
 

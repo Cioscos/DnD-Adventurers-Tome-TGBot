@@ -42,6 +42,14 @@ def action_taken(st: dict) -> bool:
     return bool(st["action_used"] or st["action_attacks"] > 0)
 
 
+def refuse_surge_magic(char) -> None:
+    """2024: l'azione in più (Azione Impetuosa pag. 91, Velocità) non può essere Magia. L'azione Attacco già iniziata (attacchi
+    o lancio fatti) è l'azione spesa; la Magia da Guerra fa parte dell'Attacco (non passa di qui)."""
+    st = get_turn(char)
+    if (action_taken(st) or st.get("action_spell_level") is not None) and st["extra_actions"] > 0:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "surge_no_magic"})
+
+
 def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     """Segna ``slot`` come usato; 409 ``turn_slot_used`` se lo era già.
 

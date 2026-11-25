@@ -131,7 +131,7 @@ def _primal_effect(ctx: RuleContext, params: dict) -> None:
 
 PRIMAL_USE = OnUse(
     cost=1, cost_by=lambda _c, p: 1 if p.get("pay") == "use" else 0, slot_by=lambda _c, p: "action" if p.get("pay") == "slot" else None,
-    spends_slot="slot_level", spends_slot_when=lambda _c, p: p.get("pay") == "slot", check=_primal_check, effect=_primal_effect,
+    magic_action=True, spends_slot="slot_level", spends_slot_when=lambda _c, p: p.get("pay") == "slot", check=_primal_check, effect=_primal_effect,
     choices=(UseChoice("pay", _both("Costo", "Cost"), lambda _c: list(_PAYMENTS), lambda k: _PAYMENTS[k]),
              UseChoice("kind", _both("Bestia", "Beast"), lambda _c: list(BEASTS), lambda k: _KIND[k], optional=True),
              UseChoice("damage_type", _both("Tipo di danno", "Damage type"), lambda _c: list(_DAMAGE), lambda k: _DAMAGE[k], optional=True),

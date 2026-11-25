@@ -285,3 +285,36 @@ async def test_armi_a_due_mani_2024_anche_il_dado_di_superiorita_vale_almeno_3(c
     r = await _damage(client, cid, colpo, _key("pushing"))
     assert r.status_code == 200, r.text
     assert r.json()["option_result"]["extra_rolls"] == [3]  # «ogni 1 o 2 sui dadi di danno conta come 3»
+
+
+@pytest.mark.caccia(id="CB-4785", fonte="2024 · Guerriero · Azione Impetuosa · pag. 91: l'azione in più non può essere l'azione Magia; Paladino · Destriero Fedele · pag. 111; Warlock · Vigore Immondo · pag. 155; Chierico · Preservare Vita; Ranger · Compagno Primordiale · pag. 122",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Azione Impetuosa / Action Surge (Guerriero 2, pag. 91)",
+                           "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/preserve-life"])
+@pytest.mark.parametrize("caso", ["destriero", "vigore", "preservare", "compagno"])
+async def test_azione_impetuosa_non_paga_i_lanci_e_i_privilegi_ad_azione_magia(client, caso):
+    classe = {"destriero": ("paladin", 5, None), "vigore": ("warlock", 2, None), "preservare": ("cleric", 3, "Dominio della Vita"),
+              "compagno": ("ranger", 3, "Signore delle Bestie")}[caso]
+    cid = await _crea(client, "2024", ("fighter", 2, None), classe)
+    if caso == "vigore":
+        scelta = next(c for c in (await _scheda(client, cid))["pending_choices"] if c.get("group") == "invocations")
+        chiavi = ["fiendish_vigor", *(o["key"] for o in scelta["options"] if o["key"] not in ("fiendish_vigor", "agonizing_blast", "repelling_blast", "eldritch_spear"))]
+        r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": chiavi[:scelta["count"]]})
+        assert r.status_code == 200, r.text
+    if caso == "compagno":  # la bestia a terra si rialza con l'azione Magia e uno slot
+        r = await _usa(client, cid, "ranger.primal_companion", params={"pay": "use", "kind": "land", "damage_type": "slashing"})
+        assert r.status_code == 200, r.text
+        bestia = (await client.get(f"/characters/{cid}/companions")).json()[0]["id"]
+        r = await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "damage", "value": 999})
+        assert r.status_code == 200, r.text
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    assert (await _usa(client, cid, "fighter.action_surge")).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "action"})).status_code == 200
+    if caso == "preservare":
+        r = await client.post(f"/characters/{cid}/preserve-life", json={"allocations": [{"character_id": cid, "amount": 1}]})
+    else:
+        chiave, corpo = {"destriero": ("paladin.faithful_steed", {"params": {"name": "Lampo", "steed_type": "celestial"}}),
+                         "vigore": ("warlock.fiendish_vigor", {}),
+                         "compagno": ("ranger.primal_companion", {"params": {"pay": "slot", "kind": "land", "slot_level": "1"}})}[caso]
+        r = await _usa(client, cid, chiave, **corpo)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "surge_no_magic", r.text

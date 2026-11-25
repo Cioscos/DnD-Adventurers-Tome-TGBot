@@ -10,7 +10,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
-const ERRORS = ['over_half', 'over_pool', 'no_uses', 'turn_slot_used', 'invalid_target', 'target_dead', 'confirm_required', 'bad_allocation', 'feature_not_usable']
+const ERRORS = ['over_half', 'over_pool', 'no_uses', 'turn_slot_used', 'invalid_target', 'target_dead', 'confirm_required', 'bad_allocation', 'feature_not_usable', 'surge_no_magic']
 
 /** Preservare Vita (R42): 5 × livello PF fra chi lo usa e gli altri partecipanti della serata. Il server impone riserva,
  *  tetto alla metà dei PF massimi e destinatari; qui si vede solo quanto resta. Chi non è nell'app: lo dice il giocatore al GM (D1). */

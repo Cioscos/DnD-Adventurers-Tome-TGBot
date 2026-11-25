@@ -66,7 +66,7 @@ from core.rules.roll_options import AppliedOptions, option_names, scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
-from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
+from api.services.rules_turn import get_turn, refuse_if_incapacitated, refuse_surge_magic, spend
 from core.rules.catalog import active_features
 from core.rules.catalog.spells import hurled_lit, spell_effect
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX
@@ -238,15 +238,6 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
     return pool, total
 
 
-def _refuse_surge_magic(char: Character) -> None:
-    """Azione Impetuosa 2024: l'azione in più non può essere Magia. L'azione Attacco già iniziata (attacchi o lancio fatti) è
-    l'azione spesa; la Magia da Guerra fa parte dell'Attacco (non passa di qui)."""
-    turn = get_turn(char)
-    spent_action = turn["action_used"] or turn["action_attacks"] > 0 or turn.get("action_spell_level") is not None
-    if spent_action and turn["extra_actions"] > 0:
-        raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
-
-
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
@@ -297,7 +288,7 @@ def _consume_cast(
 
     if (not ritual and character_edition(char) == "2024" and _cast_kind(char, spell) == "action"
             and not _LONG_CASTING.search(spell.casting_time or "") and not war_magic):
-        _refuse_surge_magic(char)
+        refuse_surge_magic(char)
     if ki_pool is not None:
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
             spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
@@ -674,7 +665,7 @@ async def spell_attack(
     elif lit is not None:  # Produrre Fiamma 2024: non è un lancio, si scaglia la fiamma accesa con un'azione Magia
         if not lit:
             raise HTTPException(status_code=409, detail={"code": "flame_not_lit"})
-        _refuse_surge_magic(char)
+        refuse_surge_magic(char)
         _mark_turn_slot(char, spell, _slot_marks(char), await active_encounter_row(session, char.id) is not None, kind="action")
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)

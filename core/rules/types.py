@@ -310,6 +310,7 @@ class OnUse:
     maximize_if: "Callable[[RuleContext, dict], bool] | None" = None
     maximize_cost: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
+    magic_action: bool = False  # 2024: l'azione spesa è l'azione Magia (il riassunto non comincia con «Magic action»)
     once_per_turn: bool = False
     # con ``once_per_turn``: una volta per il proprio turno, il turno di un altro non riapre l'uso (Forza Vivificante: «all'inizio
     # di ogni tuo turno»); lo riapre solo ``reset_turn``

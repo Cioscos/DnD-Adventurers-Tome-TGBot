@@ -1788,6 +1788,7 @@
       "preserve_living": "None is a construct or an undead",
       "preserve_go": "Heal",
       "preserve_errors": {
+        "surge_no_magic": "The extra action cannot be the Magic action.",
         "over_half": "Someone would go above half their maximum HP: lower the numbers.",
         "over_pool": "You split more HP than the pool.",
         "no_uses": "No Channel Divinity uses left.",
@@ -1897,6 +1898,7 @@
       "weapon_range": "Range {{range}}",
       "use_attack": "Attack roll: {{total}} (d20 {{die}} {{bonus}})",
       "use_errors": {
+        "surge_no_magic": "The extra action cannot be the Magic action.",
         "target_not_down": "The target already has at least that many HP: no use was spent.",
         "nothing_to_remove": "None of the chosen conditions is present: no points were spent.",
         "invalid_target": "A creature is not seated at your session.",
