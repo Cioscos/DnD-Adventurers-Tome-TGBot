@@ -42,14 +42,14 @@ from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
     UndoLog, clear_effects_for, expire_effect, release_concentration_effects, undo_last_advance,
 )
-from api.services.durations import end_concentration, process_edge
+from api.services.durations import end_concentration, mark_turn_owner, process_edge
 from api.services.rules_states import MINUTE_ROUNDS, end_minute_states
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
     pc_char as _pc_char, set_condition as _set_condition,
 )
-from api.services.rules_turn import clear_turn, reset_turn, set_surprised
+from api.services.rules_turn import clear_turn, reset_turn, set_others_turn, set_surprised
 from api.services.thiefs_reflexes import add_second_turns
 from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block, pc_initiative_mod
@@ -466,6 +466,7 @@ async def start_encounter(
         if first_char is not None:
             reset_turn(first_char)  # il primo turno non passa da process_edge
             await apply_turn_start(db, first_char)
+    await mark_turn_owner(db, enc)
 
     await db.flush()
     if first is not None:
@@ -506,6 +507,7 @@ async def _turn_endpoint(
     if backward:
         await undo_last_advance(db, enc)
         moved = _advance_turn(enc, list(enc.combatants), backward=True)
+        await mark_turn_owner(db, enc)
         await db.flush()
         if moved is not None:
             await _notify_turn(enc, moved)
@@ -526,6 +528,7 @@ async def _advance_forward(db: AsyncSession, enc: Encounter) -> Optional[Combata
         if outgoing is not None:
             await process_edge(db, enc, outgoing, "end", undo)
         await process_edge(db, enc, moved, "start", undo)
+        await mark_turn_owner(db, enc)
         enc.last_advance_undo = undo.to_json()
         await db.flush()
         await notify_saves(db, undo.created_saves)
@@ -864,10 +867,14 @@ async def delete_combatant(
             if enc.active_combatant_id == extra.id:
                 _move_pointer_off(enc, list(enc.combatants), extra.id)
             await db.delete(extra)
+    if comb.character_id is not None and (pc := await db.get(Character, comb.character_id)) is not None:
+        set_others_turn(pc, False)  # fuori dallo scontro non c'è il turno di un altro
     await db.delete(comb)
     touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
+    if enc.status == "active":
+        await mark_turn_owner(db, enc)
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 

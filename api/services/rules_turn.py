@@ -171,6 +171,14 @@ def set_damaged(char, value: bool = True) -> None:
         _save(char, {**st, "damaged": value})
 
 
+def set_others_turn(char, value: bool) -> None:
+    """In uno scontro è (o non è) il turno di un altro combattente: ``turn_state["others_turn"]``, letto da ciò che vale solo
+    nei propri turni (Sterminatore di Nemici 2014). ``reset_turn`` e ``clear_turn`` lo tolgono; fuori da uno scontro non c'è."""
+    st = get_turn(char)
+    if bool(st.get("others_turn")) != value:
+        _save(char, {**st, "others_turn": value})
+
+
 def set_surprised(char, value: bool = True) -> None:
     """2014: il turno in corso è quello della sorpresa (nessuna azione, movimento o reazione)."""
     st = get_turn(char)

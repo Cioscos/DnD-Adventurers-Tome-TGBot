@@ -3,9 +3,10 @@ import pytest
 
 from tests.caccia.test_cb_regola_2014_barbarian import _in_ira
 from tests.caccia.test_cb_regola_2014_bard import BI, _riga
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, seed_session
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, seed_session, setup_full_encounter
 from tests.integration._telegram_stub import install_fake_telegram
 from tests.integration.rules.test_2014_barbarian import _barbarian, _hit, _rage, _states
+from tests.integration.rules.test_2014_bard import _roll_keys, _sword
 from tests.integration.rules.test_2014_fighter import _fighter
 from tests.integration.rules.test_2014_rogue_thief import _reflexes_encounter
 
@@ -85,3 +86,32 @@ async def test_da_sorpreso_il_ladro_non_usa_l_azione_scaltra(client, test_sessio
     r = await client.post(f"/characters/{cid}/features/rogue.cunning_action/use", json={"params": {"action": "dash"}})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "incapacitated", r.text[:200]
     assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["bonus_used"] is False
+
+
+@pytest.mark.caccia(id="CB-4195", fonte="2014 · Ranger · Sterminatore di Nemici · pag. 105", zona="regola:2014/ranger", voce="interazione",
+                    copre=["carta:2014/classes/ranger.md#Sterminatore di Nemici / Foe Slayer (Ranger 20, pag. 105)",
+                           "POST /sessions/{session_id}/encounter/next-turn", "POST /sessions/{session_id}/encounter/prev-turn",
+                           "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/items/{item_id}/attack"])
+async def test_sterminatore_di_nemici_solo_nei_turni_del_ranger(client, test_session_factory, monkeypatch, come_utente):
+    # «una volta per turno, vale per un solo attacco a turno del ranger»: nel turno di un nemico (attacco di opportunità) non c'è
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)  # ordine: PG, goblin, goblin
+    come_utente(GM_ID)
+    cid = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]["character_id"]
+    come_utente(PLAYER_ID)
+    assert (await client.patch(f"/characters/{cid}/ability_scores/wisdom", json={"value": 16})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "ranger", "level": 20, "hit_die": 10})).status_code == 201
+    spada = await _sword(client, cid)
+    sterminatore = {"ranger.foe_slayer_attack", "ranger.foe_slayer_attack_late", "ranger.foe_slayer_damage"}
+    assert sterminatore <= set(await _roll_keys(client, cid, "attack", item_id=spada))  # nel suo turno
+    come_utente(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # turno del goblin
+    come_utente(PLAYER_ID)
+    assert not sterminatore & set(await _roll_keys(client, cid, "attack", item_id=spada))
+    r = await client.post(f"/characters/{cid}/items/{spada}/attack",
+                          json={"die": 10, "options": ["ranger.foe_slayer_attack"], "defer_damage": True, "confirm_extra_attack": True})
+    assert r.status_code == 409, r.text[:200]
+    come_utente(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200  # il GM torna al turno del ranger
+    come_utente(PLAYER_ID)
+    assert sterminatore <= set(await _roll_keys(client, cid, "attack", item_id=spada))
