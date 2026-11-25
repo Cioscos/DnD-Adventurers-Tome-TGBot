@@ -54,7 +54,6 @@ def _somma(pg: dict) -> dict[str, int]:
      {"class_name": "fighter", "level": 3, "subclass": "Maestro di Battaglia", "skill_choices": ["acrobatics", "history"]},
      "student_of_war_tool", 1),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3561: difforme dal manuale, confermato")
 async def test_strumento_del_background_non_consuma_la_scelta_di_classe(client, background, strumento, classe, gruppo, quanti):
     pg = await _crea(client, background, initial_class=classe)
     assert pg["tool_proficiencies"].get(strumento), pg["tool_proficiencies"]  # precondizione: lo strumento del background c'è

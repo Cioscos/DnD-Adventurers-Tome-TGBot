@@ -31,7 +31,7 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.proficiencies import (
     class_proficiencies, mark_seeded, merge_grant, validate_skill_choices,
 )
-from core.rules.level_choices import sync_level_choices
+from core.rules.level_choices import TOOL_SEED_FLAG, sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
@@ -132,6 +132,8 @@ async def create_class_for_character(
         char.current_hit_points = hp
         await session.flush()
 
+    if is_first_class:  # senza classi gli strumenti sulla scheda vengono da altre fonti (background, specie): non sono la sua scelta
+        char.settings = {**(char.settings or {}), TOOL_SEED_FLAG: True}
     await sync_class_feature_abilities(session, char, cls, lang=lang)
     if fresh_hp:  # un personaggio nuovo parte a PF pieni, anche se un privilegio alza il massimo (Resilienza Draconica)
         char.current_hit_points = max(char.current_hit_points, effective_hp_max(char))

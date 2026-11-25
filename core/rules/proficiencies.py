@@ -293,8 +293,8 @@ def is_weapon_proficient(char: Any, item: Any) -> bool:
     meta = _meta(item)
     category = meta.get("weapon_category")
     profs = _profs(char, "weapons", "other")
-    if category not in ("simple", "martial") or _unseeded_empty(char, profs):
-        return True
+    if category not in ("simple", "martial") or meta.get("pact_weapon") or _unseeded_empty(char, profs):
+        return True  # arma del patto, evocata o legata: competenza (Patto della Lama 2014 pag. 115, 2024 pag. 156)
     if category in profs or _canon(str(getattr(item, "name", ""))) in profs:
         return True
     from core.rules.weapons import WEAPONS, weapon_key  # import locale: weapons legge il registro dei talenti
