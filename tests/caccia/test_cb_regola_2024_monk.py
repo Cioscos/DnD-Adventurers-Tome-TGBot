@@ -34,7 +34,6 @@ async def _monaco(client, sottoclasse, livello, **punteggi) -> int:
                            "carta:2024/general.md#Dodge [Action] (Schivata) (pag. 366)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2411: difforme dal manuale, confermato")
 async def test_difesa_paziente_a_punto_da_vantaggio_ai_ts_su_destrezza(client, dadi):
     # La versione a 1 punto fa Disimpegno e Schivata: fino al prossimo turno i TS su Destrezza hanno vantaggio
     cid = await _monk24(client, 2)

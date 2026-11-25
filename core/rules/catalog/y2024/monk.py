@@ -81,6 +81,14 @@ def _patient_state(focus: bool):
     return state
 
 
+def _dodging_dex_save(ctx: RuleContext) -> bool:
+    """Schivata della Difesa Paziente a punto (Schivata, pag. 366): vantaggio ai TS su Destrezza; si perde con Velocità 0 (afferrato,
+    trattenuto). L'Incapacitato chiude già lo stato."""
+    on = {k for k, v in (ctx.char.conditions or {}).items() if v}
+    dodging = any(s.get("key") == "patient_defense" and (s.get("data") or {}).get("mode") == "disengage_dodge" for s in ctx.char.active_states or [])
+    return ctx.roll == "save" and ctx.ability == "dexterity" and dodging and not on & {"grappled", "restrained"}
+
+
 def _patient_dice(ctx: RuleContext) -> str:
     """Dal 10° la versione a punto dà due dadi Arti Marziali di PF temporanei; prima nessun dado."""
     return f"2{_die(ctx)[1:]}" if ctx.class_level >= 10 else ""
@@ -263,8 +271,8 @@ BASE_ROWS = (
             ("Difesa Paziente (1 punto)", "Patient Defense (1 point)"),
             ("Azione bonus e 1 punto: Disimpegno e Schivata insieme; chi ti attacca ha svantaggio. Dal 10° ottieni PF temporanei pari a due dadi Arti Marziali.",
              "Bonus action and 1 point: Disengage and Dodge together; attackers have disadvantage. From 10th you gain temporary hit points equal to two Martial Arts dice."),
-            "bonus_action", on_use=OnUse(slot="bonus", spends=KI, state=_patient_state(True), rolls=_patient_dice,
-                                         temp_hp=lambda _c, rolled: rolled)),
+            "bonus_action", modifiers=(Modifier("advantage", 1, when=_dodging_dex_save, source=f"feature:{PD_FOCUS}"),),
+            on_use=OnUse(slot="bonus", spends=KI, state=_patient_state(True), rolls=_patient_dice, temp_hp=lambda _c, rolled: rolled)),
     feature("step_of_the_wind", CK, ED, 2, "Passo del Vento / Step of the Wind (Monaco 2, pag. 102)", ("Passo del Vento", "Step of the Wind"),
             ("Azione bonus, gratis: Scatto.", "Bonus action, free: Dash."),
             "bonus_action", on_use=OnUse(slot="bonus", state=_step_state(False))),
