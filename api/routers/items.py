@@ -1332,7 +1332,8 @@ async def cast_from_scroll(
     it = lang != "en"
     ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato." if it else f"{item.name}: level {level} spell cast."
     if level >= 2:
-        die = random.randint(1, 20)
+        # una prova di Arcano vera: Dote Affidabile, vantaggio e svantaggio valgono come nella prova dalla scheda
+        die = resolve_applied("normal", None, None, modifiers_for(char, "skill", skill="arcana", ability="intelligence")).kept
         total = die + await check_bonus(session, char, "intelligence", "arcana")
         ok = total >= 10 + level
         text = ((f"Arcano {die} → {total} contro CD {10 + level}: " if it else f"Arcana {die} → {total} against DC {10 + level}: ")

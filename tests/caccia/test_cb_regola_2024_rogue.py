@@ -97,7 +97,6 @@ async def test_conoscenza_potenziata_da_psi_vale_per_la_prova_con_strumento(clie
                     copre=["carta:2024/classes/rogue.md#Dote Affidabile / Reliable Talent (Ladro 7, pag. 131)",
                            "carta:2024/classes/rogue.md#Usare Dispositivi Magici / Use Magic Device (Furfante 13, pag. 137)",
                            "PATCH /characters/{char_id}/skills", "POST /characters/{char_id}/items/{item_id}/scroll"])
-@pytest.mark.xfail(strict=True, reason="CB-2563: difforme dal manuale, confermato")
 async def test_la_prova_di_arcano_della_pergamena_rispetta_dote_affidabile(client, dadi):
     cid = await _ladro(client, 13, "thief")  # Intelligenza 10, competenza +5
     assert (await client.patch(f"/characters/{cid}/skills", json={"skills": {"arcana": True}})).status_code == 200
