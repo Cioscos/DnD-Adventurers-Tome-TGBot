@@ -46,7 +46,6 @@ from api.services.session_allies import ally_target, deliver_temp_gifts, load_re
 from api.services.spell_effects import apply_spell_effects, cast_level, cast_damage_type, cast_upcast_type, chosen_damage_type, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
-from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, refuse_null, roll_concentration_save
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
@@ -856,8 +855,11 @@ async def update_concentration(
         spell = next((s for s in char.spells if s.id == body.spell_id), None)
         if spell is None:
             raise HTTPException(status_code=404, detail="spell_not_found")
-        rounds = body.rounds if body.rounds is not None else parse_duration_rounds(spell.duration)
-        start_concentration(char, body.spell_id, rounds)
+        # shortcut: lo slot si conosce solo nel turno del lancio, dopo vale quello base (i round si possono indicare a mano)
+        last = (char.turn_state or {}).get("last_slot_cast") or {}
+        level = last["level"] if spell.srd_index and last.get("spell") == spell.srd_index else None
+        rounds = body.rounds if body.rounds is not None else slot_concentration(char, spell, level or spell.level)[1]
+        start_concentration(char, body.spell_id, rounds, level=level)
     await release_concentration_effects(session, char)
     return await build_character_response(session, char)
 

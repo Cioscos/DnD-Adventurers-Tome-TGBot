@@ -3,6 +3,7 @@ import pytest
 
 from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg
 from tests.integration.rules.test_2014_bard import _roll_keys, _states, _use
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
 from tests.integration.rules.test_2014_wizard import _wizard
 from tests.integration.rules.test_2014_wizard_illusion_evocation import _illusion
 from tests.integration.rules.test_2024_cleric_domains import _dom, _spell_rows
@@ -80,3 +81,17 @@ async def test_realta_illusoria_vale_finche_dura_l_immagine_maggiore_lanciata_co
     r = await _use(client, cid, "wizard.illusory_reality", params={"object": "Ponte"})
     # col 3° l'illusione era la concentrazione appena persa; col 6° dura finché non è dissolta, la concentrazione non c'entra
     assert r.status_code == (409 if slot == 3 else 200), r.text
+
+
+@pytest.mark.caccia(id="CB-4705", fonte="2014 · Incantesimi · Dominare Persone (slot del 7°: 1 ora) · pag. 232", zona="regola:2014/incantesimi-D-F",
+                    voce="interazione", copre=["carta:2014/spells.md#Dominare Persone", "PATCH /characters/{char_id}/concentration"])
+async def test_riprendere_la_concentrazione_nel_turno_del_lancio_tiene_lo_slot(client):
+    cid = await _pg(client, "wizard", 13)
+    domina = await _spell(client, cid, "Dominare Persone", 5, srd_index="dominate-person", duration="Concentrazione, fino a 1 minuto",
+                          is_concentration=True, school="enchantment")
+    assert (await _rilancia(client, cid, domina, slot_level=7))["settings"]["concentration_rounds_left"] == 600
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200  # tolta per sbaglio
+    r = await client.patch(f"/characters/{cid}/concentration", json={"spell_id": domina})
+    assert r.status_code == 200, r.text
+    s = r.json()["settings"]
+    assert (s["concentration_rounds_left"], s["concentration_level"]) == (600, 7)
