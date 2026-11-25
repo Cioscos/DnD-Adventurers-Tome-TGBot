@@ -9,6 +9,7 @@ from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, 
 
 OVERCHANNEL = f"{CK}.overchannel"
 OVERCHANNEL_STATE = "overchannel"
+OVERCHANNEL_CAST = "overchannel_cast"  # turn_state: l'ultimo lancio, per contare un uso della Saturazione Magica per lancio
 
 
 def _no_options(_ctx: RuleContext) -> list[str]:
@@ -92,24 +93,42 @@ def _overchannel_state(char) -> dict | None:
     return next((s for s in char.active_states or [] if s.get("key") == OVERCHANNEL_STATE), None)
 
 
-def _count_overchannel(_session, ctx: RuleContext, _inputs: dict) -> None:
-    """Un uso in più fra due riposi lunghi: lo stato porta il conto, il riposo lungo lo chiude."""
+def _last_cast(ctx: RuleContext) -> dict:
+    """L'ultimo lancio del turno (``{"spell", "slot"}``, scritto da ``school_hooks``) e se ha già contato un uso (``counted``)."""
+    return (ctx.char.turn_state or {}).get(OVERCHANNEL_CAST) or {}
+
+
+def _count_overchannel(_session, ctx: RuleContext, inputs: dict) -> None:
+    """Un uso per lancio fra due riposi lunghi (2014 pag. 87, 2024 pag. 174): gli altri tiri di danno dello stesso lancio (i raggi,
+    un nuovo tiro) fino al prossimo lancio non ne contano un altro. Lo stato porta il conto, il riposo lungo lo chiude.
+    ``inputs["new_use"]`` dice a ``_overchannel_hurt`` se questo tiro ha contato un uso."""
     from core.rules.states import begin_state  # import locale
+    cast = _last_cast(ctx)
+    inputs["new_use"] = not (cast.get("spell") == ctx.spell.id and cast.get("counted"))
+    if not inputs["new_use"]:
+        return
     state = _overchannel_state(ctx.char)
     uses = int(((state or {}).get("data") or {}).get("uses") or 0) + 1
     begin_state(ctx.char, StateSpec(OVERCHANNEL_STATE, ends_on=("rest_long",), data={"uses": uses, "locked": True}), OVERCHANNEL, "Saturazione Magica")
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), OVERCHANNEL_CAST: {**cast, "spell": ctx.spell.id, "counted": True}}
 
 
-def _overchannel_hurt(ctx: RuleContext, _inputs: dict) -> str | None:
-    """Dal secondo uso: 2d12 per livello dell'incantesimo, e 1d12 per livello in più a ogni uso successivo."""
+def _overchannel_hurt(ctx: RuleContext, inputs: dict) -> str | None:
+    """Dal secondo uso: 2d12 per livello dell'incantesimo, e 1d12 per livello in più a ogni uso successivo. Solo al tiro che conta l'uso."""
     uses = int(((_overchannel_state(ctx.char) or {}).get("data") or {}).get("uses") or 0)
-    return f"{uses * (ctx.casting_level or ctx.spell.level)}d12" if uses >= 2 else None
+    return f"{uses * (ctx.casting_level or ctx.spell.level)}d12" if uses >= 2 and inputs.get("new_use") else None
+
+
+def _overchannel_available(ctx: RuleContext) -> bool:
+    """«Un incantesimo da mago» di 1°-5° che infligge danno (2014 pag. 87)."""
+    if ctx.spell is None or not ctx.spell.damage_dice or not _wizard_spell(ctx):
+        return False
+    return 1 <= (ctx.casting_level or ctx.spell.level) <= 5
 
 
 OVERCHANNEL_OPTION = RollOptionSpec(
     key=OVERCHANNEL, phase="before", rolls=("spell_damage",), maximize=True, on_confirm=_count_overchannel, self_damage=_overchannel_hurt,
-    available=lambda c: (c.spell is not None and 1 <= (c.casting_level or c.spell.level) <= 5 and bool(c.spell.damage_dice)
-                         and _wizard_spell(c)),  # «un incantesimo da mago» (2014 pag. 87, 2024 pag. 174)
+    available=_overchannel_available,
     label={"it": "Saturazione Magica: i dadi di danno valgono il massimo (dal secondo uso subisci danni necrotici)",
            "en": "Overchannel: damage dice are maximized (from the second use you take necrotic damage)"})
 

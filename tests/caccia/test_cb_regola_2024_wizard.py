@@ -175,7 +175,6 @@ async def test_saturazione_magica_2024_non_vale_per_un_lancio_senza_slot(client)
                     voce="ripetizione", copre=["carta:2024/classes/wizard.md#Saturazione Magica / Overchannel (Invocatore 14, pag. 174)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use",
                                                "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2715: difforme dal manuale, confermato")
 async def test_saturazione_magica_i_raggi_dello_stesso_lancio_sono_un_solo_uso(client, monkeypatch):
     cid = await _mago(client, 14, "evoker")
     await _pf(client, cid, 200)
