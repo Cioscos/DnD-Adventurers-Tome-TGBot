@@ -18,7 +18,7 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { dice?: string }) => (o?.dice ? `${k} ${o.dice}` : k), i18n: { language: 'it' } }) }
 })
 vi.mock('framer-motion', async () => {
   const React = await import('react')
@@ -191,6 +191,40 @@ describe('SpellDamageSheet', () => {
     renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={4} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 4 }, { kind: 'd6', count: 5 }]))
+  })
+
+  it('leaves the extra dice out of the main roll when their type is not the main one and there is no second part (Hunger of Hadar 2024, acid)', async () => {
+    flags.anim = true
+    playAndCollect.mockResolvedValue([])
+    rollDamage.mockResolvedValue(result)
+    const hadar = { ...leveled, damage_dice: '2d6', damage_type: 'cold', higher_levels_dice: '1d6' } as Spell
+    useSpell.mockResolvedValue({ id: 7, spells: [{ ...hadar, effect: { cast_upcast_type: 'acid' } }] })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={hadar} slotLevel={4} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 2 }]))
+  })
+
+  it.each([
+    ['Flame Blade 2014 at slot 6: +1d6 every two slots', { level: 2, srd_index: 'flame-blade', damage_dice: '3d6', higher_levels_dice: '1d6' }, 6, '2d6'],
+    ['Sleep 2014 at slot 3 on a row without higher_levels_dice: +2d8 per slot', { level: 1, srd_index: 'sleep', damage_dice: '5d8' }, 3, '4d8'],
+    ['Hail of Thorns 2014 at slot 9: at most 6d10', { level: 1, srd_index: 'hail-of-thorns', damage_dice: '1d10', higher_levels_dice: '1d10' }, 9, '5d10'],
+  ])('tells the extra dice the roll already includes as the server counts them (%s)', (_name, row, slot, dice) => {
+    renderWithProviders(<SpellDamageSheet charId={7} spell={{ ...leveled, ...row } as Spell} slotLevel={slot} onClose={() => {}} />)
+    expect(screen.getByText(`character.spells.upcast_auto ${dice}`)).toBeInTheDocument()
+  })
+
+  it('says the extra dice of a type the roll does not carry go by hand (Hunger of Hadar 2024, acid), and stay included when a part of that type takes them', () => {
+    useEffectPickStore.setState({ picked: { 2: { choices: { upcast_type: 'acid' } } } })
+    const hadar = { ...leveled, damage_dice: '2d6', damage_type: 'cold', higher_levels_dice: '1d6' } as Spell
+    const { unmount } = renderWithProviders(<SpellDamageSheet charId={7} spell={hadar} slotLevel={4} onClose={() => {}} />)
+    expect(screen.getByText('character.spells.upcast_manual 1d6')).toBeInTheDocument()
+    expect(screen.queryByText(/upcast_auto/)).toBeNull()
+    unmount()
+    useEffectPickStore.setState({ picked: { 2: { choices: { upcast_type: 'radiant' } } } })
+    const strike = { ...leveled, damage_dice: '4d6', damage_type: 'fire', higher_levels_dice: '1d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={4} onClose={() => {}} />)
+    expect(screen.getByText('character.spells.upcast_auto 1d6')).toBeInTheDocument()
+    expect(screen.queryByText(/upcast_manual/)).toBeNull()
   })
 
   it('names each group of dice by its damage type in the result', async () => {

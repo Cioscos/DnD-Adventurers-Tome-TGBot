@@ -100,7 +100,6 @@ async def test_scagliare_maledizione_con_slot_quarto_dura_dieci_minuti_di_concen
 
 @pytest.mark.caccia(id="CB-3414", fonte="2014 · Incantesimi · Tempesta di Vendetta · pag. 284", zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Tempesta di Vendetta", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3414: difforme dal manuale, confermato")
 async def test_tempesta_di_vendetta_il_ts_superato_non_dimezza_il_tuono_iniziale(client):
     cid = await _pg(client, "druid", 17)
     sid = await _impara(client, cid, "storm-of-vengeance")
@@ -111,7 +110,7 @@ async def test_tempesta_di_vendetta_il_ts_superato_non_dimezza_il_tuono_iniziale
 
 @pytest.mark.caccia(id="CB-3415", fonte="2014 · Incantesimi · Sonno · pag. 279", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Sonno", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.parametrize("slot, dadi_attesi", [(1, 5), pytest.param(2, 7, marks=pytest.mark.xfail(strict=True, reason="CB-3415: difforme dal manuale, confermato")), pytest.param(3, 9, marks=pytest.mark.xfail(strict=True, reason="CB-3415: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, dadi_attesi", [(1, 5), (2, 7), (3, 9)])
 async def test_sonno_somma_due_d8_alla_riserva_per_ogni_slot_oltre_il_primo(client, slot, dadi_attesi):
     cid = await _pg(client, "bard", 5)
     sid = await _impara(client, cid, "sleep")  # 5d8, +2d8 per slot dalla riga del catalogo
@@ -139,7 +138,6 @@ async def test_incantesimo_preso_dal_catalogo_infligge_anche_la_seconda_parte_de
 @pytest.mark.caccia(id="CB-3417", fonte="2014 · Incantesimi · Scudo di Fuoco · pag. 275", zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Scudo di Fuoco", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3417: difforme dal manuale, confermato")
 async def test_scudo_di_fuoco_gelido_infligge_danni_da_freddo(client):
     cid = await _pg(client)
     await _slot(client, cid, 4)

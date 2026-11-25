@@ -65,7 +65,6 @@ async def _due_concentrazioni(client, slot):
 @pytest.mark.caccia(id="CB-3311", fonte="2014 · Incantesimi · Lama Infuocata · pag. 247", zona="regola:2014/incantesimi-G-L", voce="limiti",
                     copre=["carta:2014/spells.md#Lama Infuocata", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(3, "3d6"), (4, "4d6"), (6, "5d6"), (9, "6d6")])
-@pytest.mark.xfail(strict=True, reason="CB-3311: difforme dal manuale, confermato")
 async def test_lama_infuocata_sale_di_1d6_ogni_due_livelli_di_slot(client, slot, dadi_attesi):
     cid = await _pg(client, "druid", 17, "Druido")
     sid = await _impara(client, cid, "flame-blade")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 import re
 import uuid
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Annotated, Any
 
@@ -50,6 +51,7 @@ from api.routers._helpers import collect_homebrew_notifications, refuse_null, ro
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
+from core.rules.catalog.y2014.cleric import BLESSED_HEALER
 from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, SP, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
@@ -67,6 +69,7 @@ from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
 from core.rules.catalog.spells import spell_effect
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
 from core.rules.pact_casts import FREE_CASTS, pact_cast, spent_free_casts
@@ -79,7 +82,7 @@ from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
-from core.game.stats import cantrip_dice_multiplier
+from core.game.stats import cantrip_dice_multiplier, effective_ability_mod
 from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.spellcasting import (
     at_will, bonus_cast, can_ritual, champion_bonus_cast, LONG_CASTING as _LONG_CASTING, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
@@ -855,6 +858,38 @@ async def concentration_save(
 # Spell damage roll
 # ---------------------------------------------------------------------------
 
+@dataclass(frozen=True)
+class _Upcast:
+    """Scalata che «+NdM per livello» non dice; il client la rispecchia (UPCAST_RULES in webapp/src/lib/srd/catalog.ts)."""
+    dice: str | None = None  # dadi per passo, anche quando la riga non li ha
+    step: int = 1  # livelli di slot per passo
+    max_extra: int | None = None  # dadi in più al massimo
+    both: bool = False  # i dadi in più valgono per ciascuna parte del danno
+
+
+# Per incantesimo ed edizione di chi lancia (docs/superpowers/rules/{2014,2024}/spells.md)
+_UPCAST = {
+    ("spiritual-weapon", "2014"): _Upcast(dice="1d8", step=2),  # +1d8 ogni due slot oltre il 2° (pag. 215)
+    ("flame-blade", "2014"): _Upcast(dice="1d6", step=2),  # +1d6 al 4°, 6° e 8° (pag. 247)
+    ("hail-of-thorns", "2014"): _Upcast(max_extra=5),  # massimo 6d10 (pag. 266)
+    ("sleep", "2014"): _Upcast(dice="2d8"),  # la riserva di PF cresce di 2d8 per slot (pag. 279)
+    ("flame-strike", "2024"): _Upcast(both=True),  # +1d6 fuoco e +1d6 radiosi per livello (pag. 275)
+}
+# Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
+_ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}
+# Tipo del danno deciso da una scelta del lancio che non è «damage_type»: Scudo di Fuoco caldo fuoco, freddo freddo (2014 pag. 275; 2024 pag. 274)
+_TYPE_BY_CHOICE = {"fire_shield": ("shield", {"warm": "fire", "cold": "cold"})}
+
+
+def _cast_choice_type(char: Character, spell: Spell) -> str | None:
+    """Il tipo di danno che decide la scelta dell'incantesimo in corso (nell'orologio su chi lancia), o ``None``."""
+    found = spell_effect(character_edition(char), spell.srd_index, spell.name)
+    if not found or (rule := _TYPE_BY_CHOICE.get(found[0].key)) is None:
+        return None
+    clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{found[0].key}"), None)
+    return rule[1].get((((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get(rule[0]))
+
+
 @router.post(
     "/{char_id}/spells/{spell_id}/roll_damage",
     response_model=RollDamageResult,
@@ -892,24 +927,35 @@ async def roll_spell_damage(
         base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0
-    moved_dice = 0
-    # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo
-    # incantesimi di livello >= 1, stessi lati). "sleep" no: i suoi dadi sono un pool di PF.
-    if spell.level > 0 and spell.higher_levels_dice and spell.srd_index != "sleep":
-        um = DICE_RE.match(spell.higher_levels_dice.strip())
+    second_gained = 0
+    edition = character_edition(char)
+    rule = _UPCAST.get((spell.srd_index or "", edition), _Upcast())
+    per_level = rule.dice or spell.higher_levels_dice
+    # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo incantesimi di livello >= 1, stessi lati).
+    if spell.level > 0 and per_level:
+        um = DICE_RE.match(per_level.strip())
         if um and int(um.group(2)) == sides:
-            gained = int(um.group(1)) * (casting_level - spell.level)
+            steps = (casting_level - spell.level) // rule.step
+            gained = int(um.group(1)) * steps
+            if rule.max_extra is not None:
+                gained = min(gained, rule.max_extra)
             base_count += gained
-            # I dadi in più sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) passano a lei
             second_die = DICE_RE.match((spell.extra_damage_dice or "").strip())
-            if second_die and int(second_die.group(2)) == sides and (up := cast_upcast_type(char, spell)) and up == spell.extra_damage_type:
+            same_sides = bool(second_die) and int(second_die.group(2)) == sides
+            if rule.both:  # un dado in più di ciascun tipo
+                second_gained = gained if same_sides else 0
+            # I dadi in più sono del tipo scelto al lancio: se non è quello principale lasciano il tiro e passano alla seconda parte
+            # di quel tipo (Colpo Infuocato: radioso), o senza una si applicano a mano (Fame di Hadar 2024: l'acido, pag. 286)
+            elif (up := cast_upcast_type(char, spell)) and up != canonical_damage_type(spell.damage_type):
                 base_count -= gained
-                moved_dice = gained
+                second_gained = gained if same_sides and up == spell.extra_damage_type else 0
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
-            base_bonus += int(um.group(3) or 0) * (casting_level - spell.level)
+            base_bonus += int(um.group(3) or 0) * steps
 
     # Privilegi che aggiungono un fisso ai danni di un incantesimo (Incantesimi Potenti)
     base_bonus += modifiers_for(char, "damage", spell=spell).flat
+    if (spell.srd_index, edition) in _ADDS_SPELL_MOD and (caster := spell_stats(char, spell)):
+        base_bonus += effective_ability_mod(char, caster.ability)
     _mark_empowered(char, spell)
 
     # Apply critical (double dice count, not the flat bonus)
@@ -937,7 +983,7 @@ async def roll_spell_damage(
         if not sm:
             raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
         second_sides = int(sm.group(2))
-        second_count = (int(sm.group(1)) + moved_dice) * (2 if body.is_critical else 1)
+        second_count = (int(sm.group(1)) + second_gained) * (2 if body.is_critical else 1)
         types = [t for t in (spell.extra_damage_type or "").split("|") if t]
         if body.extra_damage_type is not None and body.extra_damage_type not in types:
             raise HTTPException(status_code=422, detail={"code": "invalid_damage_type"})
@@ -974,7 +1020,7 @@ async def roll_spell_damage(
         all_extra = [random.randint(1, group_sides) for _, count, group_sides in groups for _ in range(count)]
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
-    base_type = chosen_damage_type(char, spell, body.damage_type) or spell.damage_type  # il tipo scelto al lancio
+    base_type = chosen_damage_type(char, spell, body.damage_type) or _cast_choice_type(char, spell) or spell.damage_type  # il tipo scelto al lancio
     opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level, damage_type=canonical_damage_type(base_type))
     main_type = opts.damage_type or base_type  # Incantesimo Trasmutato
     await deliver_temp_gifts(session, char, opts)  # Incantesimi Potenti Migliorati
@@ -998,7 +1044,7 @@ async def roll_spell_damage(
     carried_dice = carried["dice"] if carried else []
     total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
              + sum(v for _, v in carried_dice))
-    total = scale_damage(total, opts.multiplier)
+    total = scale_damage(max(0, total), opts.multiplier)  # il danno arriva a 0, mai sotto (2014 pag. 196; 2024 pag. 27)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
     parts = damage_parts([("main", main_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
@@ -1089,7 +1135,8 @@ async def roll_spell_damage(
 # danno solo a TS fallito (prima riga), oppure danno che non dipende dal TS, che vale solo per l'effetto (punizioni e il resto).
 _NO_HALF_ON_SAVE = {
     "disintegrate", "contagion", "black-tentacles", "hunger-of-hadar", "cordon-of-arrows", "dream", "geas",
-    "contact-other-plane", "faithful-hound", "conjure-animals",
+    "contact-other-plane", "faithful-hound", "conjure-animals", "storm-of-vengeance",
+    "evards-black-tentacles",  # la chiave della riga concessa (Stregoneria Aberrante 2024), non l'indice SRD
     "blinding-smite", "banishing-smite", "searing-smite", "staggering-smite", "thunderous-smite", "wrathful-smite",
     "ensnaring-strike", "feeblemind", "heat-metal", "phantasmal-force", "web", "fount-of-moonlight", "bestow-curse",
 }
@@ -1169,6 +1216,8 @@ async def roll_spell_healing(
     wanted = body.target_character_ids
     if len(set(wanted)) != len(wanted) or len(wanted) + body.apply_to_self > healing.targets:
         raise HTTPException(status_code=422, detail={"code": "invalid_target"})
+    if body.apply_to_self and healing.targets == 1 and BLESSED_HEALER.key in body.options:  # l'unico bersaglio è chi lancia
+        raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": BLESSED_HEALER.key})
     allies = [await ally_target(session, char, tid) for tid in wanted]  # PG seduti alla stessa serata attiva, prima di tirare
     if any(a.is_dead for a in allies):
         raise HTTPException(status_code=409, detail={"code": "target_dead"})
@@ -1226,6 +1275,8 @@ async def last_damage_options(
     spell = next((s for s in char.spells if last and kind == "spell" and s.id == last["spell_id"]), None)
     if not last or (kind == "spell" and spell is None):
         raise HTTPException(status_code=409, detail={"code": "no_last_damage"})
+    if used := set(body.options) & set(last.get("after_used", [])):  # Potenziato si somma a un'altra opzione, non a sé stesso
+        raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": sorted(used)[0]})
     opts = use_options(session, char, "spell_damage" if kind == "spell" else "weapon_damage", body, phase="after_damage",
                        spell=spell, damage_type=canonical_damage_type(last["result"].get("damage_type")) if spell else None)
 
@@ -1247,7 +1298,7 @@ async def last_damage_options(
             dice[i][1] = v
 
     values = [v for _, v in dice]
-    total = last_damage_total(values, {**last, "flat": flat})
+    total = max(0, last_damage_total(values, {**last, "flat": flat}))  # come il tiro: mai sotto 0
     base = last.get("base", len(values))
     old = last["result"]
     previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
@@ -1284,7 +1335,8 @@ async def last_damage_options(
     add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
                  f"Dopo il danno ({option_names(char, opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
-    turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}
+    turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json"),
+                           "after_used": [*last.get("after_used", []), *opts.keys]}
     char.turn_state = turn
     await session.commit()  # get_db chiude dopo la risposta: il client rilegge subito usi e turno
     return result

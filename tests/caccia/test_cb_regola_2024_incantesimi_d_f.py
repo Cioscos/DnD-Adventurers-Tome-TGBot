@@ -179,7 +179,6 @@ async def test_forza_fantasmatica_del_grande_antico_2024_fa_2d8_anche_con_slot_s
 @pytest.mark.caccia(id="CB-3720", fonte="2024 · Incantesimi · Fame di Hadar · pag. 286", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Fame di Hadar", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3720: difforme dal manuale, confermato")
 async def test_fame_di_hadar_2024_il_dado_in_piu_scelto_acido_non_va_al_freddo(client):
     cid = await _pg(client, "warlock", 7)
     sid = await _impara(client, cid, "hunger-of-hadar")

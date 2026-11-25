@@ -68,7 +68,6 @@ def _stati(scheda: dict, chiave: str) -> list[dict]:
 @pytest.mark.caccia(id="CB-3361", fonte="2014 · Incantesimi · Raffica di Spine (slot superiori, massimo 6d10) · pag. 266", zona="regola:2014/incantesimi-M-R",
                     voce="limiti", copre=["carta:2014/spells.md#Raffica di Spine", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("livello_slot", [7, 9])
-@pytest.mark.xfail(strict=True, reason="CB-3361: difforme dal manuale, confermato")
 async def test_raffica_di_spine_non_supera_sei_d10_con_slot_alti(client, livello_slot):
     cid = await _pg(client, "Ranger")
     sid = await _incantesimo(client, cid, "Raffica di Spine", "hail-of-thorns", 1, damage_dice="1d10", damage_type="piercing",

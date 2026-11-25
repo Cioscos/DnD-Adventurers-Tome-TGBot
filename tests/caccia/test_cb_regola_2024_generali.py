@@ -146,7 +146,6 @@ async def test_una_seconda_istanza_piu_corta_non_accorcia_la_condizione(client, 
 @pytest.mark.caccia(id="CB-2866", fonte="2024 · Regole di gioco · Tiri per i danni · pag. 27", zona="regola:2024/generali",
                     voce="limiti", copre=["carta:2024/general.md#Tiri per i danni / Damage Rolls (pag. 27)",
                                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2866: difforme dal manuale, confermato")
 async def test_il_danno_di_un_incantesimo_non_scende_sotto_zero(client):
     cid = await _pg(client, "wizard", 1)
     trucchetto = (await client.post(f"/characters/{cid}/spells", json={"name": "Dardo", "level": 0, "damage_dice": "1d10",
@@ -164,7 +163,6 @@ async def test_il_danno_di_un_incantesimo_non_scende_sotto_zero(client):
 @pytest.mark.parametrize("percorso,corpo", [
     ("spells", {"name": "Decimo", "level": 10}), ("spells", {"name": "Negativo", "level": -1}),
     ("spell_slots", {"level": 0, "total": 1}), ("spell_slots", {"level": 10, "total": 1})])
-@pytest.mark.xfail(strict=True, reason="CB-2867: difforme dal manuale, confermato")
 async def test_livelli_di_incantesimo_e_di_slot_fuori_dalla_scala_rifiutati(client, percorso, corpo):
     cid = await _pg(client)
     r = await client.post(f"/characters/{cid}/{percorso}", json=corpo)

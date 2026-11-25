@@ -76,7 +76,7 @@ class SpellRead(BaseModel):
 
 class SpellCreate(BaseModel):
     name: str = Field(pattern=VISIBLE)
-    level: int = 0
+    level: int = Field(0, ge=0, le=9)  # livelli da 0 (trucchetti) a 9
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -93,6 +93,9 @@ class SpellCreate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: bool = False
     # Scelta di incantesimi in sospeso (Segreti Magici) che questo incantesimo risolve; non è una colonna.
@@ -101,7 +104,7 @@ class SpellCreate(BaseModel):
 
 class SpellUpdate(BaseModel):
     name: Optional[str] = Field(None, pattern=VISIBLE)
-    level: Optional[int] = None
+    level: Optional[int] = Field(None, ge=0, le=9)
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -118,6 +121,9 @@ class SpellUpdate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: Optional[bool] = None
 
@@ -201,7 +207,7 @@ class SpellSlotRead(BaseModel):
 
 
 class SpellSlotCreate(BaseModel):
-    level: int
+    level: int = Field(ge=1, le=9)  # gli slot servono gli incantesimi dal 1° al 9° livello
     total: int
     used: int = 0
     is_pact: bool = False

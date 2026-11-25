@@ -54,7 +54,6 @@ async def test_dopo_un_trucchetto_rapido_nessun_incantesimo_di_livello_nello_ste
                     copre=["carta:2024/classes/sorcerer.md#Incantesimo Potenziato / Empowered Spell (Metamagia, pag. 142)",
                            "carta:2024/classes/sorcerer.md#Metamagia / Metamagic (Stregone 2, pag. 141)",
                            "POST /characters/{char_id}/last-damage/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2612: difforme dal manuale, confermato")
 async def test_incantesimo_potenziato_2024_una_volta_sola_sullo_stesso_danno(client):
     # Potenziato si somma a un'altra opzione, non a sé stesso: due usi ritirerebbero più dadi del Carisma
     cid = await _caster24(client, 5, "empowered", charisma=16)

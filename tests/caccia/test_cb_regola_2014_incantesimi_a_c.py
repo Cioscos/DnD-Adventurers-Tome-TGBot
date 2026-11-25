@@ -62,7 +62,6 @@ async def _opzioni(client, cid, tiro) -> list[str]:
 @pytest.mark.caccia(id="CB-3211", fonte="2014 · Incantesimi · Arma Spirituale · pag. 215", zona="regola:2014/incantesimi-A-C", voce="limiti",
                     copre=["carta:2014/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(4, 2), (6, 3), (8, 4), (9, 4)])
-@pytest.mark.xfail(strict=True, reason="CB-3211: difforme dal manuale, confermato")
 async def test_arma_spirituale_aggiunge_un_d8_ogni_due_livelli_di_slot_oltre_il_secondo(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 3, "Dominio della Vita", wisdom=16)  # Arma Spirituale sempre preparata dal dominio
     arma = await _incantesimo(client, cid, "spiritual-weapon")
@@ -73,7 +72,6 @@ async def test_arma_spirituale_aggiunge_un_d8_ogni_due_livelli_di_slot_oltre_il_
 
 @pytest.mark.caccia(id="CB-3212", fonte="2014 · Incantesimi · Arma Spirituale · pag. 215", zona="regola:2014/incantesimi-A-C", voce="regola",
                     copre=["carta:2014/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3212: difforme dal manuale, confermato")
 async def test_il_danno_di_arma_spirituale_somma_il_modificatore_da_incantatore(client, dadi):
     cid = await _pg(client, "cleric", 3, "Dominio della Vita", wisdom=16)  # Saggezza +3
     arma = await _incantesimo(client, cid, "spiritual-weapon")
@@ -136,7 +134,6 @@ async def test_contattare_altri_piani_non_mostra_la_cd_di_chi_lancia_al_posto_de
 
 @pytest.mark.caccia(id="CB-3217", fonte="2014 · Incantesimi · Colpo Infuocato · pag. 222", zona="regola:2014/incantesimi-A-C", voce="persistenza",
                     copre=["carta:2014/spells.md#Colpo Infuocato", "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3217: difforme dal manuale, confermato")
 async def test_la_seconda_parte_del_danno_di_colpo_infuocato_scritta_all_aggiunta_resta_salvata(client):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     classe = (await _scheda(client, cid))["classes"][0]["id"]

@@ -22,8 +22,9 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
-import { upcastExtraDice } from '@/lib/srd/catalog'
+import { upcastBoth, upcastExtraDice } from '@/lib/srd/catalog'
 import { cantripMultiplier, totalLevelOf } from '@/lib/dnd'
+import { canonicalDamageType } from '@/lib/damageModifier'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
@@ -85,6 +86,7 @@ export default function SpellDamageSheet({
   // Il tipo scelto al lancio, mostrato solo a lancio confermato dal server (un lancio rifiutato non ne ha salvato nessuno).
   const [slotConsumed, setSlotConsumed] = useState(false)
   const pickedType = useEffectPickStore((s) => (spell && (slotConsumed || slotAlreadyConsumed) ? s.picked[spell.id]?.choices?.damage_type : undefined))
+  const pickedUpcastType = useEffectPickStore((s) => (spell ? s.picked[spell.id]?.choices?.upcast_type : undefined))
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
@@ -154,9 +156,12 @@ export default function SpellDamageSheet({
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
           // I dadi dello slot più alto sono del tipo salvato dal server al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
-          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides, cached?.rules_edition)
           const upcastType = cached?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type  // lo dice il server: lo store del client può averla persa
-          const moved = upcastType && upcastType === spell.extra_damage_type && second?.sides === main.sides ? gained : 0
+          const both = upcastBoth(spell.srd_index, cached?.rules_edition)  // Colonna di fiamme 2024: un dado in più di ciascun tipo
+          const toSecond = second?.sides === main.sides && (both || (upcastType && upcastType === spell.extra_damage_type)) ? gained : 0
+          // di un tipo che non è il principale lasciano il tiro, anche senza seconda parte (Fame di Hadar 2024: l'acido si applica a mano)
+          const moved = !both && upcastType && upcastType !== canonicalDamageType(spell.damage_type) ? gained : 0
           const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
@@ -168,7 +173,7 @@ export default function SpellDamageSheet({
           for (const part of [second, manual]) {
             if (!part) continue
             if (!isAllowedDiceKind(`d${part.sides}`)) { extraOk = false; continue }
-            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? moved * 2 : moved) : 0)
+            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? toSecond * 2 : toSecond) : 0)
             extraCount += count
             groups.push({ kind: `d${part.sides}` as DiceKind, count: count })
           }
@@ -217,8 +222,16 @@ export default function SpellDamageSheet({
   // Il server dice se un TS superato dimezza: i trucchetti (Fiamma Sacra) e Disintegrazione non fanno danni
   const showHalf = !isAttack && result?.save_halves !== false
   const isCantrip = spell.level === 0
-  const autoUpcast = parseDice(spell.higher_levels_dice)
-  const autoExtra = autoUpcast ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides) : 0
+  // I dadi dello slot più alto come li conta il server (passo, tetto, dadi senza higher_levels_dice: UPCAST_RULES)
+  const cachedChar = qc.getQueryData<CharacterFull>(['character', charId])
+  const mainDice = parseDice(spell.damage_dice)
+  const autoExtra = mainDice ? upcastExtraDice(spell, effectiveCastingLevel, mainDice.sides, cachedChar?.rules_edition) : 0
+  const upcastType = pickedUpcastType
+    ?? ((slotConsumed || slotAlreadyConsumed) ? cachedChar?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type : undefined)
+  // Di un tipo che non è il principale, senza una seconda parte di quel tipo, il tiro non li ha (Fame di Hadar 2024: l'acido)
+  const upcastByHand = !!upcastType && !upcastBoth(spell.srd_index, cachedChar?.rules_edition)
+    && upcastType !== canonicalDamageType(spell.damage_type)
+    && !(parseDice(spell.extra_damage_dice)?.sides === mainDice?.sides && upcastType === spell.extra_damage_type)
   // U15: la CD del TS sta nel foglio del tiro, non solo nella testata della pagina
   const saveLine = !isAttack && spell.save_dc != null
     ? `${spell.attack_save?.trim().toUpperCase() === 'SAVE' ? t('character.spells.attack_save.save') : spell.attack_save?.trim()} · ${t('character.spells.save_dc', { dc: spell.save_dc })}`
@@ -315,7 +328,9 @@ export default function SpellDamageSheet({
 
           {autoExtra > 0 && (
             <p className="text-sm text-dnd-text-muted font-body italic text-center">
-              {t('character.spells.upcast_auto', { dice: spell.higher_levels_dice })}
+              {upcastByHand
+                ? t('character.spells.upcast_manual', { dice: `${autoExtra}d${mainDice?.sides}`, type: t(`character.inventory.damage_types.dmg_${upcastType}`, { defaultValue: upcastType }) })
+                : t('character.spells.upcast_auto', { dice: `${autoExtra}d${mainDice?.sides}` })}
             </p>
           )}
 
