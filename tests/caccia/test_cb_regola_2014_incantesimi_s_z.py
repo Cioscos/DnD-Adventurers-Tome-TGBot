@@ -71,7 +71,6 @@ async def _danno(client, cid, sid, livello, **altro) -> dict:
 @pytest.mark.caccia(id="CB-3411", fonte="2014 · Incantesimi · Sortilegio · pag. 279", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Sortilegio", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("livello_warlock, slot, round_attesi", [(5, 3, 4800), (9, 5, 14400)])
-@pytest.mark.xfail(strict=True, reason="CB-3411: difforme dal manuale, confermato")
 async def test_sortilegio_con_slot_alto_mantiene_la_concentrazione_per_la_durata_dello_slot(client, livello_warlock, slot, round_attesi):
     cid = await _pg(client, "warlock", livello_warlock)  # gli slot del patto sono del 3° (livello 5) e del 5° (livello 9)
     sid = await _impara(client, cid, "hex")
@@ -82,7 +81,6 @@ async def test_sortilegio_con_slot_alto_mantiene_la_concentrazione_per_la_durata
 
 @pytest.mark.caccia(id="CB-3412", fonte="2014 · Incantesimi · Scagliare Maledizione · pag. 273", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Scagliare Maledizione", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3412: difforme dal manuale, confermato")
 async def test_scagliare_maledizione_dallo_slot_quinto_non_richiede_concentrazione(client):
     cid = await _pg(client, "cleric", 9)
     sid = await _impara(client, cid, "bestow-curse")
@@ -92,7 +90,6 @@ async def test_scagliare_maledizione_dallo_slot_quinto_non_richiede_concentrazio
 
 @pytest.mark.caccia(id="CB-3413", fonte="2014 · Incantesimi · Scagliare Maledizione · pag. 273", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Scagliare Maledizione", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3413: difforme dal manuale, confermato")
 async def test_scagliare_maledizione_con_slot_quarto_dura_dieci_minuti_di_concentrazione(client):
     cid = await _pg(client, "cleric", 9)
     sid = await _impara(client, cid, "bestow-curse")

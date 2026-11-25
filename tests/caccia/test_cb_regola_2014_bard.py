@@ -91,7 +91,6 @@ async def test_un_trucchetto_di_segreti_magici_conta_fra_gli_incantesimi_conosci
     ({"casting_time": "1 minuto"}, {"slot_level": 1}),
     ({"casting_time": "1 azione", "is_ritual": True}, {"as_ritual": True}),
 ], ids=["tempo_di_lancio_un_minuto", "rituale"])
-@pytest.mark.xfail(strict=True, reason="CB-1612: difforme dal manuale, confermato")
 async def test_magia_da_battaglia_solo_dopo_un_incantesimo_lanciato_con_l_azione(client, incantesimo, lancio):
     cid = await _bardo(client, 14, VALOR)
     spada = await _spada(client, cid)

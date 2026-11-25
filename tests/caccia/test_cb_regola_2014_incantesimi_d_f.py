@@ -77,7 +77,6 @@ async def _serata(client, factory, classe: str, livello: int, indice: str) -> tu
     ("bard", 11, "dominate-person", 6, 100), ("bard", 13, "dominate-person", 7, 600), ("bard", 15, "dominate-person", 8, 4800),
     ("sorcerer", 17, "dominate-monster", 9, 4800),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3261: difforme dal manuale, confermato")
 async def test_dominare_con_slot_superiore_allunga_la_concentrazione(client, classe, livello, indice, slot, round_attesi):
     cid = await _pg(client, classe, livello)
     sid = await _impara(client, cid, indice)

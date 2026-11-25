@@ -50,7 +50,7 @@ from api.routers._helpers import collect_homebrew_notifications, refuse_null, ro
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
-from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, SP, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -182,7 +182,7 @@ def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: 
         # fuori scontro: già segnata, nessun costo in più
 
 
-def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
+def _mark_cast(char: Character, spell: Spell, spent_slot: bool, ritual: bool) -> None:
     """Turno salvato per le regole sugli incantesimi nello stesso turno; le reazioni possono cadere fuori dal proprio."""
     kind = _cast_kind(char, spell)
     if spell.srd_index:  # Abiurazione Migliorata: la prova dopo controincantesimo o dissolvi magie, anche se lanciato in reazione
@@ -198,7 +198,9 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     turn["leveled_cast"] = bool(turn.get("leveled_cast")) or spell.level >= 1
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
-    if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
+    # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale). Un rituale o un tempo di 1 minuto o più
+    # non è un lancio con l'azione (2014 pag. 55 e 201-202; 2024 pag. 67 e 236: «Tempi lunghi, Rituali compresi»)
+    if kind == "action" and not ritual and not _LONG_CASTING.search(spell.casting_time or ""):
         casters = caster_stats(char)
         turn["action_spell_class"] = spell.class_id or (casters[0].class_id if len(casters) == 1 else None)
         turn["action_spell_level"] = spell.level  # Magia da Guerra: 0 è un trucchetto
@@ -206,6 +208,36 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
 
 
 WAR_MAGIC_KEYS = {"fighter.war_magic", "fighter.improved_war_magic"}
+
+# Concentrazione che cambia con lo slot e che la riga non dice: (edizione -> slot da cui non serve più, slot -> round).
+# Immagine Maggiore 2014 pag. 242, 2024 pag. 295; Scagliare Maledizione 2014 pag. 273, 2024 pag. 245 (10 minuti con lo slot del 4°);
+# Dominare Bestie / Persone / Mostri 2014 pag. 231-232, 2024 pag. 265-266 (10 minuti, 1 ora, 8 ore)
+_SLOT_CONCENTRATION = {"major-image": ({"2014": 6, "2024": 4}, {}), "bestow-curse": ({"2014": 5, "2024": 5}, {4: 100}),
+                       "dominate-beast": ({}, {5: 100, 6: 600, 7: 4800, 8: 4800, 9: 4800}),
+                       "dominate-person": ({}, {6: 100, 7: 600, 8: 4800, 9: 4800}),
+                       "dominate-monster": ({}, {9: 4800})}
+# la riga senza srd_index (scritta a mano, homebrew, import vecchi) si riconosce dal nome it/en, come per gli effetti del lancio
+_SLOT_CONCENTRATION_NAMES = {n.lower(): k for k, names in {
+    "major-image": ("Immagine Maggiore", "Major Image"), "bestow-curse": ("Scagliare Maledizione", "Maledizione", "Bestow Curse"),
+    "dominate-beast": ("Dominare Bestie", "Dominate Beast"), "dominate-person": ("Dominare Persone", "Dominate Person"),
+    "dominate-monster": ("Dominare Mostri", "Dominate Monster")}.items() for n in names}
+
+
+def _slot_concentration(char: Character, spell: Spell, level: int) -> tuple[bool, int | None]:
+    """Se il lancio a questo livello chiede concentrazione e per quanti round: quelli dello slot (la tabella sopra, Sortilegio
+    e Marchio del Cacciatore dal catalogo degli effetti), altrimenti la durata scritta sulla riga."""
+    edition = character_edition(char)
+    key = spell.srd_index if spell.srd_index in _SLOT_CONCENTRATION else next(
+        (_SLOT_CONCENTRATION_NAMES[n] for p in (spell.name or "").split("/") if (n := p.strip().lower()) in _SLOT_CONCENTRATION_NAMES), "")
+    until, rounds = _SLOT_CONCENTRATION.get(key, ({}, {}))
+    if level >= until.get(edition, 10):
+        return False, None
+    if level in rounds:
+        return True, rounds[level]
+    found = spell_effect(edition, spell.srd_index, spell.name)
+    if found and found[1].concentration and found[1].rounds_by_slot:
+        return True, found[1].rounds_by_slot(level)
+    return True, parse_duration_rounds(spell.duration)
 
 
 def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, extra: int) -> tuple[Any, int]:
@@ -236,6 +268,8 @@ def _consume_cast(
     il chiamante con ``_charge_pact_use``, con un UPDATE condizionato.
     """
     ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
+    # Stregoneria Psionica 2024 pag. 146: coi punti stregoneria l'incantesimo non ha componenti, il nascondiglio resta
+    silent = silent or (ki_pool is not None and ki_pool.feature_key == SP)
     free_state = None
     free_at_will = False
     no_concentration = no_concentration_option  # Compagno Draconico (l'opzione è convalidata da use_options); Benedizione del Dio della Guerra: il lancio gratuito non chiede Concentrazione
@@ -315,7 +349,7 @@ def _consume_cast(
                      meta={"slot_level": slot.level, **({"is_pact": True} if slot.is_pact else {})})
     else:
         add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
-    _mark_cast(char, spell, slot is not None)
+    _mark_cast(char, spell, slot is not None, ritual)
     if slot is not None and spell.srd_index:  # Rompi-Incantesimi: lo slot dell'ultimo lancio del turno, da rendere a lancio concluso
         turn = get_turn(char)
         turn["last_slot_cast"] = {"spell": spell.srd_index, "level": slot.level, "pact": bool(slot.is_pact)}
@@ -327,9 +361,10 @@ def _consume_cast(
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
-    if spell.is_concentration and not no_concentration:
-        start_concentration(char, spell.id, parse_duration_rounds(spell.duration),
-                            level=slot.level if slot is not None else spell.level)
+    level = slot.level if slot is not None else spell.level
+    needs_concentration, rounds = _slot_concentration(char, spell, level) if spell.is_concentration else (False, None)
+    if needs_concentration and not no_concentration:
+        start_concentration(char, spell.id, rounds, level=level)
     return pact_row
 
 
@@ -535,6 +570,7 @@ async def use_spell(
     spell = result.scalar_one_or_none()
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
+    refuse_if_incapacitated(char)  # ogni lancio costa un'azione, un'azione bonus o una reazione (2014 pag. 189-190, 291; 2024 pag. 369)
     if spell.srd_index == "divine-smite" and character_edition(char) == "2024":  # si sceglie dopo un colpo, mai da elenco
         raise HTTPException(status_code=409, detail={"code": "smite_on_hit"})
 
@@ -551,13 +587,16 @@ async def use_spell(
     if (character_edition(char) == "2024" and not (body.free_cast or body.ki or body.as_ritual)
             and (found := spell_effect("2024", spell.srd_index, spell.name)) and found[1].on_hit):
         spend(char, "bonus")  # punizione 2024 lanciata da elenco: costa l'azione bonus, 409 turn_slot_used prima di spendere lo slot
+    # lo stato del lancio gratuito, letto prima che il lancio lo chiuda: senza Concentrazione, con la durata del suo «then»
+    free = ((free_cast_state(char, spell) or {}).get("data") or {}) if body.free_cast else {}
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.options or [],
-                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or [])))
+                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST, FEY_NO_CONCENTRATION_KEY} & set(body.options or []))
+                                         or bool(free.get("no_concentration")), lasts=free.get("then"))
     if spell.srd_index == "find-steed" and not (body.free_cast or body.as_ritual) and any(
             s.key == STEED for s, _row in active_features(char)):  # Destriero Fedele: il lancio con slot crea il destriero del suo livello
         await session.refresh(char, attribute_names=["companions"])
