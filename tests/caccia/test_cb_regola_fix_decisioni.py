@@ -408,3 +408,46 @@ async def test_produrre_fiamma_2024_si_accende_col_lancio_e_si_scaglia_con_l_azi
     assert (await riga())["effect"]["lit"] is False
     cid, spell = ids["2014"]  # nel 2014 il lancio e il tiro restano una cosa sola
     assert (await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 15})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4647", fonte="decisione D-020 (tests/caccia/decisioni.md): fuori dalla finestra del riposo lungo il cambio di preparati (e trucchetti 2024) va confermato; libero alla creazione e alla salita di livello",
+                    zona="regola:2014/cleric", voce="regola",
+                    copre=["carta:2014/classes/cleric.md#Incantesimi / Spellcasting (Chierico 1, pag. 58)",
+                           "carta:2024/classes/cleric.md#Incantesimi / Spellcasting (Chierico 1, pag. 69)", "PATCH /characters/{char_id}/spells/{spell_id}",
+                           "DELETE /characters/{char_id}/spells/{spell_id}"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_cambiare_i_preparati_lontano_dal_riposo_lungo_si_conferma(client, edizione):
+    cid = await _pg(client, edizione, "cleric", 3, wisdom=16)
+    ids = {}
+    for nome, livello in (("Benedizione", 1), ("Cura", 1), ("Luce Prova", 0)):
+        r = await client.post(f"/characters/{cid}/spells", json={"name": nome, "level": livello})
+        assert r.status_code == 201, r.text
+        ids[nome] = r.json()["id"]
+    url = f"/characters/{cid}/spells/{ids['Benedizione']}"
+
+    async def prepara(valore, **q):
+        return await client.patch(url, json={"is_prepared": valore}, params=q)
+
+    async def spendi():
+        slot = next(s for s in (await _scheda(client, cid))["spell_slots"] if s["level"] == 1)
+        r = await client.patch(f"/characters/{cid}/spell_slots/{slot['id']}", json={"used": slot["used"] + 1})
+        assert r.status_code == 200, r.text
+
+    assert (await prepara(True)).status_code == 200  # creazione: libero
+    await spendi()
+    r = await prepara(False)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "change_after_long_rest", r.text
+    assert (await prepara(False, confirm=True)).status_code == 200
+    # i trucchetti solo nel 2024; un incantesimo non preparato si dimentica senza conferma
+    r = await client.delete(f"/characters/{cid}/spells/{ids['Luce Prova']}")
+    assert r.status_code == (409 if edizione == "2024" else 204), r.text
+    assert (await client.delete(f"/characters/{cid}/spells/{ids['Cura']}")).status_code == 204
+    cls = (await _scheda(client, cid))["classes"][0]  # salita di livello: libero, anche con slot spesi
+    r = await client.patch(f"/characters/{cid}/classes/{cls['id']}", json={"level": 4})
+    assert r.status_code == 200, r.text
+    assert (await prepara(True)).status_code == 200
+    await spendi()
+    assert (await prepara(False)).status_code == 409
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
+    assert r.status_code == 200, r.text
+    assert (await prepara(False)).status_code == 200

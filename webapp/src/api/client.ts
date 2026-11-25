@@ -985,13 +985,13 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (charId: number, spellId: number, data: Partial<Spell>) =>
-      request<Spell>(`/characters/${charId}/spells/${spellId}`, {
+    update: (charId: number, spellId: number, data: Partial<Spell>, confirm = false) =>
+      request<Spell>(`/characters/${charId}/spells/${spellId}${confirm ? '?confirm=true' : ''}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    remove: (charId: number, spellId: number) =>
-      request<void>(`/characters/${charId}/spells/${spellId}`, { method: 'DELETE' }),
+    remove: (charId: number, spellId: number, confirm = false) =>
+      request<void>(`/characters/${charId}/spells/${spellId}${confirm ? '?confirm=true' : ''}`, { method: 'DELETE' }),
     use: (charId: number, spellId: number, body: SpellUseBody) =>
       request<CharacterFull>(`/characters/${charId}/spells/${spellId}/use`, {
         method: 'POST',

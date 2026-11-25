@@ -74,7 +74,7 @@ from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
 from core.rules.pact_casts import FREE_CASTS, pact_cast, spent_free_casts
 from core.rules.school_hooks import after_cast
-from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
+from core.rules.spellbook import MODES, book_refusal, change_needs_rest, copy_cost, prepare_refusal, wizard_row
 from core.rules.states import begin_state, free_cast_state, has_state, item_spell_held
 from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, ensure_new_spell, release_spell_pick, spell_pick_target
@@ -116,6 +116,12 @@ def _ensure_prepare_capacity(char: Character, class_id: int | None = None) -> No
     info = build_spellcasting_info(char)
     if info.has_preparing_class and info.prepared_count >= (info.prepared_cap or 0):
         raise _prepared_cap_error(info.prepared_count, info.prepared_cap or 0, False)
+
+
+def _check_rest_window(char: Character, spell: Spell, confirm: bool) -> None:
+    """D-020: fuori dalla finestra del riposo lungo o della salita di livello il cambio va confermato."""
+    if not confirm and change_needs_rest(char, spell):
+        raise HTTPException(status_code=409, detail={"code": "change_after_long_rest"})
 
 
 def _check_class(char: Character, class_id: int | None) -> None:
@@ -416,6 +422,7 @@ async def add_spell(
     body: SpellCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    confirm: bool = False,
 ) -> Spell:
     char = await get_owned_full(char_id, user_id, session)
     _check_class(char, body.class_id)
@@ -431,6 +438,7 @@ async def add_spell(
         if (refusal := prepare_refusal(char, spell)) is not None:
             raise HTTPException(status_code=refusal[0], detail={"code": refusal[1]})
         _ensure_prepare_capacity(char, body.class_id)
+        _check_rest_window(char, spell, confirm)
     spell.is_prepared = spell.is_prepared or body.always_prepared
     session.add(spell)
     await session.flush()
@@ -450,6 +458,7 @@ async def update_spell(
     body: SpellUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    confirm: bool = False,
 ) -> Spell:
     char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -473,6 +482,8 @@ async def update_spell(
         if (refusal := prepare_refusal(char, spell)) is not None:
             raise HTTPException(status_code=refusal[0], detail={"code": refusal[1]})
         _ensure_prepare_capacity(char, data.get("class_id", spell.class_id))
+    if data.get("is_prepared") in (True, False) and data["is_prepared"] != bool(spell.is_prepared) and new_level >= 1 and not new_always:
+        _check_rest_window(char, spell, confirm)
     for field, value in data.items():
         setattr(spell, field, value)
     return spell
@@ -484,6 +495,7 @@ async def remove_spell(
     spell_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    confirm: bool = False,
 ) -> None:
     char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -492,6 +504,8 @@ async def remove_spell(
     spell = result.scalar_one_or_none()
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
+    if spell.level == 0 or spell.is_prepared:
+        _check_rest_window(char, spell, confirm)
     if char.concentrating_spell_id == spell_id:
         end_concentration(char)
         await session.flush()

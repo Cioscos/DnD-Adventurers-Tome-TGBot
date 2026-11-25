@@ -843,6 +843,9 @@
       "sources": "Sorgenti"
     },
     "spells": {
+      "off_rest_confirm": "Cambia lo stesso",
+      "off_rest_body": "Gli incantesimi preparati (e nel 2024 i trucchetti) si cambiano dopo un riposo lungo o salendo di livello. Dopo l'ultimo riposo hai già speso slot: cambiare lo stesso?",
+      "off_rest_title": "Lontano dal riposo lungo",
       "hurl": "Scaglia",
       "twinned_attack": "Secondo bersaglio: per colpire",
       "twinned_damage": "Secondo bersaglio: danno",

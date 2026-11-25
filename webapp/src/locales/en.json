@@ -843,6 +843,9 @@
       "sources": "Sources"
     },
     "spells": {
+      "off_rest_confirm": "Change anyway",
+      "off_rest_body": "Prepared spells (and cantrips in 2024) change after a long rest or when you level up. You have already spent slots since your last rest: change anyway?",
+      "off_rest_title": "Away from a long rest",
       "hurl": "Hurl",
       "twinned_attack": "Second target: to hit",
       "twinned_damage": "Second target: damage",

@@ -75,7 +75,7 @@ async def _cast(client, cid, spell: int, level: int, targets, conditions=None):
 
 async def _named_spell(client, cid, name: str, level: int, srd_index=None, concentration=False, duration=None) -> int:
     """Un incantesimo inserito a mano o importato: il nome, e se c'è lo `srd_index`."""
-    r = await client.post(f"/characters/{cid}/spells", json={
+    r = await client.post(f"/characters/{cid}/spells?confirm=true", json={
         "name": name, "level": level, "srd_index": srd_index, "is_prepared": True, "is_concentration": concentration, "duration": duration,
         "class_id": (await _full(client, cid))["classes"][0]["id"]})
     assert r.status_code == 201, r.text

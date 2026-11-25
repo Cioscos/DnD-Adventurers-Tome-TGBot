@@ -13,8 +13,10 @@ from core.data.spell_slots import caster_kind
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition, class_key
 from core.rules.pact_casts import pact_cast
+from core.rules.feature_sync import REPLACED_AT_REST
+from core.rules.level_choices import PREPARED_SWAP
 from core.rules.schools import normalize_school
-from core.rules.spellcasting import caster_ability, slots_for
+from core.rules.spellcasting import caster_ability, prepares, slots_for
 
 MODES = ("copy", "backup", "retranscribe")  # retranscribe: il libro è andato perso, si ritrascrive un incantesimo preparato
 _HOURS = {"copy": 2, "retranscribe": 1, "backup": 1}
@@ -102,3 +104,18 @@ def prepare_refusal(char: Any, spell: Any) -> tuple[int, str] | None:
     if spell.level > top_slot_level(char, row):
         return 422, "spell_above_slots"
     return None
+
+
+def change_needs_rest(char: Any, spell: Any) -> bool:
+    """D-020: i preparati (e nel 2024 i trucchetti) si cambiano dopo un riposo lungo, finché non si spende uno slot, o salendo
+    di livello; gli slot già spesi alla salita di livello non chiudono la finestra."""
+    # shortcut: la finestra si legge dagli slot spesi, quindi recuperarli tutti (Recupero Arcano, riposo breve del Warlock) la riapre
+    edition = character_edition(char)
+    if spell.always_prepared or (spell.level < 1 and edition == "2014"):
+        return False
+    row = _spell_row(char, spell)
+    if not (prepares(edition, row, char) if row is not None else any(prepares(edition, c, char) for c in char.classes)):
+        return False
+    level_up = ((char.settings or {}).get(REPLACED_AT_REST) or {}).get(PREPARED_SWAP) or {}
+    free = level_up.get("n", 0) if level_up.get("at") == (char.last_long_rest_at or "") else 0
+    return sum(s.used for s in char.spell_slots) > free

@@ -98,7 +98,7 @@ async def test_a_spell_whose_damage_cannot_be_rolled_is_cast_anyway_and_says_so(
     assert {s["level"]: s["available"] for s in use.json()["spell_slots"]}[2] == before[2] - 1
     roll = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 2})
     assert roll.status_code == 422 and roll.json()["detail"]["code"] == "bad_damage_dice"
-    normal = await client.post(f"/characters/{cid}/spells", json={
+    normal = await client.post(f"/characters/{cid}/spells?confirm=true", json={
         "name": "Dardo", "level": 1, "damage_dice": "1d4", "damage_type": "force", "is_prepared": True})
     use = await client.post(f"/characters/{cid}/spells/{normal.json()['id']}/use", json={"slot_level": 1})
     assert use.json()["damage_unrollable"] is False

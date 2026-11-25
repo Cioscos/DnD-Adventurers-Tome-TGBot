@@ -19,6 +19,7 @@ from core.rules.types import ChoiceSpec, RuleContext
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
 TOOL_SEED_FLAG = "tool_choices_seeded"  # settings: strumenti sulla scheda già contati nelle scelte di classe (una volta)
 FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
+PREPARED_SWAP = "prepared"  # in settings[REPLACED_AT_REST]: slot già spesi all'ultima salita di livello (D-020)
 CLASS_CANTRIPS = "class_cantrips"  # trucchetti della tabella della classe, scelti dalla pagina degli incantesimi (B2)
 
 
@@ -166,6 +167,11 @@ def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> N
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
     done = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
     if new_level > old_level:
+        if old_level or len(char.classes) > 1:  # alla creazione nessuno slot è speso (e non è ancora caricato)
+            from core.rules.feature_sync import REPLACED_AT_REST  # import locale: feature_sync importa questo modulo
+            swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+            char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, PREPARED_SWAP: {
+                "at": char.last_long_rest_at or "", "n": sum(s.used for s in char.spell_slots)}}}
         for lvl in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT):
             entry = {"id": uuid.uuid4().hex, "kind": "asi", "class_key": key, "level": lvl, "created_at": _now()}
             if (old_level < lvl <= new_level and (edition == "2014" or lvl != 19) and _token(entry) not in done

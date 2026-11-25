@@ -5,23 +5,25 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
 import SaveRollSheet from '@/components/SaveRollSheet'
 import Extras from '@/pages/Extras'
+import Spells from '@/pages/Spells'
 import CharacterSelect from '@/pages/CharacterSelect'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
 import type { Spell } from '@/types'
 
-const { getChar, updateXP, rollSave, createComp, useSpell, rollHealing } = vi.hoisted(() => ({
-  getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn(), createComp: vi.fn(), useSpell: vi.fn(), rollHealing: vi.fn(),
+const { getChar, updateXP, rollSave, createComp, useSpell, rollHealing, updateSpell } = vi.hoisted(() => ({
+  getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn(), createComp: vi.fn(), useSpell: vi.fn(), rollHealing: vi.fn(), updateSpell: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave }, sessionAllies: vi.fn(async () => [{ id: 9, name: 'Brann' }]), list: vi.fn(async () => []) },
     sessions: { me: vi.fn(async () => null) },
-    companions: { list: vi.fn(async () => []), create: createComp }, spells: { use: useSpell, rollHealing },
+    companions: { list: vi.fn(async () => []), create: createComp }, spells: { use: useSpell, rollHealing, update: updateSpell },
   },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
+vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: vi.fn() }) }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => async () => undefined, d20Arg: () => undefined }))
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useParams: () => ({ id: '5' }) }))
 vi.mock('react-i18next', async (orig) => ({
@@ -114,5 +116,21 @@ describe('caccia: decisioni', () => {
     expect(fortunato).toBeDisabled()
     expect(fortunato).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'Allerta' })).toBeEnabled()
+  })
+
+  // caccia: {"id": "CB-4648", "fonte": "decisione D-020 (tests/caccia/decisioni.md): il cambio di un preparato lontano dal riposo lungo si conferma", "zona": "regola:2024/wizard", "voce": "interazione", "copre": ["carta:2024/classes/wizard.md#Incantesimi / Spellcasting (Mago 1, pag. 165)", "route:/char/:id/spells"]}
+  it('preparare un incantesimo lontano dal riposo lungo chiede conferma, poi ripete il cambio confermato', async () => {
+    const bless = { id: 101, name: 'Benedizione', level: 1, is_prepared: false, is_pinned: false, is_concentration: false, is_ritual: false }
+    getChar.mockResolvedValue({
+      id: 5, rules_edition: '2014', settings: {}, classes: [{ id: 1, class_name: 'cleric', level: 5 }], abilities: [], items: [], spell_slots: [], spells: [bless],
+      spellcasting: { has_preparing_class: true, prepared_cap: 8, prepared_count: 0, cap_mode: 'auto', limits: [], casters: [] },
+    })
+    vi.stubGlobal('IntersectionObserver', class { observe() {} unobserve() {} disconnect() {} })
+    updateSpell.mockRejectedValueOnce(new ApiError(409, { code: 'change_after_long_rest' })).mockResolvedValueOnce({})
+    renderWithProviders(<Spells />)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    await user.click(await screen.findByTitle('character.spells.not_prepared'))
+    await user.click(await screen.findByText('character.spells.off_rest_confirm'))
+    await waitFor(() => expect(updateSpell).toHaveBeenLastCalledWith(5, 101, { is_prepared: true }, true))
   })
 })
