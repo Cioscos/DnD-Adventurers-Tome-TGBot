@@ -11,6 +11,7 @@ from tests.integration.rules.test_2014_bard import _use as _use_feature
 from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin_combat import _attack, _listed
 from tests.integration.rules.test_2024_paladin import _paladin24
+from tests.integration.rules.test_2024_paladin_oaths import _oath, _sword
 from tests.integration.rules.test_2024_monk import _monk24
 from tests.integration.rules.test_2014_paladin import _rest
 from tests.integration.rules.test_2024_ranger import _spell_id
@@ -134,3 +135,21 @@ async def test_il_lancio_gratuito_non_fatto_non_consuma_l_uso(client, chiave, st
     r = await client.post(f"/characters/{cid}/spells/{await _spell_id(client, cid, incantesimo)}/use", json={"free_cast": True})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, chiave))["uses"] == pieni - 1, "il lancio fatto spende l'uso"
+
+
+@pytest.mark.caccia(id="CB-4479", fonte="2024 · Paladino, Giuramento di Devozione · Arma Consacrata · pag. 113",
+                    zona="regola:2024/paladin", voce="regola",
+                    copre=["carta:2024/classes/paladin.md#Arma Consacrata / Sacred Weapon (Incanalare Divinità, Giuramento di Devozione, Paladino 3, pag. 113)",
+                           "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/items/{item_id}/attack"])
+async def test_arma_consacrata_sceglie_radioso_o_normale_a_ogni_colpo(client):
+    cid = await _oath(client, 3, "devotion", charisma=16)
+    spada = await _sword(client, cid, equip="main_hand")
+    assert (await _use_feature(client, cid, "paladin.sacred_weapon", params={"weapon": str(spada)})).status_code == 200
+    radioso = "paladin.sacred_weapon_radiant"
+    assert radioso in {o["key"] for o in await _listed(client, cid, spada)}, "«each time you hit»: la scelta è del colpo"
+    for scelte, atteso in (([radioso], True), ([], False)):  # lo stesso privilegio, un colpo radioso e uno normale
+        colpo = await _attack(client, cid, spada, options=scelte)
+        assert colpo.status_code == 200, colpo.text
+        effetti = (colpo.json().get("option_result") or {}).get("effects", [])
+        assert any("radios" in e["it"].lower() for e in effetti) is atteso, effetti
+    assert (await _ability(client, cid, "paladin.channel_divinity"))["uses"] == 1, "cambiare tipo non costa un altro uso"

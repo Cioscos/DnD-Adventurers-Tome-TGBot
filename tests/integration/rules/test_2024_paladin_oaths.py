@@ -507,16 +507,15 @@ async def test_sacred_weapon_is_for_melee_weapons_only(client):
     assert r.status_code == 409 and (await _ability(client, cid, CD))["uses"] == 2
 
 
-async def test_sacred_weapon_saves_the_damage_type_and_the_hit_shows_radiant(client):
+async def test_sacred_weapon_radiant_is_chosen_on_each_hit(client):
+    # 2024, Arma Consacrata pag. 113 («each time you hit with it ... normal damage type or Radiant»): la scelta è del colpo
     cid = await _oath(client, 3, "devotion", charisma=16)
     sword = await _sword(client, cid, equip="main_hand")
-    r = await _use(client, cid, SW, params={"weapon": str(sword), "damage_type": "radiant"})
+    r = await _use(client, cid, SW, params={"weapon": str(sword)})
     assert r.status_code == 200, r.text
-    assert r.json()["state"]["data"]["damage_type"] == "radiant"
-    body = (await client.post(f"/characters/{cid}/items/{sword}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
+    assert "damage_type" not in r.json()["state"]["data"]
+    body = (await client.post(f"/characters/{cid}/items/{sword}/attack",
+                              json={"die": 10, "confirm_extra_attack": True, "options": ["paladin.sacred_weapon_radiant"]})).json()
     assert any("radios" in e["it"].lower() for e in body["option_result"]["effects"])
-    other = await _oath(client, 3, "devotion", charisma=16)
-    sword2 = await _sword(client, other, equip="main_hand")
-    assert (await _use(client, other, SW, params={"weapon": str(sword2)})).json()["state"]["data"]["damage_type"] == "normal"
-    body = (await client.post(f"/characters/{other}/items/{sword2}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
+    body = (await client.post(f"/characters/{cid}/items/{sword}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
     assert not any("radios" in e["it"].lower() for e in (body.get("option_result") or {}).get("effects", []))

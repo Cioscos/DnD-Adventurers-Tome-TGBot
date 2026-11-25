@@ -105,34 +105,24 @@ def _melee_wielded(ctx: RuleContext) -> list[Any]:
     return [i for i in _wielded_weapons(ctx) if item_meta(i).get("weapon_type", "melee") != "ranged"]
 
 
-_DAMAGE_TYPES = {"normal": _both("Il tipo di danno normale dell'arma", "The weapon's normal damage type"),
-                 "radiant": _both("Danno radioso", "Radiant damage")}
-
-
 def _sacred_state(ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("sacred_weapon", rounds=100, ends_on=("manual", "unconscious"),
-                     data={"weapon_id": int(params["weapon"]), "bound_item": int(params["weapon"]), "attack_bonus": _cha_bonus(ctx),
-                           "damage_type": params.get("damage_type") or "normal"})
+                     data={"weapon_id": int(params["weapon"]), "bound_item": int(params["weapon"]), "attack_bonus": _cha_bonus(ctx)})
 
 
-def _sacred_radiant(ctx: RuleContext) -> bool:
-    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "sacred_weapon"), None)
-    return _sacred_applies(ctx) and ((state or {}).get("data") or {}).get("damage_type") == "radiant"
-
-
+# «each time you hit with it»: normale o radioso si sceglie a ogni attacco, non all'attivazione (il ``damage_type`` che gli
+# stati già salvati portano non conta più)
 SACRED_RADIANT = RollOptionSpec(
-    key=f"{CK}.sacred_weapon_radiant", phase="before", rolls=("attack",), automatic=True, available=_sacred_radiant,
-    label=_both("Arma Consacrata: il danno dell'arma è radioso", "Sacred Weapon: the weapon's damage is radiant"),
-    effect=_say("Arma Consacrata: i danni di quest'arma sono radiosi (scelti all'attivazione).",
-                "Sacred Weapon: this weapon's damage is radiant (chosen when activated)."))
+    key=f"{CK}.sacred_weapon_radiant", phase="before", rolls=("attack",), available=_sacred_applies,
+    label=_both("Arma Consacrata: questo colpo infligge danni radiosi invece del tipo normale?",
+                "Sacred Weapon: does this hit deal radiant damage instead of its normal type?"),
+    effect=_say("Arma Consacrata: i danni di questo colpo sono radiosi.", "Sacred Weapon: this hit's damage is radiant."))
 
 
 SACRED_WEAPON_USE = OnUse(
     spends=POOL, available=lambda c: bool(_melee_wielded(c)), state=_sacred_state,
     choices=(UseChoice("weapon", _both("Arma", "Weapon"), lambda c: [str(i.id) for i in _melee_wielded(c)],
-                       lambda k: _both(k, k), option_label_ctx=_weapon_label),
-             UseChoice("damage_type", _both("Tipo di danno", "Damage type"), lambda _c: list(_DAMAGE_TYPES), lambda k: _DAMAGE_TYPES[k],
-                       optional=True)))
+                       lambda k: _both(k, k), option_label_ctx=_weapon_label),))
 
 
 def _protection_state(_ctx: RuleContext, _inputs: dict) -> StateSpec:
