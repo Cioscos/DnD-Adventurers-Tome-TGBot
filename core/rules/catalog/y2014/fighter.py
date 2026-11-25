@@ -172,7 +172,10 @@ def _athlete_applies(ctx: RuleContext) -> bool:
         return False
     if ctx.roll == "initiative":
         return True
-    return ctx.roll in ("skill", "ability") and not ctx.proficient and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
+    # Conoscenze Secolari dà la competenza intera nell'abilità scelta (pag. 60)
+    ages = ctx.skill and any(s.get("key") == "knowledge_of_the_ages" and (s.get("data") or {}).get("skill") == ctx.skill
+                             for s in ctx.char.active_states or [])
+    return ctx.roll in ("skill", "ability") and not ctx.proficient and not ages and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
 
 
 def _survivor_heal(ctx: RuleContext) -> int:

@@ -12,10 +12,13 @@ from tests.caccia.test_cb_regola_2024_fighter import _guerriero, _manovre, _sche
 from tests.caccia.test_cb_regola_fix_lancio_core import _pg
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
 from tests.integration._telegram_stub import install_fake_telegram
-from tests.integration.rules.test_2014_bard import _roll_keys, _sword
+from tests.integration.rules.test_2014_bard import _roll_keys, _sword, _use
 from tests.integration.rules.test_2014_fighter_battle_master import _damage, _hit, _key
+from tests.integration.rules.test_2014_ranger_beast import _panther
+from tests.integration.rules.test_2014_ranger_hunter import _superior
 from tests.integration.rules.test_2014_sorcerer_origins import PRESENCE, _draconic
 from tests.integration.rules.test_2014_warlock import _warlock
+from tests.integration.rules.test_2014_warlock_invocations import _blade, _caster
 from tests.integration.rules.test_2014_warlock_patrons import FEY
 from tests.integration.rules.test_2014_wizard_enchantment import GAZE, _effect, _wizard
 from tests.integration.rules.test_2024_warlock_review2 import _chain
@@ -437,3 +440,18 @@ async def test_maestro_d_armi_dice_che_manca_la_competenza(client):
     riga = _feat_rows((await _take(client, cid, "2024_weapon_master", "strength")).json(), "2024_weapon_master")[0]
     r = await _complete(client, cid, riga["id"], {"weapon_mastery": ["greatsword"]})
     assert r.status_code == 422 and r.json()["detail"] == "feat_weapon_not_proficient", r.text
+
+
+@pytest.mark.caccia(id="CB-4811", fonte="2014 · Guerriero · Atleta Straordinario · pag. 72; Chierico · Conoscenze Secolari · pag. 60: con la competenza la metà non si somma", zona="regola:2014/fighter", voce="interazione",
+                    copre=["carta:2014/classes/fighter.md#Atleta Straordinario / Remarkable Athlete (Campione 7, pag. 72)",
+                           "POST /characters/{char_id}/skills/{skill_name}/roll"])
+async def test_conoscenze_secolari_sostituisce_l_atleta_straordinario(client):
+    cid = await _crea(client, "2014", ("fighter", 7, "Campione"), ("cleric", 2, "Dominio della Conoscenza"))
+
+    async def bonus() -> int:
+        return (await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 10})).json()["bonus"]
+
+    assert await bonus() == 2 + 2  # Forza e metà competenza
+    r = await _use(client, cid, "cleric.knowledge_of_the_ages", params={"skill": "athletics"})
+    assert r.status_code == 200, r.text
+    assert await bonus() == 2 + 4  # Forza e competenza
