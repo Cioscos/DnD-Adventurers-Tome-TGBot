@@ -161,7 +161,7 @@ BEAST_FORCE = RollOptionSpec(
     effect=_say("Il Colpo della Bestia infligge danni da forza.", "The Beast's Strike deals force damage."))
 
 BESTIAL_FURY_DAMAGE = RollOptionSpec(
-    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     pay_if_success=True,  # «la prima volta che colpisce»: su un mancato l'uso torna
     available=lambda c: _beast_attack(c) and hunters_mark_active(c),
     label=_both("Furia Bestiale: il bersaglio è la creatura marcata da Hunter's Mark? Danni da forza in più (una volta per turno)",
@@ -200,7 +200,8 @@ def _strikes_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 
 DREADFUL_STRIKES = RollOptionSpec(
-    key=f"{CK}.dreadful_strikes", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_strikes_dice, available=_weapon_attack,
+    key=f"{CK}.dreadful_strikes", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_strikes_dice, extra_damage_type="psychic",
+    available=_weapon_attack,
     label=_both("Colpi Terribili: +1d4 danni psichici (1d6 dal 11°), una volta per turno", "Dreadful Strikes: +1d4 psychic damage (1d6 from 11th), once per turn"))
 
 _CHARISMA_SKILLS = ("deception", "performance", "persuasion")
@@ -243,7 +244,7 @@ def _dread_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 DREADFUL_STRIKE = RollOptionSpec(
     key=DREAD_KEY, phase="after_hit", rolls=("attack",), once_per_turn=True, cost=Cost(feature_key=f"{CK}.dread_ambusher"),
-    extra_dice=_dread_dice, available=_weapon_attack,
+    extra_dice=_dread_dice, extra_damage_type="psychic", available=_weapon_attack,
     label=_both("Colpo Terribile: +2d6 danni psichici (2d8 dal 11°), una volta per turno, spende un uso",
                 "Dreadful Strike: +2d6 psychic damage (2d8 from 11th), once per turn, spends a use"))
 
@@ -307,7 +308,7 @@ MULTIATTACK_DEFENSE = RollOptionSpec(
                 "That creature's other attacks against you this turn have Disadvantage."))
 
 SUPERIOR_PREY = RollOptionSpec(
-    key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     separate_damage=True, crit_doubles=False,  # il dado è di una seconda creatura: fuori dal totale e senza raddoppio al critico
     available=lambda c: _weapon_attack(c) and hunters_mark_active(c),
     label=_both("Preda del Cacciatore Superiore: una seconda creatura entro 9 m dalla marcata subisce i danni di Hunter's Mark (una volta per turno)",

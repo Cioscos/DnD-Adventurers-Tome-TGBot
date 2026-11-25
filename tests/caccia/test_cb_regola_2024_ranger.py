@@ -143,7 +143,6 @@ async def test_la_bestia_primordiale_spende_i_suoi_dadi_vita(client, dadi):
                            "carta:2024/classes/ranger.md#Preda del Cacciatore Superiore / Superior Hunter's Prey (Cacciatore 11, pag. 127)"])
 @pytest.mark.parametrize("key,kind", [("ranger.dreadful_strikes", "psychic"), ("ranger.dreadful_strike", "psychic"),
                                       ("ranger.bestial_fury_damage", "force"), ("ranger.superior_hunters_prey", "force")])
-@pytest.mark.xfail(strict=True, reason="CB-2517: difforme dal manuale, confermato")
 def test_i_dadi_extra_dei_privilegi_hanno_il_tipo_di_danno_della_carta(key, kind):
     assert _option(key).extra_damage_type == kind
 
