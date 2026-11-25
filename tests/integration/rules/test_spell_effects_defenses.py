@@ -315,7 +315,7 @@ def test_invisibility_ends_when_the_target_attacks_or_casts_but_not_the_greater_
 
     for key, edition, action, left in (("invisibility", "2014", "attack", False), ("invisibility", "2024", "cast", False),
                                        ("greater_invisibility", "2014", "attack", True)):
-        char = SimpleNamespace(conditions={}, active_states=[], settings={}, turn_state={}, spells=[])
+        char = SimpleNamespace(id=1, conditions={}, active_states=[], settings={}, turn_state={}, spells=[])
         data = {"spell_key": key, "edition": edition, "caster_id": 1}
         begin_state(char, spell_state_spec(f"spell:{key}", data), f"spell:{key}", key)
         assert char.conditions["invisible"] is True

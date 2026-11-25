@@ -205,3 +205,52 @@ async def test_guardiani_spirituali_2014_radiosi_o_necrotici_scelti_al_lancio(cl
         r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 3})
         assert r.status_code == 200 and r.json()["damage_type"] == "necrotic", r.text
         assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4611", fonte="decisione D-032 (tests/caccia/decisioni.md): orologio e concentrazione si chiudono quando l'ultimo bersaglio perde lo stato; 2014 · Incantesimi · Invisibilità · pag. 246",
+                    zona="regola:2014/incantesimi-G-L", voce="interazione",
+                    copre=["carta:2014/spells.md#Invisibilità", "POST /characters/{char_id}/attack/unarmed",
+                           "POST /characters/{char_id}/spells/{spell_id}/use"])
+@pytest.mark.parametrize("bersagli, agisce, resta", [
+    (("lanciatore",), "attacco", False), (("lanciatore",), "lancio", False), (("eroe",), "attacco", False),
+    (("lanciatore", "eroe"), "attacco", True)])
+async def test_invisibilita_finita_per_l_ultimo_bersaglio_chiude_orologio_e_concentrazione(client, test_session_factory, bersagli, agisce, resta):
+    from tests.integration._encounter_helpers import GM_ID
+    from tests.integration.rules.test_spell_effects_defenses import _cast, _table
+    eroe, lanciatore, spell = await _table(client, test_session_factory, "Invisibility", "invisibility", 3)
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{lanciatore}/spells/{spell}", json={"level": 2})
+    assert r.status_code == 200, r.text
+    ids = {"lanciatore": lanciatore, "eroe": eroe}
+    await _cast(client, lanciatore, spell, [ids[b] for b in bersagli], level=3)
+    if agisce == "lancio":
+        altro = (await client.post(f"/characters/{lanciatore}/spells", json={"name": "Luce", "level": 0})).json()["id"]
+        r = await client.post(f"/characters/{lanciatore}/spells/{altro}/use", json={"confirm": ["one_slot_per_turn"]})
+    else:
+        as_user(GM_ID if bersagli[0] == "lanciatore" else PLAYER_ID)
+        r = await client.post(f"/characters/{ids[bersagli[0]]}/attack/unarmed", json={"die": 10})
+    assert r.status_code == 200, r.text
+    as_user(GM_ID)
+    scheda = await _scheda(client, lanciatore)
+    assert scheda["concentrating_spell_id"] == (spell if resta else None)
+    chiavi = {s["key"] for s in scheda["active_states"] or []}
+    assert ("spell_cast:invisibility" in chiavi) is resta and "spell:invisibility" not in chiavi
+    if "eroe" in bersagli:
+        as_user(PLAYER_ID)
+        assert bool((await _scheda(client, eroe))["conditions"].get("invisible")) is resta
+
+
+@pytest.mark.caccia(id="CB-4612", fonte="decisione D-032 (tests/caccia/decisioni.md); invariante: un nuovo lancio dello stesso incantesimo apre un nuovo orologio",
+                    zona="regola:2014/incantesimi-G-L", voce="ripetizione",
+                    copre=["carta:2014/spells.md#Invisibilità", "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_invisibilita_rilanciata_da_invisibili_resta_attiva_con_la_concentrazione(client, test_session_factory):
+    from tests.integration._encounter_helpers import GM_ID
+    from tests.integration.rules.test_spell_effects_defenses import _cast, _table
+    _eroe, lanciatore, spell = await _table(client, test_session_factory, "Invisibility", "invisibility", 2)
+    for _ in range(2):
+        await _cast(client, lanciatore, spell, [lanciatore], level=2, confirm=["one_slot_per_turn", "concentration"])
+        as_user(GM_ID)
+        await client.post(f"/characters/{lanciatore}/turn/new")
+    scheda = await _scheda(client, lanciatore)
+    assert scheda["concentrating_spell_id"] == spell and scheda["conditions"].get("invisible") is True
+    assert {"spell:invisibility", "spell_cast:invisibility"} <= {s["key"] for s in scheda["active_states"]}

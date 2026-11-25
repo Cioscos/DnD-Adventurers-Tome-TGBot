@@ -20,8 +20,8 @@ from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, is_incapacitated, surprise_exit_features
 from core.rules.roll_options import keep_target_effect, refund_spent
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX
-from core.rules.states import begin_state, has_state, item_spell_held, settle_closed
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
+from core.rules.states import SPELL_SPENT, begin_state, has_state, item_spell_held, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
 
@@ -151,6 +151,19 @@ def _spell_effect(spell) -> bool:
     return save != "ATK" and bool(get("damage_dice") or get("extra_damage_dice") or save)
 
 
+def _drop_from_clocks(char, closed: list[dict]) -> None:
+    """Gli incantesimi finiti per ``char`` (Invisibilità): il proprio orologio si aggiorna subito, così il lancio in corso ne
+    può aprire uno nuovo; quello di un altro lo aggiorna il flush della richiesta (``SPELL_SPENT``)."""
+    from api.services.spell_effects import drop_clock_target  # import locale: spell_effects importa questo modulo
+    for s in closed:
+        if s["data"]["caster_id"] == char.id:
+            drop_clock_target(char, s["key"], char.id)
+        else:
+            settings = char.settings or {}
+            char.settings = {**settings, SPELL_SPENT: [*(settings.get(SPELL_SPENT) or []),
+                                                       {"caster_id": s["data"]["caster_id"], "key": s["key"], "target_only": True}]}
+
+
 def end_on_action(char, action: str, spell=None) -> None:
     """Chi attacca (``attack``) o lancia (``cast``) chiude gli stati che finiscono così (Manto di Ombre).
 
@@ -158,7 +171,9 @@ def end_on_action(char, action: str, spell=None) -> None:
     ``data["refund_on_miss"]`` chiusi da un attacco tornano se il giocatore dichiara il mancato (``last_roll.refundable``)."""
     keep = {s["key"] for s in get_states(char) if (s.get("data") or {}).get("needs_effect")}         if action == "cast" and spell is not None and not _spell_effect(spell) else frozenset()
     held = [s for s in get_states(char) if action in s["ends_on"] and s["key"] not in keep and (s.get("data") or {}).get("refund_on_miss")]
-    end_states(char, action, keep=keep)
+    spells = [s for s in get_states(char) if str(s["key"]).startswith(SPELL_STATE_PREFIX) and (s.get("data") or {}).get("caster_id") is not None]
+    closed = end_states(char, action, keep=keep)
+    _drop_from_clocks(char, [s for s in spells if s["key"] in closed])
     if action == "attack":  # ogni attacco riparte da zero: un resto di quello prima non si attacca al tiro nuovo
         char.turn_state = {**{k: v for k, v in get_turn(char).items() if k != MISS_REFUND},
                            **({MISS_REFUND: {s["key"]: [f"state:{s['key']}:{json.dumps(s)}"] for s in held}} if held else {})}

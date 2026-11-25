@@ -359,12 +359,12 @@ async def test_h3b_heroism_ended_on_the_last_target_ends_the_casters_concentrati
     assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] is None
 
 
-async def test_h3b_self_cast_ended_by_the_caster_keeps_the_concentration(client, test_session_factory):
+async def test_h3b_self_cast_ended_by_the_caster_ends_the_concentration(client, test_session_factory):  # D-032
     hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
     await _defense_cast(client, caster, spell, [caster], level=1)
     as_user(GM_ID)
     assert (await client.delete(f"/characters/{caster}/active-states/spell:heroism")).status_code == 200
-    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+    assert (await _full(client, caster))["concentrating_spell_id"] is None
 
 
 async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_factory):

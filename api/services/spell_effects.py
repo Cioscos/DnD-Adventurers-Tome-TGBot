@@ -217,30 +217,35 @@ async def _cap_hp(session: AsyncSession, char: Character, changed: list[dict]) -
     cap_hp_to_max(char, changed, await get_passive_modifiers(session, char, "character.hit_points_max"))
 
 
+def drop_clock_target(caster: Character, key: str, target_id: int) -> None:
+    """Il bersaglio ha perso lo stato ``key``: l'orologio di chi lancia lo toglie e, se era l'ultimo, si chiude con la
+    concentrazione (D-032, anche su sé stessi): non resta nulla da mantenere."""
+    clock = SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]
+    settings = dict(caster.settings or {})
+    given = dict(settings.get(SPELL_GIVEN) or {})
+    left = [t for t in given.get(clock, []) if t != target_id]
+    if left:
+        caster.settings = {**settings, SPELL_GIVEN: {**given, clock: left}}
+        return
+    caster.settings = {**settings, SPELL_GIVEN: {k: v for k, v in given.items() if k != clock}}
+    closing = [s for s in caster.active_states or [] if s.get("key") == clock]
+    if not closing:
+        return
+    caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
+    settle_closed(caster, closing)
+    if any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
+            and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
+        end_concentration(caster)
+
+
 async def end_by_target(session: AsyncSession, char: Character, closed: list[dict]) -> None:
     """``char`` ha chiuso a mano gli stati ``closed``: i PF non superano il nuovo massimo e gli orologi dei lanciatori
     (``spell_cast:*``) perdono questo bersaglio, e si chiudono se non ne restano altri."""
     for state in closed:
         data, key = state.get("data") or {}, str(state.get("key", ""))
         caster = None if data.get("caster_id") is None else char if data["caster_id"] == char.id else await session.get(Character, data["caster_id"])
-        clock = SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]
-        if caster is None or not key.startswith(SPELL_STATE_PREFIX):
-            continue
-        settings = dict(caster.settings or {})
-        given = dict(settings.get(SPELL_GIVEN) or {})
-        left = [t for t in given.get(clock, []) if t != char.id]
-        if left:
-            caster.settings = {**settings, SPELL_GIVEN: {**given, clock: left}}
-            continue
-        caster.settings = {**settings, SPELL_GIVEN: {k: v for k, v in given.items() if k != clock}}
-        closing = [s for s in caster.active_states or [] if s.get("key") == clock]
-        if closing:
-            caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
-            settle_closed(caster, closing)
-            # Concentrazione su altri: finito l'ultimo bersaglio non resta nulla da mantenere (non se l'effetto era su di sé)
-            if caster is not char and any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
-                    and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
-                end_concentration(caster)
+        if caster is not None and key.startswith(SPELL_STATE_PREFIX):
+            drop_clock_target(caster, key, char.id)
     await _cap_hp(session, char, closed)
 
 

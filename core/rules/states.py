@@ -275,7 +275,7 @@ SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
 # Tipo di danno scelto all'ultimo lancio, per incantesimo: {chiave dell'effetto: tipo}. Il tiro di danno legge la voce del proprio incantesimo; un lancio scrive (o toglie) solo la sua.
 SPELL_CAST_TYPE = "spell_cast_type"
 # Sul bersaglio: [{"caster_id", "key"}] degli stati ``spell:*`` spesi da un'opzione (Guida e Resistenza 2014: «poi l'incantesimo termina»);
-# il flush chiude la concentrazione e l'orologio di chi ha lanciato.
+# il flush chiude la concentrazione e l'orologio di chi ha lanciato. Con ``target_only`` (Invisibilità) solo se era l'ultimo bersaglio.
 SPELL_SPENT = "spell_spent"
 # Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente

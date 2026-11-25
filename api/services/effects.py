@@ -357,6 +357,11 @@ def _end_spent_spells(session: Session, char: Character) -> None:
     for entry in pending:
         caster = char if entry["caster_id"] == char.id else session.get(Character, entry["caster_id"])
         clock = SPELL_CLOCK_PREFIX + entry["key"][len(SPELL_STATE_PREFIX):]
+        if entry.get("target_only"):  # solo per questo bersaglio (Invisibilità): gli altri restano
+            if caster is not None:
+                from api.services.spell_effects import drop_clock_target  # import locale: spell_effects importa questo modulo
+                drop_clock_target(caster, entry["key"], char.id)
+            continue
         if caster is None or not any(s.get("key") == clock for s in caster.active_states or []):
             continue
         if "concentration_end" in next(s for s in caster.active_states if s.get("key") == clock).get("ends_on", ()):
