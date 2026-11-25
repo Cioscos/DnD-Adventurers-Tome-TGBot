@@ -67,6 +67,8 @@ def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | 
     state = begin_state(char, spec, feature_key, name)
     if others:
         char.active_states = [*others, *char.active_states]  # ``begin_state`` li aveva tolti
+    if mine and (given := (mine.get("data") or {}).get("temp_given")):  # i PF temporanei del lancio di prima restano, e finiscono con questo
+        note_spell_temp_hp(char, spec.key, given, caster)
     return state
 
 

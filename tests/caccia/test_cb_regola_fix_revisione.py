@@ -144,3 +144,22 @@ async def test_un_paladino_2014_di_primo_livello_non_toglie_al_chierico_il_livel
     assert r.status_code == 422 and r.json()["detail"]["code"] == "spell_above_slots", r.text
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Aiuto", "level": 2, "is_prepared": True})
     assert r.status_code == 201, r.text
+
+
+@pytest.mark.caccia(id="CB-4769", fonte="2014 · Incantesimi · Vita Falsata · pag. 289; 2014 · Punti Ferita Temporanei · pag. 198",
+                    zona="regola:2014/incantesimi-S-Z", voce="ripetizione",
+                    copre=["carta:2014/spells.md#Vita Falsata", "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/rounds/tick"])
+async def test_vita_falsata_2014_rilanciata_con_un_tiro_piu_basso_svanisce_lo_stesso(client, dadi, test_session_factory):
+    cid, classe = await _pg(client, "sorcerer", 5)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Vita Falsata", "srd_index": "false-life", "level": 1, "class_id": classe})
+    for dado in (4, 1):  # 8 PF temporanei, poi 5: restano gli 8
+        dadi(dado)
+        corpo = {"slot_level": 1, "confirm": ["one_slot_per_turn"]}
+        assert (await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json=corpo)).status_code == 200
+    assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 8
+    async with test_session_factory() as s:  # l'ultimo round dell'ora, senza 599 tick
+        pg = await s.get(Character, cid)
+        pg.active_states = [{**x, "rounds_left": 1} if x.get("rounds_left") else x for x in pg.active_states or []]
+        await s.commit()
+    assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 0
