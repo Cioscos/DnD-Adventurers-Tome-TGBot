@@ -447,7 +447,7 @@ export default function Turn() {
           <RollButton onRoll={(mode) => castFlow.beginCast(spell, mode)} pending={castFlow.isSpellPending(spell.id)}
             ariaLabel={`${t('character.turn.cast')} ${label}`}
             className={`${BTN} bg-dnd-arcane/10 text-dnd-arcane-bright border-dnd-arcane/30`}>
-            <Sparkles size={14} />{t('character.turn.cast')}
+            <Sparkles size={14} />{t(spell.effect?.lit ? 'character.spells.hurl' : 'character.turn.cast')}
           </RollButton>
         )
       }

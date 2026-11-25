@@ -19,7 +19,7 @@ from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
-from core.rules.catalog.spells import spell_effect
+from core.rules.catalog.spells import hurled_lit, spell_effect
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import CLASS_CANTRIPS, FREE_KNOWN_KEY, active_choice_specs
 from core.rules.modifiers import modifiers_for
@@ -48,6 +48,7 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
             "hit_damage": any(o.phase == "after_hit" or (o.phase == "before" and "attack" in o.rolls and o.extra_dice)
                               for o in (*variant.options, *variant.on_hit)),
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
+            **({"lit": lit} if (lit := hurled_lit(char, srd_index, name)) is not None else {}),  # si scaglia solo da acceso (Produrre Fiamma 2024)
             "not_self": variant.not_self,  # chi lancia non è fra i bersagli (Vincolo di Interdizione)
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
@@ -90,6 +91,8 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
         spell.effect = effect_view(char, spell.srd_index, spell.name, spell.level)
+        if spell.effect and spell.effect.get("lit"):  # acceso: l'uso è scagliarlo, con l'azione
+            spell.effective_casting_time = "1 action" if "action" in (spell.casting_time or "").lower() else "1 azione"
         spell.healing_preview = healing_preview(char, spell, stats)
         ki = ki_cast_info(char, spell)
         if ki is not None:

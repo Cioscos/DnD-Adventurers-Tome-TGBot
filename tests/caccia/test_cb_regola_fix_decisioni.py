@@ -365,3 +365,46 @@ async def test_lampo_di_interdizione_migliorato_da_i_pf_temporanei_al_chierico_b
     r = await client.post(f"/characters/{cid}/features/{lampo}/use", json={"params": {"self": True}})
     assert r.status_code == 200 and r.json()["given"] is None, r.text
     assert 5 <= (await _scheda(client, cid))["temp_hp"] <= 15  # 2d6 + Saggezza (+3)
+
+
+@pytest.mark.caccia(id="CB-4645", fonte="2024 · Incantesimi · Produrre Fiamma · pag. 308 (lancio con l'azione bonus, la fiamma si scaglia con un'azione Magia finché dura); 2014 · pag. 264",
+                    zona="regola:2024/incantesimi-M-R", voce="regola",
+                    copre=["carta:2024/spells.md#Produrre Fiamma", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "POST /characters/{char_id}/spells/{spell_id}/attack"])
+async def test_produrre_fiamma_2024_si_accende_col_lancio_e_si_scaglia_con_l_azione(client, test_session_factory):
+    from tests.integration._encounter_helpers import GM_ID, seed_session
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    sid, _eroe = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    ids = {}
+    for edizione, tempo in (("2024", "1 azione bonus"), ("2014", "1 azione")):
+        cid = await _pg(client, edizione, "druid", 3, wisdom=16)
+        r = await client.post(f"/characters/{cid}/spells", json={
+            "name": "Produrre Fiamma", "srd_index": "produce-flame", "level": 0, "attack_save": "ATK", "casting_time": tempo,
+            "duration": "10 minuti", "damage_dice": "1d8", "damage_type": "fire"})
+        assert r.status_code == 201, r.text
+        ids[edizione] = cid, r.json()["id"]
+    cid, spell = ids["2024"]
+    await _seat(test_session_factory, cid)
+    url = f"/characters/{cid}/spells/{spell}"
+    r = await client.post(f"{url}/attack", json={"die": 15})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "flame_not_lit", r.text[:200]
+    assert (await client.post(f"{url}/use", json={})).status_code == 200
+    turno = await _turno(client, cid)
+    assert (turno["bonus_used"], turno["action_used"]) == (True, False)
+
+    async def riga():
+        return next(s for s in (await _scheda(client, cid))["spells"] if s["id"] == spell)
+
+    assert ((await riga())["effect"]["lit"], (await riga())["effective_casting_time"]) == (True, "1 azione")
+    assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == 200
+    assert (await _turno(client, cid))["action_used"] is True
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == 200  # ancora accesa: non serve un altro lancio
+    turno = await _turno(client, cid)
+    assert (turno["bonus_used"], turno["action_used"]) == (False, True)
+    for _ in range(100):  # 10 minuti
+        await client.post(f"/characters/{cid}/rounds/tick")
+    assert (await riga())["effect"]["lit"] is False
+    cid, spell = ids["2014"]  # nel 2014 il lancio e il tiro restano una cosa sola
+    assert (await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 15})).status_code == 200

@@ -68,7 +68,7 @@ from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
-from core.rules.catalog.spells import spell_effect
+from core.rules.catalog.spells import hurled_lit, spell_effect
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
@@ -168,7 +168,7 @@ def _slot_marks(char: Character) -> tuple:
     return tuple(turn[k] for k in _SLOT_MARKS)
 
 
-def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: bool) -> None:
+def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: bool, kind: str | None = None) -> None:
     """Il lancio con slot o il trucchetto segna azione, azione bonus o reazione del suo tempo di lancio (B4), dopo le opzioni
     di lancio: se una ha già pagato il suo slot o preso il posto di un attacco (Incantesimo Rapido, trucchetto al posto di un
     attacco) il turno è cambiato da ``before`` e non si segna altro. Ki, Arcanum, lanci gratuiti e rituali pagano il turno da sé.
@@ -178,7 +178,7 @@ def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: 
     if _LONG_CASTING.search(spell.casting_time or "") or _slot_marks(char) != before:
         return
     try:
-        spend(char, _cast_kind(char, spell))
+        spend(char, kind or _cast_kind(char, spell))
     except HTTPException:
         if in_encounter:
             raise
@@ -263,6 +263,15 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
     return pool, total
 
 
+def _refuse_surge_magic(char: Character) -> None:
+    """Azione Impetuosa 2024: l'azione in più non può essere Magia. L'azione Attacco già iniziata (attacchi o lancio fatti) è
+    l'azione spesa; la Magia da Guerra fa parte dell'Attacco (non passa di qui)."""
+    turn = get_turn(char)
+    spent_action = turn["action_used"] or turn["action_attacks"] > 0 or turn.get("action_spell_level") is not None
+    if spent_action and turn["extra_actions"] > 0:
+        raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
+
+
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
@@ -312,12 +321,8 @@ def _consume_cast(
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
     if (not ritual and character_edition(char) == "2024" and _cast_kind(char, spell) == "action"
-            and not _LONG_CASTING.search(spell.casting_time or "")):
-        turn = get_turn(char)  # Azione Impetuosa 2024: l'azione in più non può essere Magia
-        # L'azione Attacco già iniziata (attacchi o lancio fatti) è l'azione spesa; la Magia da Guerra fa parte dell'Attacco
-        spent_action = turn["action_used"] or turn["action_attacks"] > 0 or turn.get("action_spell_level") is not None
-        if spent_action and turn["extra_actions"] > 0 and not war_magic:
-            raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
+            and not _LONG_CASTING.search(spell.casting_time or "") and not war_magic):
+        _refuse_surge_magic(char)
     if ki_pool is not None:
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
             spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
@@ -673,8 +678,14 @@ async def spell_attack(
     refuse_if_incapacitated(char)
 
     cast_block = spell_fx = None
+    lit = hurled_lit(char, spell.srd_index, spell.name)
     if body.with_inspiration:
         spend_inspiration_attack(char, spell_id=spell.id)
+    elif lit is not None:  # Produrre Fiamma 2024: non è un lancio, si scaglia la fiamma accesa con un'azione Magia
+        if not lit:
+            raise HTTPException(status_code=409, detail={"code": "flame_not_lit"})
+        _refuse_surge_magic(char)
+        _mark_turn_slot(char, spell, _slot_marks(char), await active_encounter_row(session, char.id) is not None, kind="action")
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
         await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.cast_options)  # prima di spendere

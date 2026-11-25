@@ -139,7 +139,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
       const pick = useEffectPickStore.getState().picked[cast.spell.id]
-      const prepared = await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
+      // Scagliare una fiamma accesa non è un lancio: nessuna opzione di lancio da chiedere
+      const prepared = cast.spell.effect?.lit
+        ? { confirm: [], options: [], option_inputs: {} }
+        : await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id }, 'before', { cancellable: true })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode, choice), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
@@ -249,7 +252,9 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     if (spell.level === 0) {
       // Trucchetto — nessuno slot; la concentrazione si gestisce nello sheet danni se presente.
       withEffect(spell, 1, () => {
-        if (isAttackSpell(spell)) {
+        if (spell.effect?.lit === false) {
+          castMutation.mutate({ spell })
+        } else if (isAttackSpell(spell)) {
           beginAttack({ spell, slot: null, ritual: false, mode })
         } else if (damageOnCast(spell) || isHealingSpell(spell)) {
           setPendingRitual(false)

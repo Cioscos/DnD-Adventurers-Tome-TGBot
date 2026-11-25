@@ -248,7 +248,7 @@ function SpellItemInner({
                                active:opacity-60"
                   >
                     <Sparkles size={12} />
-                    {t('character.spells.use')}
+                    {t(spell.effect?.lit ? 'character.spells.hurl' : 'character.spells.use')}
                   </RollButton>
                 ) : (
                   <Pressable

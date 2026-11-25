@@ -26,6 +26,7 @@
     "action_failed": "Action failed: check your connection and try again.",
     "action_refused": "Action failed.",
     "server_errors": {
+      "flame_not_lit": "The flame is not lit: cast the spell again, then hurl it.",
       "option_unavailable": "That option is not available now: a requirement is not met or the resource is already spent.",
       "turn_slot_used": "You already used that action this turn.",
       "no_uses": "No uses left.",
@@ -335,6 +336,7 @@
         "glyph_of_warding": "Glyph of Warding",
         "sorcerous_burst": "Sorcerous Burst",
         "dragons_breath": "Dragon's Breath",
+        "produce_flame": "Produce Flame",
         "spirit_guardians": "Spirit Guardians",
         "magic_weapon": "Magic Weapon",
         "divine_favor": "Divine Favor",
@@ -841,6 +843,7 @@
       "sources": "Sources"
     },
     "spells": {
+      "hurl": "Hurl",
       "twinned_attack": "Second target: to hit",
       "twinned_damage": "Second target: damage",
       "pick_already_known": "It is already on my sheet",

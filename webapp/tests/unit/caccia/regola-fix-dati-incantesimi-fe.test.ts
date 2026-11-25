@@ -24,6 +24,7 @@ vi.mock('@/hooks/useD20Roll', async (orig) => ({ ...(await orig<Record<string, u
 const produrreFiamma = {
   id: 21, name: 'Produrre Fiamma', level: 0, srd_index: 'produce-flame', attack_save: 'ATK', casting_time: '1 azione bonus',
   is_concentration: false, is_ritual: false, damage_dice: '1d8', damage_type: 'fire', is_prepared: true,
+  effect: { target_kind: 'self', max_targets_by_slot: {}, choices: [], lit: false },
 } as unknown as Spell
 
 const druido = {
@@ -31,10 +32,10 @@ const druido = {
   spellcasting: { has_preparing_class: false, has_wizard: false, has_ritual_caster: false, casters: [] },
 } as unknown as CharacterFull
 
-function Banco() {
+function Banco({ spell = produrreFiamma }: { spell?: Spell }) {
   const flow = useCastFlow(7, druido)
   return createElement(Fragment, null,
-    createElement('button', { onClick: () => flow.beginCast(produrreFiamma) }, 'lancia'),
+    createElement('button', { onClick: () => flow.beginCast(spell) }, 'lancia'),
     flow.elements)
 }
 
@@ -42,7 +43,7 @@ afterEach(() => { vi.clearAllMocks() })
 
 describe('caccia: correzioni del gruppo dati-incantesimi-fe', () => {
   // caccia: {"id": "CB-4037", "fonte": "2024 · Incantesimi · Produrre Fiamma (il lancio crea la fiamma, scagliarla è un'azione Magia) · pag. 308", "zona": "regola:2024/incantesimi-M-R", "voce": "regola", "copre": ["carta:2024/spells.md#Produrre Fiamma", "route:/char/:id/spells"]}
-  it.fails('Produrre Fiamma 2024 al lancio crea la fiamma senza scagliarla', async () => {
+  it('Produrre Fiamma 2024 al lancio crea la fiamma senza scagliarla', async () => {
     vi.mocked(api.spells.use).mockResolvedValue({} as never)
     vi.mocked(api.spells.attack).mockResolvedValue({} as never)
     renderWithProviders(createElement(Banco), { client: new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }) })
@@ -50,5 +51,15 @@ describe('caccia: correzioni del gruppo dati-incantesimi-fe', () => {
     // il lancio (azione bonus) dà la fiamma per 10 minuti; ogni lancio della fiamma è un attacco a parte che costa l'azione
     await waitFor(() => expect(api.spells.use).toHaveBeenCalled())
     expect(api.spells.attack).not.toHaveBeenCalled()
+  })
+
+  // caccia: {"id": "CB-4646", "fonte": "2024 · Incantesimi · Produrre Fiamma (finché dura la fiamma si scaglia con un'azione, senza un altro lancio) · pag. 308", "zona": "regola:2024/incantesimi-M-R", "voce": "regola", "copre": ["carta:2024/spells.md#Produrre Fiamma", "route:/char/:id/spells"]}
+  it('Produrre Fiamma 2024 accesa si scaglia senza lanciarla di nuovo', async () => {
+    vi.mocked(api.spells.attack).mockResolvedValue({} as never)
+    const accesa = { ...produrreFiamma, effective_casting_time: '1 azione', effect: { ...produrreFiamma.effect!, lit: true } }
+    renderWithProviders(createElement(Banco, { spell: accesa }), { client: new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }) })
+    await userEvent.click(screen.getByText('lancia'))
+    await waitFor(() => expect(api.spells.attack).toHaveBeenCalled())
+    expect(api.spells.use).not.toHaveBeenCalled()
   })
 })

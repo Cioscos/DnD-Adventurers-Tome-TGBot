@@ -26,6 +26,7 @@
     "action_failed": "Operazione non riuscita: controlla la connessione e riprova.",
     "action_refused": "Operazione non riuscita.",
     "server_errors": {
+      "flame_not_lit": "La fiamma non è accesa: lancia di nuovo l'incantesimo, poi scagliala.",
       "option_unavailable": "Quell'opzione non è disponibile ora: un requisito non è soddisfatto o la risorsa è già stata spesa.",
       "turn_slot_used": "Hai già usato quell'azione in questo turno.",
       "no_uses": "Usi esauriti.",
@@ -335,6 +336,7 @@
         "glyph_of_warding": "Glifo di Interdizione",
         "sorcerous_burst": "Esplosione Stregonesca",
         "dragons_breath": "Soffio del Drago",
+        "produce_flame": "Produrre Fiamma",
         "spirit_guardians": "Guardiani Spirituali",
         "magic_weapon": "Arma Magica",
         "divine_favor": "Favore Divino",
@@ -841,6 +843,7 @@
       "sources": "Sorgenti"
     },
     "spells": {
+      "hurl": "Scaglia",
       "twinned_attack": "Secondo bersaglio: per colpire",
       "twinned_damage": "Secondo bersaglio: danno",
       "pick_already_known": "È già sulla mia scheda",
