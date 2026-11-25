@@ -493,11 +493,11 @@ async def spend_beast_hit_dice(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceResult:
-    """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0
-    (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello attuale (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
+    """La bestia del ranger, o la forma attiva con PF propri (Forma Selvatica 2014 pag. 66), spende Dadi Vita (quelli del suo
+    profilo) in un riposo breve: dado + Costituzione, mai sotto 0 (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello attuale (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
-    if comp.feature_key not in BEAST_KEYS:
+    if comp.feature_key not in BEAST_KEYS and not (form_own_hp(char) and await get_active_form(session, char.id) is comp):
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})

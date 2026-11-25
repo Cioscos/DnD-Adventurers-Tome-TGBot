@@ -46,6 +46,10 @@ const beast = (over: Partial<Companion> = {}) => ({
   statblock: { hit_dice: '3d8', hit_dice_spent: 1, actions: [{ name: 'Morso', attack_bonus: 4, damage_dice: '1d6+2' }] }, ...over,
 }) as unknown as Companion
 
+const wolf = (over: Partial<Companion> = {}) => beast({
+  kind: 'wild_shape', feature_key: null, is_active: true, statblock: { hit_dice: '2d8+2', actions: [] } as unknown as Companion['statblock'], ...over,
+})
+
 beforeEach(() => {
   attack.mockReset().mockResolvedValue({ to_hit_die: 12, to_hit_bonus: 6, to_hit_total: 18, is_critical: false, damage_total: 5, notes: [] })
   hitDice.mockReset().mockResolvedValue({ healed: 4, hit_dice_left: 1, rolls: [4], companion: beast() })
@@ -68,6 +72,16 @@ describe('CompanionCard: bestia del Signore delle Bestie', () => {
     expect(screen.getAllByText(/character.extras.beast.hit_dice \(0\/3\)/)[0]).toBeDisabled()
     renderWithProviders(<CompanionCard charId={7} comp={beast({ feature_key: null })} wildShapeUses={null} />)
     expect(screen.getAllByText(/character.extras.beast.hit_dice/)).toHaveLength(2)
+  })
+
+  it('an active 2014 form spends the Hit Dice of the beast, an inactive or 2024 one does not', async () => {
+    hitDice.mockResolvedValue({ healed: 5, hit_dice_left: 1 })
+    renderWithProviders(<CompanionCard charId={7} comp={wolf({ is_active: false })} wildShapeUses={1} />)
+    renderWithProviders(<CompanionCard charId={7} comp={wolf()} wildShapeUses={1} formHasNoHp />)
+    expect(screen.queryByText(/character.extras.beast.hit_dice/)).toBeNull()
+    renderWithProviders(<CompanionCard charId={7} comp={wolf()} wildShapeUses={1} />)
+    await userEvent.click(screen.getByText(/character.extras.beast.hit_dice \(2\/2\)/))
+    await waitFor(() => expect(hitDice).toHaveBeenCalledWith(7, 3, 1))
   })
 
   it('attacks as a reaction without an order, with the reaction flag', async () => {

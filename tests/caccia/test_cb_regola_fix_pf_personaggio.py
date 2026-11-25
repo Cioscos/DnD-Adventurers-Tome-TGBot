@@ -133,7 +133,6 @@ async def test_il_rilancio_con_ispirazione_sostituisce_il_ts_contro_la_morte(cli
                     zona="regola:2014/druid", voce="regola",
                     copre=["carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)",
                            "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
-@pytest.mark.xfail(strict=True, reason="CB-4316: difforme dal manuale, confermato (Q-2014-druid-2, rinviato: serve il pulsante dei Dadi Vita sulla forma)")
 async def test_in_forma_selvatica_2014_si_spendono_i_dadi_vita_della_bestia(client, dadi):
     cid = await _pg(client, "druid", 2)
     pf = (await client.get(f"/characters/{cid}")).json()["current_hit_points"]
@@ -151,6 +150,12 @@ async def test_in_forma_selvatica_2014_si_spendono_i_dadi_vita_della_bestia(clie
     # il d8 della bestia (Costituzione 10) cura la forma: 3 + 6; i PF del druido restano quelli di prima
     assert r.json()["companion"]["current_hp"] == 9
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == pf
+    # tornato normale i dadi della bestia non si spendono; alla trasformazione dopo sono di nuovo tutti
+    assert (await client.post(f"/characters/{cid}/companions/{forma}/deactivate", json={})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/companions/{forma}/hit-dice", json={"count": 1})).status_code == 409
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    r = await client.post(f"/characters/{cid}/companions/{forma}/activate", json={})
+    assert r.status_code == 200 and not r.json()["statblock"].get("hit_dice_spent"), r.text
 
 
 @pytest.mark.caccia(id="CB-4317", fonte="2024 · Regole generali · Bloodied (Sanguinante) · pag. 362; Punti Ferita / Hit Points · pag. 27 (a metà PF o meno, anche a 0)",

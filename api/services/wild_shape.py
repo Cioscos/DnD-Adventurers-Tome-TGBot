@@ -115,6 +115,8 @@ def start_form(char: Character, form: Companion, grant: bool = True) -> None:
         data["skills"] = _numbers(sb.get("skills"), SKILL_ABILITY_MAP)
         data["saves"] = {_ABILITY_FULL[k]: v for k, v in _numbers(sb.get("saves"), _ABILITY_FULL).items()}
     start_state(char, StateSpec(key=STATE_KEY, rounds=rounds, ends_on=tuple(ends), data=data), "druid.wild_shape")
+    if grant:  # una bestia nuova ha tutti i suoi Dadi Vita, come i PF
+        form.statblock = {k: v for k, v in sb.items() if k != "hit_dice_spent"}
     if grant and limits is not None and not limits.own_hp:
         char.temp_hp = max(char.temp_hp or 0, limits.temp_hp)  # i PF temporanei non si sommano: vale il maggiore
 

@@ -115,6 +115,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   // Signore delle Bestie: i Dadi Vita del profilo della bestia, spesi in un riposo breve
   const isBeast = comp.feature_key === 'ranger.rangers_companion'
   const spendsHitDice = isBeast || comp.feature_key === 'ranger.primal_companion'  // anche la bestia primordiale 2024 ha Dadi Vita (p.123)
+    || (comp.kind === 'wild_shape' && comp.is_active && !formHasNoHp)  // Forma Selvatica 2014: i Dadi Vita della bestia (p.66)
   const hitDice = useMutation({
     mutationFn: () => api.companions.hitDice(charId, comp.id, 1),
     onSuccess: (r) => {
@@ -127,7 +128,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       else notifyMutationError(err)
     },
   })
-  const hdTotal = Number(/^(\d+)d\d+$/.exec(String(comp.statblock.hit_dice ?? ''))?.[1] ?? 0)
+  const hdTotal = Number(/^(\d+)d\d+/.exec(String(comp.statblock.hit_dice ?? ''))?.[1] ?? 0)
   const hdLeft = Math.max(0, hdTotal - Number(comp.statblock.hit_dice_spent ?? 0))
 
   const activate = useMutation({
