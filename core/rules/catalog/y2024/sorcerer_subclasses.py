@@ -13,8 +13,8 @@ from typing import Any
 
 from core.data.damage_types import spell_damage_type
 from core.rules.catalog._common import feature, state_on
-from core.rules.catalog.y2014.sorcerer import BEND_LUCK_USE, SP, TIDES, _cha, _regeneration
-from core.rules.states import get_states
+from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, BEND_LUCK_USE, SP, TIDES, _cha, _regeneration
+from core.rules.states import cast_once, get_states
 from core.rules.types import (
     ChoiceSpec, Cost, KiSpell, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UnarmoredAc, UseChoice, Uses, UseToggle,
 )
@@ -23,7 +23,6 @@ ED, CK = "2024", "sorcerer"
 P = f"{CK}."
 D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative", "concentration")  # D20 Test: prove, tiri per colpire, TS
 NO_CONCENTRATION_KEY = f"{P}dragon_companion_no_concentration"  # lo legge il router degli incantesimi
-AFFINITY_USED = "affinity_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il Carisma (un tiro per lancio)
 
 
 def _both(it: str, en: str) -> dict[str, str]:
@@ -164,14 +163,15 @@ def _affinity_label(key: str) -> dict:
 
 def _mark_affinity(_session: Any, ctx: RuleContext, _inputs: dict) -> list[str]:
     """Il Carisma vale per un solo tiro dei danni per incantesimo (pag. 148): un lancio nuovo riapre (``_end_cast``)."""
-    ctx.char.turn_state = {**(ctx.char.turn_state or {}), AFFINITY_USED: ctx.spell.id}
-    return [f"turnkey:{AFFINITY_USED}"]  # un rimborso riapre il bonus
+    key = cast_once(AFFINITY_USED, ctx.spell)
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), key: True}
+    return [f"turnkey:{key}"]  # un rimborso riapre il bonus
 
 
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c), on_confirm=_mark_affinity,
     available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c)
-    and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
+    and cast_once(AFFINITY_USED, c.spell) not in (c.char.turn_state or {}),
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
 def _rolls_with_advantage_or_disadvantage(ctx: RuleContext) -> bool:
     """Ripristinare l'Equilibrio scatta su un d20 con Vantaggio o Svantaggio (pag. 146), dichiarato o automatico.

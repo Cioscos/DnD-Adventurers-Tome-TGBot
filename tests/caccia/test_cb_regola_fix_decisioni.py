@@ -865,3 +865,67 @@ async def test_la_variante_dell_ingombro_vale_solo_nel_2014(client, edizione, li
     r = await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 10})
     assert r.json()["mode"] == modo, r.json()
 
+
+async def _tiro_danni(client, cid, spell, **corpo) -> int:
+    return (await _danno(client, cid, spell, main_rolls=[3, 3], **corpo))["total"]
+
+
+@pytest.mark.caccia(id="CB-4885", fonte="decisione D-051 (tests/caccia/decisioni.md): un tiro di danni per lancio, anche nei turni dopo; 2014 · Stregone · Affinità Elementale · pag. 111; 2024 · pag. 148",
+                    zona="regola:2014/sorcerer", voce="limiti",
+                    copre=["carta:2014/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Discendenza Draconica 6, pag. 111)",
+                           "carta:2024/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Stregoneria Draconica 6, pag. 148)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_affinita_elementale_non_si_riapre_nei_turni_dopo_dello_stesso_lancio(client, edizione):
+    from tests.integration.rules.test_2014_bard import _full, _roll_keys
+    from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+    from tests.integration.rules.test_2014_sorcerer_origins import _draconic
+    from tests.integration.rules.test_2024_sorcerer_subclasses import _affinity, _make
+    affinita = "sorcerer.elemental_affinity"
+    if edizione == "2014":
+        cid = await _draconic(client, 6, "red", charisma=18)
+    else:
+        cid = await _make(client, "draconic", 6, charisma=18)
+        await _affinity(client, cid, "fire")
+    nube = await _spell(client, cid, "Nube Ardente", 2, attack_save="DEX", damage_dice="2d6", damage_type="fire", is_concentration=True)
+    dardo = await _spell(client, cid, "Dardo", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
+
+    async def lancia(spell, livello):
+        r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": livello, "confirm": ["one_slot_per_turn", "concentration"]})
+        assert r.status_code == 200, r.text
+
+    async def offerta(spell) -> bool:
+        return affinita in await _roll_keys(client, cid, "spell_damage", spell_id=spell)
+
+    await lancia(nube, 2)
+    assert await _tiro_danni(client, cid, nube, casting_level=2, options=[affinita]) == 6 + 4
+    for passo in ("turn/new", "rounds/tick"):  # lo stesso lancio, nei turni dopo
+        assert (await client.post(f"/characters/{cid}/{passo}")).status_code == 200
+        assert not await offerta(nube)
+    await lancia(dardo, 1)  # un altro incantesimo ha il suo tiro e non riapre quello ancora in corso
+    assert (await offerta(dardo), await offerta(nube)) == (True, False)
+    await client.post(f"/characters/{cid}/turn/new")
+    await lancia(nube, 2)
+    assert await offerta(nube)  # un lancio nuovo
+    await _tiro_danni(client, cid, nube, casting_level=2, options=[affinita])
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+    assert await offerta(nube)  # finito con la concentrazione
+    assert (await _full(client, cid))["concentrating_spell_id"] is None
+
+
+@pytest.mark.caccia(id="CB-4886", fonte="decisione D-051 (tests/caccia/decisioni.md): un tiro di danni per lancio, anche nei turni dopo; 2014 · Mago · Invocazione Potente · pag. 87; 2024 · pag. 174",
+                    zona="regola:2014/wizard", voce="limiti",
+                    copre=["carta:2014/classes/wizard.md#Invocazione Potente / Empowered Evocation (Invocazione 10, pag. 87)",
+                           "carta:2024/classes/wizard.md#Invocazione Potente / Empowered Evocation (Invocatore 10, pag. 174)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione, sottoclasse", [("2014", "evocation"), ("2024", "evoker")])
+async def test_invocazione_potente_non_si_riapre_nei_turni_dopo_dello_stesso_lancio(client, edizione, sottoclasse):
+    from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+    cid = await _pg(client, edizione, "wizard", 10, sottoclasse, intelligence=18)
+    nube = await _spell(client, cid, "Nube Ardente", 2, school="evocation", attack_save="DEX", damage_dice="2d6", damage_type="fire", is_concentration=True)
+    for _ in range(2):  # ogni lancio ha il suo tiro
+        r = await client.post(f"/characters/{cid}/spells/{nube}/use", json={"slot_level": 2, "confirm": ["one_slot_per_turn", "concentration"]})
+        assert r.status_code == 200, r.text
+        assert await _tiro_danni(client, cid, nube, casting_level=2) == 6 + 4
+        await client.post(f"/characters/{cid}/turn/new")
+        assert await _tiro_danni(client, cid, nube, casting_level=2) == 6

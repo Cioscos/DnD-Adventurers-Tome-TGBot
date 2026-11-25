@@ -17,7 +17,7 @@ from core.game.actions import parse_casting_time, parse_duration_rounds
 from core.rules.catalog._common import feature, save_spell, state_on
 from core.rules.catalog.y2014.cleric import spell_dc
 from core.rules.catalog.y2014.warlock_invocations import attack_rays
-from core.rules.states import begin_state
+from core.rules.states import begin_state, cast_once
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
 )
@@ -293,19 +293,20 @@ DRAGON_ANCESTOR_CHECK = RollOptionSpec(
     label={"it": "Antenato Draconico: la prova è per interagire con un drago? Il bonus di competenza raddoppia",
            "en": "Dragon Ancestor: is the check to interact with a dragon? Your proficiency bonus doubles"})
 
-AFFINITY_USED = "affinity_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il Carisma (un tiro per lancio)
+AFFINITY_USED = "affinity"  # ``cast_once``: un tiro di danno di questo lancio ha già avuto il Carisma
 
 
 def _mark_affinity(_session: Any, ctx: RuleContext, _inputs: dict) -> list[str]:
     """Il Carisma va su un solo tiro di danno del lancio: il lancio seguente lo riapre (``_end_cast``)."""
-    ctx.char.turn_state = {**(ctx.char.turn_state or {}), AFFINITY_USED: ctx.spell.id}
-    return [f"turnkey:{AFFINITY_USED}"]
+    key = cast_once(AFFINITY_USED, ctx.spell)
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), key: True}
+    return [f"turnkey:{key}"]
 
 
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{CK}.elemental_affinity", phase="before", rolls=("spell_damage",),
     available=lambda c: c.spell is not None and _ancestor_type(c) is not None
-    and spell_damage_type(c) == _ancestor_type(c) and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
+    and spell_damage_type(c) == _ancestor_type(c) and cast_once(AFFINITY_USED, c.spell) not in (c.char.turn_state or {}),
     bonus=lambda c, _i: _cha(c), on_confirm=_mark_affinity,
     label={"it": "Affinità Elementale: aggiungi il Carisma ai danni del tipo del tuo antenato",
            "en": "Elemental Affinity: add your Charisma modifier to damage of your ancestor's type"})

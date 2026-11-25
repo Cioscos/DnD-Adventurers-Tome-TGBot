@@ -4,7 +4,7 @@ from __future__ import annotations
 from core.rules.catalog._common import feature, save_spell
 from core.rules.catalog.y2014.wizard_common import CK, ED, mod, savant
 from core.rules.schools import WINDOW_ILLUSION, WINDOW_ILLUSION_TURN, normalize_school
-from core.rules.states import has_state
+from core.rules.states import cast_once, has_state
 from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses, UseText
 
 OVERCHANNEL = f"{CK}.overchannel"
@@ -75,7 +75,7 @@ SCULPT_SPELLS = RollOptionSpec(
            "en": "Sculpt Spells: shield some visible creatures from the spell"})
 
 
-EMPOWERED_USED = "empowered_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il bonus (un tiro per lancio)
+EMPOWERED_USED = "empowered"  # ``cast_once``: un tiro di danno di questo lancio ha già avuto il bonus
 
 
 def _wizard_spell(ctx: RuleContext) -> bool:
@@ -86,7 +86,7 @@ def _wizard_spell(ctx: RuleContext) -> bool:
 def _empowered(ctx: RuleContext) -> bool:
     spell = ctx.spell
     return (ctx.roll == "damage" and spell is not None and normalize_school(spell.school) == "evocation"
-            and (ctx.char.turn_state or {}).get(EMPOWERED_USED) != spell.id and _wizard_spell(ctx))
+            and cast_once(EMPOWERED_USED, spell) not in (ctx.char.turn_state or {}) and _wizard_spell(ctx))
 
 
 def _overchannel_state(char) -> dict | None:

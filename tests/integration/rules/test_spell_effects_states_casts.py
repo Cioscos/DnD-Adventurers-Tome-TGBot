@@ -374,12 +374,12 @@ async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_fac
         async with test_session_factory() as s:
             row = await s.get(Character, caster)
             row.turn_state = {"spell_slot_cast": True, "bonus_spell_cast": True, "leveled_cast": True, "cast_prior_slot": True,
-                              "empowered_used": "x", "spell_attack_dice": 2, "cast_metamagic": ["m"], "attacks_made": 3}
+                              "cast_once:empowered:0": "x", "spell_attack_dice": 2, "cast_metamagic": ["m"], "attacks_made": 3}
             await s.commit()
         assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": kind, "confirm_early": True})).status_code == 200
         async with test_session_factory() as s:
             turn = (await s.get(Character, caster)).turn_state
         assert not turn.get("spell_slot_cast") and not turn.get("bonus_spell_cast"), kind
-        for key in ("leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic"):
+        for key in ("leveled_cast", "cast_prior_slot", "cast_once:empowered:0", "spell_attack_dice", "cast_metamagic"):
             assert key not in turn or not turn[key], (kind, key)
         assert turn["attacks_made"] == 0, kind  # B7: il riposo azzera anche gli attacchi

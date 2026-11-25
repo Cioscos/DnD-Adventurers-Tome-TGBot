@@ -51,7 +51,7 @@ from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.cleric import BLESSED_HEALER
-from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, QUICKENED_KEY, SP, SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.sorcerer import QUICKENED_KEY, SP, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.ranger_subclasses import FEY_NO_CONCENTRATION_KEY
@@ -76,7 +76,7 @@ from core.rules.pact_casts import FREE_CASTS, pact_cast, spent_free_casts
 from core.rules.school_hooks import after_cast
 from core.rules.slot_concentration import slot_concentration
 from core.rules.spellbook import MODES, book_refusal, change_needs_rest, copy_cost, prepare_refusal, wizard_row
-from core.rules.states import begin_state, free_cast_state, has_state, item_spell_held
+from core.rules.states import begin_state, cast_once, drop_cast_once, free_cast_state, has_state, item_spell_held
 from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, ensure_new_spell, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -599,7 +599,7 @@ async def use_spell(
     if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
         rule, (conds, untracked), targets, explicit = removal
         removal_lines = await apply_removal(session, char, rule, conds, untracked, targets, explicit=explicit)
-    _end_cast(char, opts)
+    _end_cast(char, spell, opts)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
@@ -688,7 +688,7 @@ async def spell_attack(
         if not body.ritual:
             _mark_turn_slot(char, spell, marks, await active_encounter_row(session, char.id) is not None)
         await deliver_temp_gifts(session, char, cast_opts)
-        _end_cast(char, cast_opts)
+        _end_cast(char, spell, cast_opts)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
         rays = attack_rays(char, spell, spell.level if body.ritual else fx_level)
@@ -794,13 +794,13 @@ def _cast_level(spell: Spell, slot_level: int | None, ritual: bool = False) -> i
     return slot_level if slot_level and slot_level >= spell.level and not ritual else spell.level
 
 
-def _end_cast(char: Character, opts: Any = None) -> None:
+def _end_cast(char: Character, spell: Spell, opts: Any = None) -> None:
     """Le opzioni del lancio hanno visto cosa c'era prima di questo incantesimo: il segno non serve più. ``opts``: quelle scelte
     al lancio; le opzioni di Metamagia restano sul turno, perché Trasmutato (al danno) rispetti il limite di una per incantesimo."""
+    drop_cast_once(char, spell.id)  # nuovo lancio: Affinità Elementale e Invocazione Potente si riaprono
     turn = get_turn(char)
     meta = [k for k in (opts.keys if opts is not None else []) if k.startswith("sorcerer.metamagic_")]
-    changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None,  # nuovo lancio: Invocazione Potente si riapre
-                   turn.pop(AFFINITY_USED, None) is not None,  # e Affinità Elementale
+    changed = any([turn.pop("cast_prior_slot", None) is not None,
                    turn.pop(SPELL_RAYS, None) is not None,  # i raggi rimasti del lancio prima sono persi
                    turn.pop(SPELL_ATTACK_DICE, None) is not None])  # e i dadi extra di un attacco precedente (forse mancato) non contano
     if meta or turn.get("cast_metamagic"):
@@ -815,7 +815,7 @@ def _mark_empowered(char: Character, spell: Spell) -> None:
             char=char, edition=character_edition(char), roll="damage", spell=spell, class_row=row, class_level=row.level))
            for spec, row in active_features(char)):
         turn = get_turn(char)
-        turn[EMPOWERED_USED] = spell.id
+        turn[cast_once(EMPOWERED_USED, spell)] = True
         char.turn_state = turn
 
 

@@ -7,6 +7,7 @@ from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
 from core.rules.modifiers import is_incapacitated
 from core.rules.spell_effects import spell_instances
+from core.rules.states import CAST_ONCE
 from core.rules.types import FORGONE, OTHERS_TURN, TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
@@ -175,13 +176,16 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"] and keep_surprise,
                  "turn_no": previous.get("turn_no", 0) + 1,
                  "attacked_before": previous.get(OFF_TURN_ATTACKS, 0),  # marcatore del turno: i rimborsi delle reazioni lo confrontano
+                 **{k: v for k, v in previous.items() if k.startswith(CAST_ONCE)},  # i lanci in corso non ricominciano col turno
                  **({"extra_actions": 1, "haste_action": True} if hasted else {}), **vex, **notice})
     return char.turn_state
 
 
 def clear_turn(char) -> None:
     """Fine dello scontro o riposo: il turno torna intatto, senza gli effetti d'inizio turno di ``reset_turn``."""
-    _save(char, {**_default(), "turn_no": get_turn(char).get("turn_no", 0) + 1})  # turn_no avanza: nessun rimborso vecchio vale
+    turn = get_turn(char)
+    kept = {k: v for k, v in turn.items() if k.startswith(CAST_ONCE) and k.endswith(f":{char.concentrating_spell_id}")}  # la concentrazione continua
+    _save(char, {**_default(), **kept, "turn_no": turn.get("turn_no", 0) + 1})  # turn_no avanza: nessun rimborso vecchio vale
 
 
 def set_start_heal(char, notices: list[dict]) -> None:

@@ -16,6 +16,20 @@ def has_state(char: Any, key: str) -> bool:
     return any(s.get("key") == key for s in char.active_states or [])
 
 
+CAST_ONCE = "cast_once:"  # turn_state: un bonus già preso da un lancio, ``cast_once:<bonus>:<incantesimo>``; vive quanto il lancio (D-051)
+
+
+def cast_once(bonus: str, spell: Any) -> str:
+    return f"{CAST_ONCE}{bonus}:{spell.id}"
+
+
+def drop_cast_once(char: Any, spell_id: int | None) -> None:
+    """Un nuovo lancio, o la fine della concentrazione, chiude quello di prima: i suoi bonus si riaprono."""
+    turn = char.turn_state or {}
+    if any(k.startswith(CAST_ONCE) and k.endswith(f":{spell_id}") for k in turn):
+        char.turn_state = {k: v for k, v in turn.items() if not (k.startswith(CAST_ONCE) and k.endswith(f":{spell_id}"))}
+
+
 def state_conditions(state: dict) -> dict[str, bool]:
     """Le condizioni che uno stato impone, ognuna con «c'era già»: quella principale e le ``also_conditions``."""
     main = {state["condition"]: state.get("condition_was_on", False)} if state.get("condition") else {}

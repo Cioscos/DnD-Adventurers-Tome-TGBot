@@ -16,7 +16,7 @@ from api.services.condition_effects import (
 from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
-from core.rules.states import SPELL_GIVEN, SUSPENDED_EFFECTS, SUSPENDED_ON, exhaustion_level
+from core.rules.states import SPELL_GIVEN, SUSPENDED_EFFECTS, SUSPENDED_ON, drop_cast_once, exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_others_turn, set_surprised
 
 
@@ -27,6 +27,7 @@ def is_concentrating(char: Character) -> bool:
 
 def end_concentration(char: Character) -> None:
     """Single place that drops concentration (spell id, item spell, round counter)."""
+    drop_cast_once(char, char.concentrating_spell_id)
     char.concentrating_spell_id = None
     end_states(char, "concentration_end")
     s = dict(char.settings or {})
@@ -90,6 +91,7 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
         ended = True
     char.settings = s
     if ended:
+        drop_cast_once(char, char.concentrating_spell_id)
         char.concentrating_spell_id = None
         end_states(char, "concentration_end")
         add_history(session, char.id, "concentration",
