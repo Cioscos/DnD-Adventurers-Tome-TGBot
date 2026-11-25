@@ -9,7 +9,7 @@ const riga = async (index: string) => {
 
 describe('caccia: regola 2014 incantesimi G-L', () => {
   // caccia: {"id": "CB-3316", "fonte": "2014 · Incantesimi · Guardiani Spirituali · pag. 240; Glifo di Interdizione · pag. 239", "zona": "regola:2014/incantesimi-G-L", "voce": "regola", "copre": ["carta:2014/spells.md#Guardiani Spirituali", "carta:2014/spells.md#Glifo di Interdizione"]}
-  it.fails.each([
+  it.each([
     ['spirit-guardians', '3d8', '1d8'],
     ['glyph-of-warding', '5d8', '1d8'],
   ])('%s aggiunto dal catalogo 2014 ha i dadi di danno della carta', async (index, dadi, perSlot) => {
@@ -19,7 +19,7 @@ describe('caccia: regola 2014 incantesimi G-L', () => {
   })
 
   // caccia: {"id": "CB-3317", "fonte": "2014 · Incantesimi · Lama Infuocata · pag. 247; Invocare il Fulmine · pag. 246; Guardiani Spirituali · pag. 240; Glifo di Interdizione · pag. 239; Levitazione · pag. 248; Individuazione dei Pensieri · pag. 244", "zona": "regola:2014/incantesimi-G-L", "voce": "regola", "copre": ["carta:2014/spells.md#Lama Infuocata", "carta:2014/spells.md#Invocare il Fulmine", "carta:2014/spells.md#Guardiani Spirituali", "carta:2014/spells.md#Glifo di Interdizione", "carta:2014/spells.md#Levitazione", "carta:2014/spells.md#Individuazione dei Pensieri"]}
-  it.fails.each([
+  it.each([
     ['flame-blade', 'ATK'],
     ['call-lightning', 'SAVE'],
     ['spirit-guardians', 'SAVE'],

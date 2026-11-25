@@ -9,7 +9,7 @@ const riga = async (index: string) => {
 
 describe('caccia: regola 2024 incantesimi S-Z', () => {
   // caccia: {"id": "CB-3872", "fonte": "2024 · Incantesimi · Trova Destriero · pag. 272; Velocità · pag. 284", "zona": "regola:2024/incantesimi-S-Z", "voce": "regola", "copre": ["carta:2024/spells.md#Trova destriero", "carta:2024/spells.md#Velocità"]}
-  it.fails.each([
+  it.each([
     ['find-steed', 'components', 'V, S'], // senza V il lancio non fa finire il nascondiglio
     ['haste', 'attack_save', ''], // Velocità non chiede TS: il bersaglio è consenziente
   ])('%s aggiunto dal catalogo 2024 ha %s come la carta', async (index, campo, atteso) => {

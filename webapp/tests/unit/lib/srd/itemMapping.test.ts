@@ -28,7 +28,7 @@ describe('item catalogue mapping', () => {
   it('shield and flat-damage blowgun do not crash', async () => {
     expect(equipmentToForm(await eq('shield'), 'en', 'imperial', L.en)).toMatchObject({ item_type: 'shield', ac_bonus: '2' })
     const b = equipmentToForm(await eq('blowgun'), 'en', 'imperial', L.en)
-    expect(b.damage_dice).toBe('1d1')
+    expect(b.damage_dice).toBe('1')  // 2014 equipaggiamento pag. 149: Cerbottana 1 perforante, nessun dado (CB-3166)
     expect(b.description).toContain('25 ft')
   })
   it('range note uses the supplied locale labels', async () => {

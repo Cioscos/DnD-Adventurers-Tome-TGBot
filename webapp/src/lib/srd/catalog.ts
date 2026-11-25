@@ -285,11 +285,10 @@ export function equipmentToForm(
     e.range_ft && e.weapon_range === 'ranged' ? `${labels.range}: ${formatLength(e.range_ft, unitSystem)}` : '',
     e.thrown_range_ft ? `${labels.thrown}: ${formatLength(e.thrown_range_ft, unitSystem)}` : '',
   ].filter(Boolean)
-  // shortcut: flat damage ("1", blowgun) becomes "1d1" to satisfy the NdX form rule; revisit if flat damage is supported.
-  const dice = e.damage_dice ?? '' // la Rete non fa danno: niente dado inventato
   return {
     ...base, item_type: 'weapon',
-    damage_dice: /^\d+$/.test(dice) ? `${dice}d1` : dice,
+    // la Rete non fa danno: niente dado inventato; la Cerbottana resta «1» fisso, che un critico non raddoppia
+    damage_dice: e.damage_dice ?? '',
     damage_type: `dmg_${e.damage_type ?? 'slashing'}`,
     weapon_type: e.weapon_range ?? 'melee',
     properties: e.properties ?? [],

@@ -92,7 +92,6 @@ async def test_il_danno_di_lama_infuocata_2024_somma_il_modificatore_da_incantat
                     voce="interazione",
                     copre=["carta:2024/spells.md#Guida", "carta:2024/general.md#Hide [Action] (Nascondersi) (pag. 368)",
                            "POST /characters/{char_id}/spells", "POST /characters/{char_id}/hide", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3763: difforme dal manuale, confermato")
 async def test_guida_presa_dal_catalogo_2024_ha_la_componente_verbale_e_fa_finire_il_nascondiglio(client):
     cid = await _pg(client, "cleric", 1)
     sid = await _impara(client, cid, "guidance")
@@ -110,7 +109,6 @@ async def test_guida_presa_dal_catalogo_2024_ha_la_componente_verbale_e_fa_finir
                     copre=["carta:2024/spells.md#Glifo di interdizione", "POST /characters/{char_id}/spells",
                            "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(3, "5d8"), (5, "7d8")])
-@pytest.mark.xfail(strict=True, reason="CB-3764: difforme dal manuale, confermato")
 async def test_le_rune_esplosive_del_glifo_2024_tirano_5d8_del_tipo_scelto_piu_1d8_per_slot(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 9)
     sid = await _impara(client, cid, "glyph-of-warding")

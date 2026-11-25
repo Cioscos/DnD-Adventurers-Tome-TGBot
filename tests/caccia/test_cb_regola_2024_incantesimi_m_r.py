@@ -65,7 +65,6 @@ def _stati(scheda: dict, chiave: str) -> list[dict]:
 @pytest.mark.caccia(id="CB-3811", fonte="2024 · Incantesimi · Protezione dal Male e dal Bene (concentrazione, fino a 10 minuti) · pag. 309-310",
                     zona="regola:2024/incantesimi-M-R", voce="regola",
                     copre=["carta:2024/spells.md#Protezione dal Male e dal Bene", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3811: difforme dal manuale, confermato")
 async def test_protezione_dal_male_e_dal_bene_dal_catalogo_avvia_la_concentrazione(client):
     cid = await _pg(client)
     sid = await _dal_catalogo(client, cid, "protection-from-evil-and-good", slot=1)
@@ -82,7 +81,6 @@ async def test_protezione_dal_male_e_dal_bene_dal_catalogo_avvia_la_concentrazio
 @pytest.mark.parametrize("indice,componenti", [
     ("divine-smite", ["V"]), ("power-word-heal", ["V"]), ("power-word-kill", ["V"]), ("resistance", ["V", "S"]), ("searing-smite", ["V"]),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3812: difforme dal manuale, confermato")
 def test_componenti_del_catalogo_2024(indice, componenti):
     # Le componenti finiscono sull'incantesimo del personaggio: la Verbale chiude il nascondiglio 2024 (casts_verbally)
     assert CATALOGO[indice]["components"] == componenti
@@ -124,10 +122,7 @@ async def test_maledizione_con_slot_alto_non_richiede_concentrazione(client, slo
                     copre=["carta:2024/spells.md#Malocchio", "carta:2024/spells.md#Marchio del cacciatore",
                            "carta:2024/spells.md#Mantello del Crociato", "carta:2024/spells.md#Maledizione",
                            "carta:2024/spells.md#Porta Dimensionale", "carta:2024/spells.md#Ragnatela", "GET /characters/{char_id}/spells"])
-# Malocchio, Marchio del Cacciatore e Mantello del Crociato: il danno arriva dall'opzione all'attacco (hit_damage), corretti
-@pytest.mark.parametrize("indice", ["hex", "hunters-mark", "crusaders-mantle", *(
-    pytest.param(i, marks=pytest.mark.xfail(strict=True, reason="CB-3815: difforme dal manuale, confermato"))
-    for i in ("bestow-curse", "dimension-door", "web"))])
+@pytest.mark.parametrize("indice", ["hex", "hunters-mark", "crusaders-mantle", "bestow-curse", "dimension-door", "web"])
 async def test_incantesimi_senza_danno_al_lancio_non_aprono_il_tiro_di_danno(client, indice):
     cid = await _pg(client)
     await _dal_catalogo(client, cid, indice)

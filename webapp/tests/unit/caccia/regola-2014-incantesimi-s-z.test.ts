@@ -5,7 +5,7 @@ const voce = async (index: string) => (await loadCatalog('spells')).find((e) => 
 
 describe('caccia: regola 2014 incantesimi S-Z', () => {
   // caccia: {"id": "CB-3425", "fonte": "2014 · Incantesimi · Sfera Infuocata · pag. 277; Terremoto · pag. 285; Tempesta di Nevischio · pag. 284; Zona di Verità · pag. 289; Sembrare · pag. 275", "zona": "regola:2014/incantesimi-S-Z", "voce": "regola", "copre": ["carta:2014/spells.md#Sfera Infuocata", "carta:2014/spells.md#Terremoto", "carta:2014/spells.md#Tempesta di Nevischio", "carta:2014/spells.md#Zona di Verità", "carta:2014/spells.md#Sembrare"]}
-  it.fails.each([
+  it.each([
     ['flaming-sphere', 'dex'], ['earthquake', 'dex'], ['sleet-storm', 'dex'], ['zone-of-truth', 'cha'], ['seeming', 'cha'],
   ])('%s preso dal catalogo è un incantesimo con TS (%s)', async (index, caratteristica) => {
     const e = await voce(index)

@@ -126,7 +126,7 @@ async def test_sonno_somma_due_d8_alla_riserva_per_ogni_slot_oltre_il_primo(clie
     ("druid", 7, "ice-storm", 4, (2, "bludgeoning"), (4, "d6", "cold")),
     ("sorcerer", 17, "meteor-swarm", 9, (20, "fire"), (20, "d6", "bludgeoning")),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3416: difforme dal manuale, confermato")
+@pytest.mark.xfail(strict=True, reason="CB-3416: dati del catalogo corretti; resta CB-3217 (SpellCreate scarta extra_damage_*)")
 async def test_incantesimo_preso_dal_catalogo_infligge_anche_la_seconda_parte_del_danno(client, classe, livello, indice, slot, prima, seconda):
     cid = await _pg(client, classe, livello)
     sid = await _impara(client, cid, indice)

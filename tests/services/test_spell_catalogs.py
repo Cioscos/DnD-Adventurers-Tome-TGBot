@@ -177,7 +177,8 @@ def test_2024_roll_fields_come_from_the_2024_text():
             continue
         text = i["desc"]["en"] + " " + ((i.get("higher_level") or {}).get("en") or "")
         flat = re.sub(r"\s+", "", text)
-        if i["damage_dice"] and i["damage_dice"] not in flat:
+        # Dardo Incantato: il testo dà il dado di un dardo, la voce i tre dardi (CB-3711: 2024 spells.md p.295)
+        if i["damage_dice"] and i["damage_dice"] not in flat and i["index"] != "magic-missile":
             wrong.append(f"{i['index']}: dadi {i['damage_dice']}")
         if i["higher_levels_dice"] and i["higher_levels_dice"] not in flat:
             wrong.append(f"{i['index']}: slot superiori {i['higher_levels_dice']}")
@@ -192,14 +193,17 @@ def test_2024_known_roll_fields():
     assert by["arcane-sword"]["damage_dice"] == "4d12"
     assert by["wall-of-ice"]["higher_levels_dice"] == "2d6"
     assert by["spiritual-weapon"]["higher_levels_dice"] == "1d8"
-    assert by["magic-missile"]["damage_dice"] == "1d4+1"
+    assert by["magic-missile"]["damage_dice"] == "3d4+3"  # tre dardi da 1d4+1 (CB-3711: 2024 spells.md, Dardo Incantato p.295)
 
 
 def test_phb_summaries_keep_their_dice():
     import re
     stems = r"(?:danni|acid|contundent|fredd|fuoc|forza|fulmin|necrotic|perforant|velen|psichic|radios|radiant|taglient|tuon)"
+    # Dadi ai colpi, non al lancio (CB-3815, CB-4031, CB-4032, CB-4033): 2024 spells.md, Mantello del Crociato p.259, Fonte di luce lunare p.277,
+    # Arma elementale p.268; 2014 spells.md, Arma Elementale p.215
+    on_hit = {"2024:crusaders-mantle", "2024:fount-of-moonlight", "2024:elemental-weapon", "2014:elemental-weapon"}
     lost = [f"{ed}:{i['index']}" for ed, items in CATALOGS.items() for i in items
-            if i["source"] == "phb" and re.search(r"\d+d\d+\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?" + stems, i["desc"]["it"], re.I)
+            if i["source"] == "phb" and f"{ed}:{i['index']}" not in on_hit and re.search(r"\d+d\d+\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?" + stems, i["desc"]["it"], re.I)
             and not i["damage_dice"]]
     assert not lost, lost
 

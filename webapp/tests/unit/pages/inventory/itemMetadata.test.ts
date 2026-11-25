@@ -40,6 +40,8 @@ describe('weapon magic fields', () => {
     expect(isItemFormValid({ ...base, magic_bonus: '11' })).toBe(false)
     expect(isItemFormValid({ ...base, magic_bonus: '3' })).toBe(true)
     expect(isItemFormValid({ ...base, properties: ['prop_versatile'], versatile_dice: 'x' })).toBe(false)
+    expect(isItemFormValid({ ...base, damage_dice: '1' })).toBe(true)  // Cerbottana: danno fisso, come lo accetta il server
+    expect(isItemFormValid({ ...base, damage_dice: '2' })).toBe(false)
   })
   it('round-trips through itemToFormData', () => {
     const f = itemToFormData({

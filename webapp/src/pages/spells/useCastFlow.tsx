@@ -36,6 +36,11 @@ const STEP_VARIANTS = {
   exit: (dir: number) => ({ opacity: 0, x: -32 * dir }),
 }
 
+/** Dadi al lancio con le scelte appena fatte (Glifo: solo le rune esplosive aprono il foglio danni). */
+/** Lo slot più alto aumenta solo il danno iniziale: nei turni dopo si tira al livello dell'incantesimo (Dardo stregato, 2014 pag. 228, 2024 pag. 343). */
+const INITIAL_UPCAST_ONLY = new Set(['witch-bolt'])
+const damageOnCast = (spell: Spell) =>rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
+
 type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
 
@@ -246,7 +251,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       withEffect(spell, 1, () => {
         if (isAttackSpell(spell)) {
           beginAttack({ spell, slot: null, ritual: false, mode })
-        } else if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
+        } else if (damageOnCast(spell) || isHealingSpell(spell)) {
           setPendingRitual(false)
           setPendingSlotLevel(0)
           setPendingSlotId(undefined)
@@ -290,7 +295,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       beginAttack({ spell, slot, ritual: false, mode: castMode })
       return
     }
-    if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
+    if (damageOnCast(spell) || isHealingSpell(spell)) {
       // Consumo slot differito al bottone Roll dello sheet danni.
       setPendingRitual(false)
       setPendingSlotLevel(slot.level)
@@ -307,7 +312,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       beginAttack({ spell, slot: null, ritual: true, mode: castMode })
       return
     }
-    if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
+    if (damageOnCast(spell) || isHealingSpell(spell)) {
       setPendingRitual(true)
       setPendingSlotLevel(null)
       setPendingSlotId(undefined)
@@ -320,7 +325,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Coi punti ki: il costo è del privilegio, il server lo ricontrolla. Con i dadi, il lancio avviene al primo tiro (come uno slot).
   const proceedKiCastNow = useCallback((spell: Spell, extra: number) => {
-    if (rollsDamageOnCast(spell)) {
+    if (damageOnCast(spell)) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level + extra)
       setPendingSlotId(undefined)
@@ -334,7 +339,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Senza slot: i dadi di danno passano dal foglio dei danni, che fa il lancio al primo tiro.
   const proceedFreeCastNow = useCallback((spell: Spell) => {
-    if (rollsDamageOnCast(spell) && !isAttackSpell(spell) && !isHealingSpell(spell)) {
+    if (damageOnCast(spell) && !isAttackSpell(spell) && !isHealingSpell(spell)) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level)
       setPendingSlotId(undefined)
@@ -388,7 +393,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const rollActiveDamage = (spell: Spell) => {
     const level = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
     setPendingRitual(false)
-    setPendingSlotLevel(level ?? spell.level)
+    setPendingSlotLevel(INITIAL_UPCAST_ONLY.has(spell.srd_index ?? '') ? spell.level : level ?? spell.level)
     setPendingSlotId(undefined)
     setDamageAfterAttack({ critical: false })  // lo slot l'ha già speso il lancio
     setRollDamageSpell(spell)

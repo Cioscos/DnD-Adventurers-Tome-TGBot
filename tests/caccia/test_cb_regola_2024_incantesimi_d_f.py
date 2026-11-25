@@ -72,7 +72,6 @@ async def _danno(client, cid: int, sid: int, **corpo) -> dict:
 @pytest.mark.caccia(id="CB-3711", fonte="2024 · Incantesimi · Dardo Incantato · pag. 295", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Dardo Incantato", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dardi", [(1, 3), (3, 5)])
-@pytest.mark.xfail(strict=True, reason="CB-3711: difforme dal manuale, confermato")
 async def test_dardo_incantato_2024_dal_catalogo_lancia_tre_dardi_piu_uno_per_slot(client, slot, dardi):
     cid = await _pg(client, "sorcerer", 5)
     sid = await _impara(client, cid, "magic-missile")
@@ -84,7 +83,6 @@ async def test_dardo_incantato_2024_dal_catalogo_lancia_tre_dardi_piu_uno_per_sl
 @pytest.mark.caccia(id="CB-3712", fonte="2024 · Incantesimi · Esplosione Stregonesca · pag. 318", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Esplosione Stregonesca", "POST /characters/{char_id}/spells/{spell_id}/attack",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3712: difforme dal manuale, confermato")
 async def test_esplosione_stregonesca_dal_catalogo_tira_1d8_del_tipo_scelto(client):
     cid = await _pg(client, "sorcerer", 1)
     sid = await _impara(client, cid, "sorcerous-burst")
@@ -96,14 +94,13 @@ async def test_esplosione_stregonesca_dal_catalogo_tira_1d8_del_tipo_scelto(clie
 
 @pytest.mark.caccia(id="CB-3713", fonte="2024 · Incantesimi · Esplosione Stregonesca · pag. 318", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Esplosione Stregonesca"])
-@pytest.mark.xfail(strict=True, reason="CB-3713: difforme dal manuale, confermato")
 def test_esplosione_stregonesca_del_catalogo_ha_componenti_verbale_e_somatica():
     assert _SRD["2024"]["sorcerous-burst"]["components"] == ["V", "S"]
 
 
 @pytest.mark.caccia(id="CB-3714", fonte="2024 · Incantesimi · Evoca Celestiale · pag. 254", zona="regola:2024/incantesimi-D-F", voce="limiti",
                     copre=["carta:2024/spells.md#Evoca Celestiale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.parametrize("slot, dadi_attesi", [(7, "6d12"), pytest.param(8, "7d12", marks=pytest.mark.xfail(strict=True, reason="CB-3714: difforme dal manuale, confermato")), pytest.param(9, "8d12", marks=pytest.mark.xfail(strict=True, reason="CB-3714: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, dadi_attesi", [(7, "6d12"), (8, "7d12"), (9, "8d12")])
 async def test_evoca_celestiale_2024_luce_ardente_sale_di_1d12_per_slot_oltre_il_settimo(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 17)
     sid = await _impara(client, cid, "conjure-celestial")
@@ -112,7 +109,7 @@ async def test_evoca_celestiale_2024_luce_ardente_sale_di_1d12_per_slot_oltre_il
 
 @pytest.mark.caccia(id="CB-3715", fonte="2024 · Incantesimi · Evoca Fatato · pag. 255", zona="regola:2024/incantesimi-D-F", voce="limiti",
                     copre=["carta:2024/spells.md#Evoca Fatato", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.parametrize("slot, dadi_attesi", [(6, "3d12"), pytest.param(7, "5d12", marks=pytest.mark.xfail(strict=True, reason="CB-3715: difforme dal manuale, confermato")), pytest.param(9, "9d12", marks=pytest.mark.xfail(strict=True, reason="CB-3715: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, dadi_attesi", [(6, "3d12"), (7, "5d12"), (9, "9d12")])
 async def test_evoca_fatato_2024_sale_di_2d12_per_slot_oltre_il_sesto(client, slot, dadi_attesi):
     cid = await _pg(client, "druid", 17)
     sid = await _impara(client, cid, "conjure-fey")
