@@ -410,12 +410,14 @@ async def upsert_effect(
     expiry: ExpirySpec | None = None, save: SaveSpec | None = None,
     source_combatant_id: int | None = None, source_character_id: int | None = None,
     source_spell_id: int | None = None, source_item_spell: str | None = None, ends_with_concentration: bool = False,
-    applied_by_gm: bool = False, encounter: Encounter | None = None, source_note: str | None = None,
+    applied_by_gm: bool = False, encounter: Encounter | None = None, source_note: str | None = None, replace: bool = True,
 ) -> ConditionEffect:
-    """Replace the effect for (target, slug) from the same source; another source's stays, with its own duration. Applies
+    """Replace the effect for (target, slug) from the same source (``replace=False``: add one more instance, as an import
+    does, whose file has no source); another source's stays, with its own duration. Applies
     the "next turn" correction when ``encounter`` is active: an end-edge expiry anchored on the active combatant lasts one
     turn more, and an end-edge save on the active target skips its first edge."""
-    await clear_effects_for(db, target, [slug], *same_source(source_combatant_id, source_character_id, source_note))
+    if replace:
+        await clear_effects_for(db, target, [slug], *same_source(source_combatant_id, source_character_id, source_note))
     count = expiry.count if expiry else None
     skip_once = False
     if encounter is not None and encounter.status == "active" and encounter.active_combatant_id:

@@ -190,3 +190,19 @@ async def test_calmare_emozioni_sospende_ogni_istanza_con_la_sua_durata(client, 
     scheda = (await client.get(f"/characters/{cid}")).json()
     assert scheda["conditions"].get("charmed") is True
     assert [(e["source_note"], e["expiry_count"]) for e in scheda["condition_effects"]] == [("Driade", 3)]
+
+
+@pytest.mark.caccia(id="CB-4238", fonte="2024 · Condizioni · pag. 29 (ogni istanza ha la sua durata)", zona="regola:2024/generali",
+                    voce="persistenza", copre=["carta:2024/general.md#Condizioni / Conditions (pag. 29)",
+                                               "GET /characters/{char_id}/export", "POST /characters/import"])
+async def test_export_e_import_tengono_ogni_istanza_della_stessa_condizione(client, test_session_factory):
+    from api.services.condition_effects import ExpirySpec, upsert_effect
+    cid = await _pg(client)
+    await _cond(client, cid, frightened=True)
+    async with test_session_factory() as s:  # due fonti senza nota: la fonte non viaggia con il file
+        for fonte, durata in ((None, 10), (cid, 1)):
+            await upsert_effect(s, ("character", cid), "frightened", expiry=ExpirySpec("owner", "start", durata), source_character_id=fonte)
+        await s.commit()
+    r = await client.post("/characters/import", json=(await client.get(f"/characters/{cid}/export")).json())
+    assert r.status_code == 201, r.text
+    assert sorted(e["expiry_count"] for e in r.json()["condition_effects"]) == [1, 10], r.json()["condition_effects"]
