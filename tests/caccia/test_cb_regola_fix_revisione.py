@@ -513,3 +513,19 @@ async def test_succhiavita_dice_quanti_danni_sono_necrotici(client):
     assert r.status_code == 200, r.text
     effetti = (r.json()["option_result"] or {}).get("effects") or []
     assert any("necrotici" in e["it"] and "4" in e["it"] and "necrotic" in e["en"] for e in effetti), r.json()
+
+
+@pytest.mark.caccia(id="CB-4816", fonte="2014 · Bardo · Controfascino · pag. 54: fino alla fine del turno successivo; L5, fine dello scontro", zona="regola:2014/bard", voce="interazione",
+                    copre=["carta:2014/classes/bard.md#Controfascino / Countercharm (Bardo 6, pag. 54)",
+                           "POST /sessions/{session_id}/encounter/end"])
+async def test_il_controfascino_non_resta_acceso_dopo_lo_scontro(client, test_session_factory, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    cid = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]["character_id"]
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "bard", "level": 6})).status_code == 201
+    assert (await _use(client, cid, "bard.countercharm")).status_code == 200
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    as_user(PLAYER_ID)
+    assert not _ha((await client.get(f"/characters/{cid}")).json(), "countercharm")

@@ -69,10 +69,11 @@ MINUTE_ROUNDS = 10  # un minuto: a fine scontro gli stati che durano fino a qui 
 
 
 def end_minute_states(char) -> list[str]:
-    """Fine dello scontro: chiude gli stati a round che durano al più un minuto (Arma Consacrata, Benedizione); restano
-    quelli più lunghi, senza togliere loro tempo, e quelli senza durata. Restituisce i nomi degli stati chiusi."""
+    """Fine dello scontro: chiude gli stati a round che durano al più un minuto (Arma Consacrata, Benedizione) e quelli che
+    contano i turni (Controfascino); restano quelli più lunghi, senza togliere loro tempo, e quelli senza durata.
+    Restituisce i nomi degli stati chiusi."""
     states = get_states(char)
-    closed = [s for s in states if s["rounds_left"] is not None and s["rounds_left"] <= MINUTE_ROUNDS]
+    closed = [s for s in states if _turns_to_skip(s) is not None or (s["rounds_left"] is not None and s["rounds_left"] <= MINUTE_ROUNDS)]
     if closed:
         char.active_states = [s for s in states if s not in closed]
         settle_closed(char, closed)
