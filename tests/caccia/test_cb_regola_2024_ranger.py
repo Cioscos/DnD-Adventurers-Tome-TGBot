@@ -54,7 +54,6 @@ async def test_vista_ombrale_allunga_la_scurovisione_della_specie(client, test_s
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Paura di Massa / Mass Fear (Stalker delle Tenebre 11, pag. 126)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2512: difforme dal manuale, confermato")
 async def test_paura_di_massa_usa_la_cd_degli_incantesimi_della_scheda(client):
     cid = await _sub(client, 11, "gloom_stalker", wisdom=16)
     await _item(client, cid, "Pietra della mente", item_type="generic", bonuses=[{"target": "spell_dc", "value": 1}])

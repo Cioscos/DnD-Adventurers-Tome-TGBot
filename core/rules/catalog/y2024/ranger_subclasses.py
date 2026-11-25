@@ -30,6 +30,14 @@ def _both(it: str, en: str) -> dict[str, str]:
 
 
 def _spell_dc(ctx: RuleContext) -> int:
+    """La tua CD degli incantesimi da ranger, quella della scheda: con i bonus degli oggetti (Paura di Massa, Svolta Ammaliante)."""
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
+    mine = next((s.save_dc for s in caster_stats(ctx.char) if ctx.class_row is not None and s.class_id == ctx.class_row.id), None)
+    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + _wis_mod(ctx)
+
+
+def _beast_dc(ctx: RuleContext) -> int:
+    # shortcut: senza i bonus degli oggetti finché l'utente non decide Q-2024-ranger-3 (attacco e CD del Colpo della Bestia)
     return 8 + ctx.char.proficiency_bonus + _wis_mod(ctx)
 
 
@@ -151,8 +159,8 @@ BEAST_GRAPPLE = RollOptionSpec(
     key=f"{CK}.beast_grapple", phase="before", rolls=("attack",), available=_has_beast("sea"),
     label=_both("Bestia del Mare: il bersaglio è Afferrato (CD per sfuggire pari alla tua CD degli incantesimi)",
                 "Beast of the Sea: the target is Grappled (escape DC equal to your spell save DC)"),
-    effect=lambda c, _i: _both(f"Il bersaglio è Afferrato: per sfuggire serve CD {_spell_dc(c)}.",
-                               f"The target is Grappled: escaping takes DC {_spell_dc(c)}."))
+    effect=lambda c, _i: _both(f"Il bersaglio è Afferrato: per sfuggire serve CD {_beast_dc(c)}.",
+                               f"The target is Grappled: escaping takes DC {_beast_dc(c)}."))
 
 BEAST_FORCE = RollOptionSpec(
     key=f"{CK}.beast_force", phase="before", rolls=("attack",), available=_beast_attack,
