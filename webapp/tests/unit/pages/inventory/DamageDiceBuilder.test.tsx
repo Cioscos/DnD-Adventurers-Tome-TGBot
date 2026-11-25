@@ -20,6 +20,12 @@ describe('DamageDiceBuilder', () => {
     expect(screen.getByText('2d6 + 3')).toBeInTheDocument() // preview
   })
 
+  it('shows a flat damage (blowgun "1") as is, with no die selected', () => {
+    render(<DamageDiceBuilder value="1" onChange={() => {}} />)
+    expect(screen.getByText('1', { selector: 'span.text-xl' })).toBeInTheDocument() // preview
+    expect(screen.getByRole('button', { name: 'd6' })).not.toHaveClass('bg-dnd-gold/20')
+  })
+
   it('selecting a die re-serializes keeping count and modifier (contract with serializeDamageDice)', async () => {
     const onChange = vi.fn()
     render(<DamageDiceBuilder value="2d6+3" onChange={onChange} />)

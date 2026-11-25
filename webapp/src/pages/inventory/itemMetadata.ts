@@ -317,7 +317,8 @@ export function buildHomebrewMetadataPatch(
 
 export function isItemFormValid(form: ItemFormData): boolean {
   if (!form.name.trim()) return false
-  if (form.item_type === 'weapon' && form.damage_dice.trim() && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false
+  const dmg = form.damage_dice.trim()  // «1»: il danno fisso della Cerbottana, l'unico che il server accetta senza dadi
+  if (form.item_type === 'weapon' && dmg && dmg !== '1' && !DAMAGE_DICE_RE.test(dmg)) return false
   if (form.item_type === 'weapon') {
     const mb = form.magic_bonus.trim()
     if (mb !== '' && !(Number.isInteger(Number(mb)) && Number(mb) >= 0 && Number(mb) <= 10)) return false

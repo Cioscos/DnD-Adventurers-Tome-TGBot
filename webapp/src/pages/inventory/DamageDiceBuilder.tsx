@@ -60,6 +60,7 @@ export default function DamageDiceBuilder({
 }: DamageDiceBuilderProps) {
   const { t } = useTranslation()
   const { count, die, mod } = parseDamageDice(value)
+  const flat = /^\d+$/.test(value.trim())  // danno fisso del catalogo (Cerbottana «1»): nessun dado scelto finché non se ne tocca uno
   // Fuori-set rispetto ai dadi proposti QUI (non a DIE_SIZES hardcoded):
   // con dieSizes custom (es. spell con d20) il set di riferimento cambia.
   const unknownDie = !dieSizes.includes(die)
@@ -70,8 +71,8 @@ export default function DamageDiceBuilder({
   const dice: number[] = unknownDie ? [...dieSizes, die] : [...dieSizes]
 
   const fmtMod = (m: number) => (m > 0 ? `+${m}` : m < 0 ? `${m}` : '+0')
-  const preview =
-    mod === 0
+  const preview = flat ? value.trim()
+    : mod === 0
       ? `${count}d${die}`
       : `${count}d${die} ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}`
 
@@ -102,7 +103,7 @@ export default function DamageDiceBuilder({
         </span>
         <div className="flex flex-wrap gap-2">
           {dice.map((d) => {
-            const active = d === die
+            const active = !flat && d === die
             return (
               <Pressable
                 key={d}
