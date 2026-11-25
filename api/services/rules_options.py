@@ -56,7 +56,7 @@ def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "bef
         return AppliedOptions()
     keys = getattr(body, "options", None) or []
     try:
-        opts = apply_options(session, roll_context(char, roll, **kw), keys,
+        opts = apply_options(session, roll_context(char, roll, mode=getattr(body, "mode", None), **kw), keys,
                              getattr(body, "option_inputs", None), phase)
     except OptionUnavailable as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": exc.key}) from exc

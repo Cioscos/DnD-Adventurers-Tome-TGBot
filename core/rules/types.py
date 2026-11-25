@@ -800,3 +800,4 @@ class RuleContext:
     proficient: bool = False  # prova già con competenza (strumento): niente mezze competenze («Atleta Straordinario»)
     spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)
     natural_d20: int | None = None  # dopo il tiro: il d20 tenuto del tiro salvato (Fortuna dell'Halfling); None se non noto
+    mode: Any = None  # al tiro: il modo dichiarato dal giocatore (``normal``, ``advantage``, ``disadvantage``); None nell'elenco

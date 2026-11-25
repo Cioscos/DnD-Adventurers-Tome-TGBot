@@ -172,8 +172,19 @@ AFFINITY_BONUS = RollOptionSpec(
     available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c)
     and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
+def _rolls_with_advantage_or_disadvantage(ctx: RuleContext) -> bool:
+    """Ripristinare l'Equilibrio scatta su un d20 con Vantaggio o Svantaggio (pag. 146), dichiarato o automatico.
+    Nell'elenco il modo non è noto: l'opzione si offre e il tiro la riconvalida."""
+    from core.rules.modifiers import collect_modifiers  # import locale: modifiers importa il catalogo
+    if ctx.mode is None or ctx.mode != "normal":
+        return True
+    applied = collect_modifiers(ctx)
+    return applied.advantage or applied.disadvantage
+
+
 RESTORE_OWN_ROLL = RollOptionSpec(
     key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),
+    available=_rolls_with_advantage_or_disadvantage,
     label=_both("Ripristinare l'Equilibrio: tira questo d20 senza vantaggio né svantaggio (reazione)",
                 "Restore Balance: roll this d20 without advantage or disadvantage (reaction)"))
 NO_CONCENTRATION = RollOptionSpec(

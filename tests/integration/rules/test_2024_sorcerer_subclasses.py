@@ -285,6 +285,16 @@ async def test_restore_balance_on_your_own_roll_removes_advantage_and_costs_a_us
     assert r.status_code == 409, r.text
 
 
+async def test_restore_balance_on_a_normal_roll_needs_an_automatic_disadvantage(client):
+    # 2024 pag. 146: scatta su un d20 con Vantaggio o Svantaggio, anche automatico (Avvelenato)
+    cid = await _make(client, "clockwork", 5, charisma=18)
+    key = P + "restore_balance_own_roll"
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "normal", "dice": [3, 17], "options": [key]})
+    assert r.status_code == 200 and r.json()["mode_applied"] == "normal", r.text
+    assert (await _ability(client, cid, P + "restore_balance"))["uses"] == 3
+
+
 # ---------------------------------------------------------------------------
 # Magia Selvaggia
 # ---------------------------------------------------------------------------

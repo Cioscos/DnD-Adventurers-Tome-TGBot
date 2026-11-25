@@ -150,7 +150,6 @@ async def test_incantesimo_raddoppiato_vale_per_gli_incantesimi_con_un_bersaglio
                     voce="regola",
                     copre=["carta:2024/classes/sorcerer.md#Ripristinare l'Equilibrio / Restore Balance (Stregoneria Meccanica 3, pag. 146)",
                            "POST /characters/{char_id}/skills/{skill_name}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2618: difforme dal manuale, confermato")
 async def test_ripristinare_l_equilibrio_non_si_spende_su_un_tiro_senza_vantaggio_ne_svantaggio(client):
     cid = await _make(client, "clockwork", 5, charisma=18)
     r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "normal", "dice": [7], "options": [RESTORE_OWN]})
