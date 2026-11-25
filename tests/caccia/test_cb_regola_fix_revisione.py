@@ -745,3 +745,27 @@ async def test_l_allineamento_delle_chiavi_non_perde_dati_del_giocatore(client, 
         assert mia["description"] == ("mia" if testo is None else f"mia\n\n{testo}")
     else:
         assert {x["description"] for x in righe} == {"mia", testo}
+
+
+@pytest.mark.caccia(id="CB-4852", fonte="2014 · Incantesimi · Velocità · pag. 288; 2024 · pag. 284: letargia fino alla fine del turno successivo; L5, fine dello scontro", zona="flusso:sessione-combattimento", voce="interazione",
+                    copre=["POST /sessions/{session_id}/encounter/end"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_la_letargia_di_velocita_non_resta_accesa_dopo_lo_scontro(client, test_session_factory, monkeypatch, edizione):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    cid = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]["character_id"]
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edizione})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "sorcerer", "level": 5})).status_code == 201
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Velocità", "srd_index": "haste", "level": 3, "is_concentration": True, "is_prepared": True})
+    assert r.status_code == 201, r.text
+    r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"slot_level": 3, "targets": [cid]})
+    assert r.status_code == 200, r.text
+    assert _ha(await _scheda(client, cid), "spell:haste")
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    as_user(PLAYER_ID)
+    scheda = await _scheda(client, cid)
+    assert not _ha(scheda, "spell:haste")
+    assert not _ha(scheda, "spell:haste_lethargy"), "il turno successivo passa prima del prossimo scontro"
+    assert not (scheda["conditions"] or {}).get("incapacitated")
