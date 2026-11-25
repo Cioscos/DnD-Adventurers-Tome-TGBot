@@ -225,3 +225,26 @@ async def test_finita_un_istanza_l_avviso_e_lo_storico_dicono_che_la_condizione_
     assert r.json()["expired_effects"] == ["Spaventato (resta da un'altra fonte)"], r.json()["expired_effects"]
     storia = [h["description"] for h in (await client.get(f"/characters/{cid}/history")).json()]
     assert "Durata scaduta: Spaventato (resta da un'altra fonte)" in storia, storia
+
+
+@pytest.mark.caccia(id="CB-4240", fonte="decisione D-022 (tests/caccia/decisioni.md): nel 2024 il dado del Valore raddoppia sul critico; 2024 · Bardo · pag. 67",
+                    zona="regola:2024/bard", voce="regola",
+                    copre=["carta:2024/classes/bard.md#Ispirazione in Combattimento / Combat Inspiration (Collegio del Valore 3, pag. 67)",
+                           "carta:2024/general.md#Colpi Critici / Critical Hits (pag. 27-28)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_il_dado_del_valore_2024_raddoppia_sul_critico_di_un_incantesimo(client, test_session_factory, dadi):
+    from tests.integration.rules.test_2014_bard_inspiration import _give
+    from tests.integration.rules.test_2024_bard import VALOR, _table
+    sid, bard, hero = await _table(client, test_session_factory, level=3, subclass=VALOR)
+    assert (await _give(client, bard, hero)).status_code == 200
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{hero}/spells", json={"name": "Dardo di fuoco", "level": 0, "casting_time": "1 azione",
+                                                               "attack_save": "ATK", "damage_dice": "1d10", "damage_type": "fire"})
+    assert r.status_code == 201, r.text
+    spell = r.json()["id"]
+    hit = await client.post(f"/characters/{hero}/spells/{spell}/attack", json={"die": 20})
+    assert hit.status_code == 200 and hit.json()["is_critical"], hit.text
+    dadi(3, 2)  # il dado di Ispirazione (d6 al 3°), tirato due volte sul critico
+    r = await client.post(f"/characters/{hero}/spells/{spell}/roll_damage",
+                          json={"main_rolls": [4, 5], "is_critical": True, "options": ["bardic_die:damage"]})
+    assert r.status_code == 200 and r.json()["total"] == 4 + 5 + 3 + 2, r.text

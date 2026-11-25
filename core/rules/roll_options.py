@@ -96,9 +96,10 @@ _CONDITION_OPTIONS = (
         available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
     ),
     # Il dado del Valore 2024 vale dopo qualsiasi tiro per colpire a segno, anche di un incantesimo (pag. 67; il 2014, pag. 55,
-    # solo sui danni dell'arma): il danno dell'incantesimo si conferma prima di tirarlo, a colpo già messo a segno.
+    # solo sui danni dell'arma): il danno dell'incantesimo si conferma prima di tirarlo, a colpo già messo a segno. Nel 2024
+    # raddoppia sul critico (D-022).
     RollOptionSpec(
-        key="bardic_die:damage", phase="before", rolls=("spell_damage",), crit_doubles=False,
+        key="bardic_die:damage", phase="before", rolls=("spell_damage",),
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
         available=lambda ctx: ((((_bardic_state(ctx) or {}).get("data")) or {}).get("edition") == "2024"
