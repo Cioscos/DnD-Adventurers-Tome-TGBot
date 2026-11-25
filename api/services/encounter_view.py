@@ -20,16 +20,14 @@ from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.modifiers import INCAPACITATING
 from core.rules.states import is_conscious
 from core.game.item_bonuses import item_bonus_total
-from core.game.stats import effective_ability_score
+from core.game.stats import roll_ability_mod
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from core.utils.session_view import hp_bucket_from_ratio
 
 
 async def pc_initiative_mod(db: AsyncSession, char: Character) -> int:
-    """Il modificatore d'iniziativa della scheda in questo momento (DES effettiva, oggetti, homebrew)."""
-    base = next((a.value for a in (char.ability_scores or []) if a.name == "dexterity"), 10)
-    effective, _ = effective_ability_score("dexterity", base, [i for i in (char.items or []) if i.is_equipped])
-    return (effective - 10) // 2 + item_bonus_total(char.items or [], "initiative") + await get_passive_modifiers(
+    """Il modificatore d'iniziativa della scheda in questo momento (DES effettiva, anche della Forma Selvatica, oggetti, homebrew)."""
+    return roll_ability_mod(char, "dexterity") + item_bonus_total(char.items or [], "initiative") + await get_passive_modifiers(
         db, char, "character.initiative")
 
 
