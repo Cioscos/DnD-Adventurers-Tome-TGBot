@@ -648,8 +648,8 @@
     "it": "Questo incantesimo attrae o respinge creature a tua scelta. Prendi come bersaglio qualcosa entro gittata, un oggetto o una creatura di taglia Enorme o inferiore oppure un'area non più grande di un cubo di 200 piedi di lato. Poi specifichi un tipo di creatura intelligente, come draghi rossi, goblin o vampiri. Infondi nel bersaglio un'aura che attrae o respinge le creature specificate per la durata. Scegli antipatia o simpatia come effetto dell'aura.\n\n***Antipatia.*** L'incantamento fa provare alle creature del tipo che hai designato un intenso desiderio di lasciare l'area e di evitare il bersaglio. Quando una tale creatura può vedere il bersaglio o si avvicina a meno di 60 piedi da esso, deve superare un tiro salvezza su Saggezza o diventare spaventata. La creatura rimane spaventata finché può vedere il bersaglio o si trova entro 60 piedi da esso. Mentre è spaventata dal bersaglio, la creatura deve usare il proprio movimento per spostarsi verso il punto sicuro più vicino da cui non possa vedere il bersaglio. Se la creatura si muove a più di 60 piedi dal bersaglio e non può vederlo, non è più spaventata, ma lo diventa di nuovo se riacquista la vista del bersaglio o si muove entro 60 piedi da esso.\n\n***Simpatia.*** L'incantamento fa provare alle creature specificate un intenso desiderio di avvicinarsi al bersaglio mentre si trovano entro 60 piedi da esso o sono in grado di vederlo. Quando una tale creatura può vedere il bersaglio o si avvicina a meno di 60 piedi da esso, deve superare un tiro salvezza su Saggezza o usare il proprio movimento in ognuno dei suoi turni per entrare nell'area o muoversi a portata del bersaglio. Quando la creatura l'ha fatto, non può allontanarsi volontariamente dal bersaglio.\n\nSe il bersaglio infligge danni o fa altrimenti del male a una creatura interessata, la creatura interessata può effettuare un tiro salvezza su Saggezza per porre fine all'effetto, come descritto di seguito.\n\n***Porre fine all'effetto.*** Se una creatura interessata termina il proprio turno senza trovarsi entro 60 piedi dal bersaglio o senza poterlo vedere, la creatura effettua un tiro salvezza su Saggezza. Se lo supera, la creatura non è più influenzata dal bersaglio e riconosce la sensazione di repulsione o attrazione come magica. Inoltre, una creatura influenzata dall'incantesimo ha diritto a un altro tiro salvezza su Saggezza ogni 24 ore finché l'incantesimo persiste.\n\nUna creatura che supera con successo il tiro salvezza contro questo effetto è immune ad esso per 1 minuto, trascorso il quale può essere influenzata di nuovo."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -7580,8 +7580,8 @@
     "it": "Una prigione immobile, invisibile e di forma cubica composta di forza magica compare all'improvviso attorno a un'area a tua scelta entro gittata. La prigione può essere una gabbia o una scatola solida, a tua scelta.\n\nUna prigione a forma di gabbia può avere fino a 20 piedi per lato ed è fatta di sbarre di 1/2 pollice di diametro distanziate di 1/2 pollice.\n\nUna prigione a forma di scatola può avere fino a 10 piedi per lato, creando una barriera solida che impedisce a qualsiasi materia di attraversarla e blocca qualsiasi incantesimo lanciato dentro o fuori dall'area.\n\nQuando lanci l'incantesimo, qualsiasi creatura completamente all'interno dell'area della gabbia rimane intrappolata. Le creature solo parzialmente all'interno dell'area, o quelle troppo grandi per starvi dentro, vengono spinte lontano dal centro dell'area finché non sono completamente fuori dall'area.\n\nUna creatura all'interno della gabbia non può uscirne con mezzi non magici. Se la creatura tenta di usare teletrasporto o viaggio interplanare per lasciare la gabbia, deve prima effettuare un tiro salvezza su Carisma. Se lo supera, la creatura può usare quella magia per uscire dalla gabbia. Se lo fallisce, la creatura non può uscire dalla gabbia e spreca l'uso dell'incantesimo o dell'effetto. La gabbia si estende anche nel Piano Etereo, bloccando il viaggio etereo.\n\nQuesto incantesimo non può essere dissolto da *dissolvi magie*."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "cha",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -9493,8 +9493,8 @@
     "it": "Una luce divina si diffonde da te e si addensa in un morbido bagliore in un raggio di 30 piedi attorno a te. Le creature a tua scelta in quel raggio quando lanci l'incantesimo emanano luce fioca in un raggio di 5 piedi e hanno vantaggio a tutti i tiri salvezza, mentre le altre creature hanno svantaggio ai tiri per colpire contro di esse finché l'incantesimo non termina. Inoltre, quando un immondo o un non morto colpisce una creatura influenzata con un attacco in mischia, l'aura emette un lampo di luce brillante. L'attaccante deve superare un tiro salvezza su Costituzione o rimanere accecato finché l'incantesimo non termina."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -10158,8 +10158,8 @@
     "it": "Scegli una creatura che puoi vedere entro il raggio d'azione. Il bersaglio inizia una danza comica sul posto: strascicando i piedi, battendoli a terra e saltellando per la durata. Le creature che non possono essere affascinate sono immuni a questo incantesimo.\n\nUna creatura che balla deve usare tutto il suo movimento per danzare senza lasciare il proprio spazio e ha svantaggio ai tiri salvezza su Destrezza e ai tiri per colpire. Finché il bersaglio è influenzato da questo incantesimo, le altre creature hanno vantaggio ai tiri per colpire contro di esso. Come azione, una creatura che balla effettua un tiro salvezza su Saggezza per riprendere il controllo di sé. Se supera il tiro salvezza, l'incantesimo termina."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -11299,7 +11299,7 @@
     "it": "Guarigione di Massa"
    },
    "level": 9,
-   "school": "conjuration",
+   "school": "evocation",
    "casting_time": {
     "en": "1 action",
     "it": "1 azione"
@@ -16090,8 +16090,8 @@
     "it": "Quando lanci questo incantesimo, inscrivi un glifo dannoso su una superficie (come una sezione di pavimento, un muro o un tavolo) oppure all'interno di un oggetto che può essere chiuso per nascondere il glifo (come un libro, una pergamena o uno scrigno del tesoro). Se scegli una superficie, il glifo può coprire un'area della superficie non più grande di 10 piedi di diametro. Se scegli un oggetto, quell'oggetto deve rimanere al suo posto; se l'oggetto viene spostato di più di 10 piedi dal punto in cui hai lanciato questo incantesimo, il glifo si spezza e l'incantesimo termina senza essere attivato.\n\nIl glifo è quasi invisibile e richiede una prova di Intelligenza (Indagare) contro la CD del tuo incantesimo per trovarlo.\n\nDecidi tu cosa attiva il glifo quando lanci l'incantesimo. Per i glifi inscritti su una superficie, gli inneschi più tipici includono toccare o calpestare il glifo, rimuovere un altro oggetto che lo copre, avvicinarsi entro una certa distanza da esso o manipolare l'oggetto che lo regge. Per i glifi inscritti all'interno di un oggetto, gli inneschi più comuni sono aprire l'oggetto, avvicinarsi entro una certa distanza da esso o vedere o leggere il glifo.\n\nPuoi affinare ulteriormente l'innesco in modo che l'incantesimo si attivi solo in determinate circostanze o in base alle caratteristiche fisiche di una creatura (come altezza o peso), o al suo tipo fisico (per esempio, la protezione potrebbe essere impostata per colpire megere o mutaforma). Puoi anche specificare creature che non attivano il glifo, come quelle che pronunciano una certa parola d'ordine.\n\nQuando inscrivi il glifo, scegli una delle opzioni seguenti per il suo effetto. Una volta attivato, il glifo risplende, riempiendo una sfera di 60 piedi di raggio di luce fioca per 10 minuti, dopodiché l'incantesimo termina. Ogni creatura nella sfera quando il glifo si attiva è bersaglio del suo effetto, così come lo è una creatura che entra nella sfera per la prima volta in un turno o vi termina il proprio turno.\n\n***Morte.*** Ogni bersaglio deve effettuare un tiro salvezza su Costituzione, subendo 10d10 danni necrotici se fallisce, o la metà di quei danni se lo supera.\n\n***Discordia.*** Ogni bersaglio deve effettuare un tiro salvezza su Costituzione. Se fallisce, il bersaglio bisticcia e litiga con le altre creature per 1 minuto. Durante questo periodo, è incapace di una comunicazione significativa e ha svantaggio ai tiri per colpire e alle prove di caratteristica.\n\n***Paura.*** Ogni bersaglio deve effettuare un tiro salvezza su Saggezza e diventa spaventato per 1 minuto se fallisce. Finché è spaventato, il bersaglio lascia cadere qualsiasi cosa stia tenendo e deve allontanarsi di almeno 30 piedi dal glifo in ciascuno dei suoi turni, se possibile.\n\n***Disperazione.*** Ogni bersaglio deve effettuare un tiro salvezza su Carisma. Se fallisce, il bersaglio è sopraffatto dalla disperazione per 1 minuto. Durante questo periodo, non può attaccare né prendere come bersaglio alcuna creatura con capacità dannose, incantesimi o altri effetti magici.\n\n***Follia.*** Ogni bersaglio deve effettuare un tiro salvezza su Intelligenza. Se fallisce, il bersaglio è reso folle per 1 minuto. Una creatura folle non può compiere azioni, non può comprendere ciò che dicono le altre creature, non può leggere e parla solo in modo sconclusionato. Il DM controlla il suo movimento, che è irregolare.\n\n***Dolore.*** Ogni bersaglio deve effettuare un tiro salvezza su Costituzione e diventa incapacitato da un dolore lancinante per 1 minuto se fallisce.\n\n***Sonno.*** Ogni bersaglio deve effettuare un tiro salvezza su Saggezza e cade privo di sensi per 10 minuti se fallisce. Una creatura si risveglia se subisce danni o se qualcuno usa un'azione per scuoterla o schiaffeggiarla per svegliarla.\n\n***Stordimento.*** Ogni bersaglio deve effettuare un tiro salvezza su Saggezza e diventa stordito per 1 minuto se fallisce."
    },
    "higher_level": null,
-   "attack_type": null,
-   "save_ability": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,

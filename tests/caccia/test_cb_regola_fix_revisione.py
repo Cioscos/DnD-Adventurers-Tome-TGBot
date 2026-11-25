@@ -105,3 +105,18 @@ async def test_rigenerazione_senza_tiro_di_cura_da_comunque_i_4d8_piu_15(client,
 ])
 def test_gli_incantesimi_concessi_hanno_i_dati_della_carta(edizione, chiave, campo, valore):
     assert getattr(granted_spell(chiave, edizione), campo) == valore
+
+
+@pytest.mark.caccia(id="CB-4765", fonte="2014 · Incantesimi · Guarigione di Massa · pag. 240; Antipatia/Simpatia · pag. 214; Simbolo · pag. 277; "
+                                        "Aura Sacra · pag. 216; Danza Irresistibile di Otto · pag. 228; Gabbia di Forza · pag. 238",
+                    zona="regola:2014/incantesimi-G-L", voce="regola",
+                    copre=["carta:2014/spells.md#Guarigione di Massa", "carta:2014/spells.md#Antipatia/Simpatia"])
+@pytest.mark.parametrize("indice, campi", [
+    ("mass-heal", {"school": "evocation"}),  # «Invocazione»: è evocation in inglese (come Cura Ferite di Massa, CB-4035)
+    ("antipathy-sympathy", {"attack_type": "SAVE", "save_ability": "wis"}), ("symbol", {"attack_type": "SAVE", "save_ability": "con"}),
+    ("holy-aura", {"attack_type": "SAVE", "save_ability": "con"}), ("irresistible-dance", {"attack_type": "SAVE", "save_ability": "wis"}),
+    ("forcecage", {"attack_type": "SAVE", "save_ability": "cha"}),
+])
+def test_le_voci_2014_del_catalogo_hanno_scuola_e_ts_della_carta(indice, campi):
+    voce = _voce("2014", indice)
+    assert {k: voce[k] for k in campi} == campi
