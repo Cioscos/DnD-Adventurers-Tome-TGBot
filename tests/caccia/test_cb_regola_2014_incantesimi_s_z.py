@@ -108,7 +108,7 @@ async def test_tempesta_di_vendetta_il_ts_superato_non_dimezza_il_tuono_iniziale
     assert corpo["save_halves"] is False  # chi supera il TS non subisce i 2d6 né resta assordato
 
 
-@pytest.mark.caccia(id="CB-3415", fonte="2014 · Incantesimi · Sonno · pag. 279", zona="regola:2014/incantesimi-S-Z", voce="limiti",
+@pytest.mark.caccia(id="CB-3415", fonte="decisione D-043 (tests/caccia/decisioni.md): +2d8 per slot oltre il 1°; 2014 · Incantesimi · Sonno · pag. 279", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Sonno", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(1, 5), (2, 7), (3, 9)])
 async def test_sonno_somma_due_d8_alla_riserva_per_ogni_slot_oltre_il_primo(client, slot, dadi_attesi):

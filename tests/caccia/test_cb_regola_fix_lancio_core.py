@@ -33,7 +33,7 @@ async def test_contattare_altri_piani_mostra_la_cd_15_fissa_del_ts_di_chi_lancia
     assert (contatto["attack_save"], contatto["save_dc"]) == ("SAVE", 15)
 
 
-@pytest.mark.caccia(id="CB-3992", fonte="2014 · Incantesimi · Vincolo di Interdizione · pag. 289", zona="regola:2014/incantesimi-S-Z", voce="regola",
+@pytest.mark.caccia(id="CB-3992", fonte="decisione D-041 (tests/caccia/decisioni.md): rifiutato su sé stessi, come nel 2024; 2014 · Incantesimi · Vincolo di Interdizione · pag. 289", zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Vincolo di Interdizione", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("su_di_se", [True, False], ids=["su_di_se", "senza_bersagli"])
 async def test_vincolo_di_interdizione_non_si_lancia_su_chi_lo_lancia(client, su_di_se):

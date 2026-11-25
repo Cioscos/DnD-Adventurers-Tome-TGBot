@@ -153,7 +153,7 @@ async def test_le_manovre_dopo_un_colpo_valgono_anche_per_l_attacco_con_incantes
     assert {"fighter.maneuver_disarming", "fighter.maneuver_menacing"} <= await _opzioni_attacco(client, cid, dardo)
 
 
-@pytest.mark.caccia(id="CB-4517", fonte="2024 · Warlock · Patrono Fatato, Fuga Velata e Passi del Fatato · pag. 159; Lanciare senza slot · pag. 235-236",
+@pytest.mark.caccia(id="CB-4517", fonte="decisione D-044 (tests/caccia/decisioni.md): si paga anche con uno slot di 2° o più; 2024 · Warlock · Patrono Fatato, Fuga Velata e Passi del Fatato · pag. 159; Lanciare senza slot · pag. 235-236",
                     zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Fuga Velata / Misty Escape (Patrono Fatato 6, pag. 159)",
                            "carta:2024/classes/warlock.md#Passi del Fatato / Steps of the Fey (Patrono Fatato 3, pag. 159)",
