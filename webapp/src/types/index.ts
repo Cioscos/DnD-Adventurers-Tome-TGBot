@@ -1001,6 +1001,8 @@ export interface RollHealingRequest extends Partial<RollChoice> {
   apply_to_self?: boolean
   /** PG seduti alla stessa serata attiva che ricevono la cura (il server li verifica). */
   target_character_ids?: number[]
+  /** PF di ogni bersaglio (per id, chi lancia compreso) di una cura che si divide. */
+  amounts?: Record<number, number>
 }
 
 /** Esito di POST /characters/{id}/spells/{spell_id}/roll_healing (R41). */

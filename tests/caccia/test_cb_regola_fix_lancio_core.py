@@ -50,9 +50,8 @@ async def test_vincolo_di_interdizione_non_si_lancia_su_chi_lo_lancia(client, su
     assert next(s for s in scheda["spell_slots"] if s["level"] == 2)["used"] == 0  # rifiutato prima di spendere lo slot
 
 
-@pytest.mark.caccia(id="CB-3993", fonte="2014 · Incantesimi · Guarigione di Massa · pag. 240", zona="regola:2014/incantesimi-G-L", voce="regola",
+@pytest.mark.caccia(id="CB-3993", fonte="decisione D-038 (tests/caccia/decisioni.md): quantità per bersaglio, somma massima 700; 2014 · Incantesimi · Guarigione di Massa · pag. 240", zona="regola:2014/incantesimi-G-L", voce="regola",
                     copre=["carta:2014/spells.md#Guarigione di Massa", "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
-@pytest.mark.xfail(strict=True, reason="CB-3993: difforme dal manuale, confermato")
 async def test_guarigione_di_massa_divide_i_700_pf_fra_piu_creature(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(PLAYER_ID)
@@ -69,17 +68,19 @@ async def test_guarigione_di_massa_divide_i_700_pf_fra_piu_creature(client, test
     await _seat(test_session_factory, cid, GM_ID)
     assert (await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 9})).status_code == 200
     # Q-2014-incantesimi-g-l-1: fino a 700 PF divisi a piacere fra quante creature si vuole; 100 + 50 mancanti stanno nei 700
-    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={"casting_level": 9, "apply_to_self": True,
-                                                                               "target_character_ids": [eroe]})
-    assert r.status_code == 200, r.text
+    corpo = {"casting_level": 9, "apply_to_self": True, "target_character_ids": [eroe]}
+    for quantita in ({}, {cid: 100}, {cid: 1, eroe: 700}, {cid: 0, eroe: 100}):  # una parte per ogni bersaglio, somma massima 700
+        r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={**corpo, "amounts": quantita})
+        assert r.status_code == 422, (quantita, r.status_code)
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={**corpo, "amounts": {cid: 600, eroe: 100}})
+    assert r.status_code == 200 and r.json()["healed_allies"][0]["healed"] == 100, r.text
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == 60
     as_user(PLAYER_ID)
     assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 200
 
 
-@pytest.mark.caccia(id="CB-3994", fonte="2024 · Incantesimi · Guarigione di Massa · pag. 296", zona="regola:2024/incantesimi-G-L", voce="regola",
+@pytest.mark.caccia(id="CB-3994", fonte="decisione D-038 (tests/caccia/decisioni.md): quantità per bersaglio, somma massima 700; 2024 · Incantesimi · Guarigione di Massa · pag. 296", zona="regola:2024/incantesimi-G-L", voce="regola",
                     copre=["carta:2024/spells.md#Guarigione di Massa", "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
-@pytest.mark.xfail(strict=True, reason="CB-3994: difforme dal manuale, confermato")
 async def test_guarigione_di_massa_2024_divide_i_700_pf_fra_piu_creature(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(PLAYER_ID)
@@ -96,9 +97,12 @@ async def test_guarigione_di_massa_2024_divide_i_700_pf_fra_piu_creature(client,
     await _seat(test_session_factory, cid, GM_ID)
     assert (await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 9})).status_code == 200
     # Q-2024-incantesimi-g-l-1: fino a 700 PF divisi a scelta fra qualsiasi numero di creature visibili; 100 + 50 mancanti stanno nei 700
-    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={"casting_level": 9, "apply_to_self": True,
-                                                                               "target_character_ids": [eroe]})
-    assert r.status_code == 200, r.text
+    corpo = {"casting_level": 9, "apply_to_self": True, "target_character_ids": [eroe]}
+    for quantita in ({}, {cid: 100}, {cid: 1, eroe: 700}, {cid: 0, eroe: 100}):  # una parte per ogni bersaglio, somma massima 700
+        r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={**corpo, "amounts": quantita})
+        assert r.status_code == 422, (quantita, r.status_code)
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={**corpo, "amounts": {cid: 600, eroe: 100}})
+    assert r.status_code == 200 and r.json()["healed_allies"][0]["healed"] == 100, r.text
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == 60
     as_user(PLAYER_ID)
     assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 200

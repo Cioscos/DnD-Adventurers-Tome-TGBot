@@ -5,12 +5,19 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
 import SaveRollSheet from '@/components/SaveRollSheet'
 import Extras from '@/pages/Extras'
+import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
+import type { Spell } from '@/types'
 
-const { getChar, updateXP, rollSave, createComp } = vi.hoisted(() => ({ getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn(), createComp: vi.fn() }))
+const { getChar, updateXP, rollSave, createComp, useSpell, rollHealing } = vi.hoisted(() => ({
+  getChar: vi.fn(), updateXP: vi.fn(), rollSave: vi.fn(), createComp: vi.fn(), useSpell: vi.fn(), rollHealing: vi.fn(),
+}))
 
 vi.mock('@/api/client', () => ({
-  api: { characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave } }, companions: { list: vi.fn(async () => []), create: createComp } },
+  api: {
+    characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave }, sessionAllies: vi.fn(async () => [{ id: 9, name: 'Brann' }]) },
+    companions: { list: vi.fn(async () => []), create: createComp }, spells: { use: useSpell, rollHealing },
+  },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => async () => undefined, d20Arg: () => undefined }))
@@ -59,5 +66,25 @@ describe('caccia: decisioni', () => {
     await user.click(screen.getByText('invia'))
     await user.click(await screen.findByText('character.extras.beast.not_allowed_confirm'))
     await waitFor(() => expect(createComp).toHaveBeenLastCalledWith(5, { name: 'Orso', force: true }))
+  })
+
+  // caccia: {"id": "CB-4641", "fonte": "decisione D-038 (tests/caccia/decisioni.md): quantità scelta per ogni bersaglio, somma massima 700; 2014 pag. 240, 2024 pag. 296", "zona": "regola:2024/incantesimi-G-L", "voce": "interazione", "copre": ["carta:2014/spells.md#Guarigione di Massa", "carta:2024/spells.md#Guarigione di Massa", "POST /characters/{char_id}/spells/{spell_id}/roll_healing"]}
+  it('Guarigione di Massa chiede i PF di ogni bersaglio e non si lancia oltre i 700', async () => {
+    useSpell.mockResolvedValue({ id: 5 })
+    rollHealing.mockResolvedValue({ total: 700, breakdown: '', healed: 100, healed_allies: [], self_healed: 0 })
+    const spell = { id: 3, name: 'Guarigione di Massa', level: 9, srd_index: 'mass-heal', is_healing: true } as Spell
+    renderWithProviders(<SpellHealingSheet charId={5} spell={spell} slotLevel={9} onClose={() => {}} />)
+    await userEvent.click(await screen.findByRole('switch', { name: 'Brann' }))
+    const lancia = screen.getByRole('button', { name: /roll_button/ })
+    const [io, brann] = screen.getAllByRole('textbox')
+    await userEvent.type(io, '200')
+    expect(lancia).toBeDisabled()  // manca la parte di Brann
+    await userEvent.type(brann, '501')
+    expect(screen.getByText('character.spells.roll_healing.pool_over')).toBeInTheDocument()
+    expect(lancia).toBeDisabled()
+    await userEvent.clear(brann)
+    await userEvent.type(brann, '500')
+    await userEvent.click(lancia)
+    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(5, 3, expect.objectContaining({ target_character_ids: [9], amounts: { 5: 200, 9: 500 } })))
   })
 })

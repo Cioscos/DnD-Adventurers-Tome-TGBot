@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { GiHealthNormal as Heart, GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
@@ -7,6 +7,7 @@ import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@
 import { notifyCastError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
@@ -23,7 +24,9 @@ interface Props {
 }
 
 // Cure che toccano più creature (chi lancia compreso); le altre una sola. Il server ricontrolla (HealingSpec.targets).
-const MULTI_TARGET: Record<string, number> = { 'mass-cure-wounds': 6, 'mass-healing-word': 6, 'prayer-of-healing': 6 }
+const MULTI_TARGET: Record<string, number> = { 'mass-cure-wounds': 6, 'mass-healing-word': 6, 'prayer-of-healing': 6, 'mass-heal': 20 }
+// Cure che si dividono fra i bersagli, una quantità ciascuno (D-038): il totale.
+const POOL: Record<string, number> = { 'mass-heal': 700 }
 
 /** Passo «cura» dello sheet di lancio (R41): il server tira i dadi e somma modificatore e privilegi. La cura va a chi lancia
  *  e/o ai PG seduti alla stessa serata attiva (B8): il server verifica la serata e applica i PF. */
@@ -36,9 +39,10 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
   // U22: di default la cura va a chi lancia, così non si perde; scegliere un alleato (bersaglio unico) la sposta
   const [onSelf, setOnSelf] = useState(true)
   const [allyIds, setAllyIds] = useState<number[]>([])
+  const [amounts, setAmounts] = useState<Record<number, string>>({})
   const spellId = spell?.id
   useEffect(() => {
-    if (spellId != null) { setResult(null); setCastNotes(undefined); setConsumed(false); setOnSelf(true); setAllyIds([]) }
+    if (spellId != null) { setResult(null); setCastNotes(undefined); setConsumed(false); setOnSelf(true); setAllyIds([]); setAmounts({}) }
   }, [spellId])
   const { data: everyone = [] } = useQuery({ queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: spellId != null })
   const allies = everyone.filter((a) => !a.dead)  // il server rifiuta un bersaglio morto
@@ -50,6 +54,16 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
     if (max === 1) { setOnSelf(false); setAllyIds([id]); return }
     if (allyIds.length + (onSelf ? 1 : 0) < max) setAllyIds([...allyIds, id])
   }
+
+  const pool = POOL[spell?.srd_index ?? '']
+  const chosen = [...(onSelf ? [charId] : []), ...allyIds]
+  const amount = (id: number) => Math.max(0, parseInt(amounts[id] ?? '', 10) || 0)
+  const left = (pool ?? 0) - chosen.reduce((n, id) => n + amount(id), 0)
+  const unsplit = pool != null && (left < 0 || chosen.some((id) => amount(id) < 1))
+  const amountInput = (id: number, label: string) => pool != null && chosen.includes(id) && (
+    <Input label={label} type="number" inputMode="numeric" min={1} max={pool}
+      value={amounts[id] ?? ''} placeholder="0" onChange={(v) => setAmounts((s) => ({ ...s, [id]: v }))} />
+  )
 
   const level = slotLevel && slotLevel > 0 ? slotLevel : spell?.level ?? 0
   const mutation = useMutation({
@@ -67,7 +81,8 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
       }
       const choice = await askRollOptions(charId, { roll: 'spell_healing', spell_id: spell.id, casting_level: level }, 'before', { cancellable: true })
       return api.spells.rollHealing(charId, spell.id, {
-        casting_level: level, apply_to_self: onSelf, target_character_ids: allyIds, ...(choice.options.length > 0 ? choice : {}),
+        casting_level: level, apply_to_self: onSelf, target_character_ids: allyIds,
+        ...(pool != null ? { amounts: Object.fromEntries(chosen.map((id) => [id, amount(id)])) } : {}), ...(choice.options.length > 0 ? choice : {}),
       })
     },
     onSuccess: (data) => {
@@ -95,10 +110,19 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
           </div>
           {allies.length > 0 && <h3 className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.spells.roll_healing.targets')}</h3>}
           <SwitchToggle label={t('character.spells.roll_healing.on_self')} checked={onSelf} onChange={pickSelf} />
+          {amountInput(charId, t('character.spells.roll_healing.amount_self'))}
           {allies.map((a) => (
-            <SwitchToggle key={a.id} label={a.name} aria-label={a.name} checked={allyIds.includes(a.id)} onChange={(on) => pickAlly(a.id, on)} />
+            <Fragment key={a.id}>
+              <SwitchToggle label={a.name} aria-label={a.name} checked={allyIds.includes(a.id)} onChange={(on) => pickAlly(a.id, on)} />
+              {amountInput(a.id, t('character.spells.roll_healing.amount', { name: a.name }))}
+            </Fragment>
           ))}
-          <Button variant="primary" fullWidth icon={<Dices size={18} />} onClick={() => mutation.mutate()} loading={mutation.isPending} haptic="medium">
+          {pool != null && (
+            <p className={`text-sm font-body tabular-nums ${left < 0 ? 'text-dnd-crimson-bright' : 'text-dnd-text'}`}>
+              {left < 0 ? t('character.spells.roll_healing.pool_over', { n: -left, pool }) : t('character.spells.roll_healing.pool_left', { n: left, pool })}
+            </p>
+          )}
+          <Button variant="primary" fullWidth disabled={unsplit} icon={<Dices size={18} />} onClick={() => mutation.mutate()} loading={mutation.isPending} haptic="medium">
             {t('character.spells.roll_healing.roll_button')}
           </Button>
           {onBack && <Button variant="ghost" fullWidth onClick={onBack} disabled={mutation.isPending}>{t('common.back')}</Button>}

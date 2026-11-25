@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
@@ -257,10 +257,12 @@ class LastDamageBody(RollOptionsBody):
 class RollHealingRequest(RollOptionsBody):
     """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali né dadi.
     ``apply_to_self``: chi lancia è anche il bersaglio; ``target_character_ids``: PG seduti alla stessa serata attiva che
-    ricevono la stessa cura (quanti, chi lancia compreso, lo dice ``HealingSpec.targets``)."""
+    ricevono la stessa cura (quanti, chi lancia compreso, lo dice ``HealingSpec.targets``). ``amounts``: i PF di ogni bersaglio
+    (chi lancia compreso, per id) di una cura che si divide; con un bersaglio solo si può tacere: la riceve tutta."""
     casting_level: int | None = None
     apply_to_self: bool = False
-    target_character_ids: list[int] = Field(default_factory=list, max_length=6)
+    target_character_ids: list[int] = Field(default_factory=list, max_length=20)
+    amounts: dict[int, Annotated[int, Field(ge=1)]] = Field(default_factory=dict, max_length=20)
 
 
 class RollHealingResult(BaseModel):

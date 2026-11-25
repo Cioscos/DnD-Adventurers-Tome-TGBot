@@ -1229,6 +1229,10 @@ async def roll_spell_healing(
         raise HTTPException(status_code=422, detail={"code": "invalid_target"})
     if body.apply_to_self and healing.targets == 1 and BLESSED_HEALER.key in body.options:  # l'unico bersaglio è chi lancia
         raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": BLESSED_HEALER.key})
+    receivers = [*([char.id] if body.apply_to_self else []), *wanted]
+    split = healing.pool and bool(body.amounts or len(receivers) > 1)  # il totale si divide (Guarigione di Massa, D-038)
+    if split and (set(body.amounts) != set(receivers) or sum(body.amounts.values()) > healing_fixed(healing, spell.level, level)):
+        raise HTTPException(status_code=422, detail={"code": "bad_allocation"})
     allies = [await ally_target(session, char, tid) for tid in wanted]  # PG seduti alla stessa serata attiva, prima di tirare
     if any(a.is_dead for a in allies):
         raise HTTPException(status_code=409, detail={"code": "target_dead"})
@@ -1254,13 +1258,18 @@ async def roll_spell_healing(
     if applied.flat:
         parts.append(f"{applied.flat:+d}")
     breakdown = " ".join(parts) + f" = {total}"
+    given = dict.fromkeys(receivers, total)
+    if split:  # i privilegi (Discepolo della Vita) si aggiungono alla parte di ogni creatura
+        given = {tid: body.amounts[tid] + total - modifier for tid in receivers}
+        total = sum(given.values())
+        breakdown = " + ".join(str(n) for n in given.values()) + f" = {total}"
     healed = 0
     if body.apply_to_self:
-        healed = (await apply_heal(session, char, total))["healed"]
+        healed = (await apply_heal(session, char, given[char.id]))["healed"]
     healed_allies = []
     for ally in allies:  # riletto da zero: la cura parte dai PF veri (a 0 PF azzera i TS contro la morte)
         receiver = await load_receiver(session, ally.id)
-        healed_allies.append({"id": receiver.id, "name": receiver.name, "healed": (await apply_heal(session, receiver, total, by=char, source=spell.name))["healed"]})
+        healed_allies.append({"id": receiver.id, "name": receiver.name, "healed": (await apply_heal(session, receiver, given[receiver.id], by=char, source=spell.name))["healed"]})
     self_healed = 0
     if opts.self_heal:
         self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]

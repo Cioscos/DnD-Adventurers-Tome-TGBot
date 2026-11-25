@@ -989,6 +989,10 @@
       "cast_free": "Lancia senza slot",
       "free_cast_hint": "Un effetto attivo ti permette di lanciarlo senza slot.",
       "roll_healing": {
+        "amount_self": "PF per te",
+        "pool_over": "{{n}} PF oltre i {{pool}} da dividere",
+        "pool_left": "Restano {{n}} dei {{pool}} PF da dividere",
+        "amount": "PF per {{name}}",
         "title": "Cura: {{name}}",
         "casting_level": "Livello di casting",
         "on_self": "Curo me stesso con questo incantesimo",
