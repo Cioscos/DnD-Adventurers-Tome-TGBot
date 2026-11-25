@@ -207,7 +207,7 @@ def _lacks_save_proficiency(ctx: RuleContext) -> bool:
 
 
 DIAMOND_REROLL = RollOptionSpec(
-    key=f"{CK}.diamond_soul", phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=KI),
+    key=f"{CK}.diamond_soul", phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=KI),
     label={"it": "Anima Adamantina: spendi 1 ki e ripeti il tiro salvezza fallito (vale il nuovo risultato)",
            "en": "Diamond Soul: spend 1 ki and reroll the failed saving throw (the new result stands)"})
 

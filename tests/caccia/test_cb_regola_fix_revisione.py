@@ -476,3 +476,17 @@ async def test_i_recuperi_passivi_scattano_da_soli_al_tiro_di_iniziativa(client,
     r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})  # il giocatore non spunta nulla
     assert r.status_code == 200, r.text
     assert await usi() == dopo
+
+
+@pytest.mark.caccia(id="CB-4813", fonte="2014 · Monaco · Anima Adamantina · pag. 92; 2024 · Monaco · Sopravvissuto Disciplinato · pag. 103: ogni tiro salvezza fallito", zona="regola:2014/monk", voce="regola",
+                    copre=["carta:2014/classes/monk.md#Anima Adamantina / Diamond Soul (Monaco 14, pag. 92)",
+                           "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
+@pytest.mark.parametrize("edizione,opzione", [("2014", "monk.diamond_soul"), ("2024", "monk.disciplined_survivor")])
+async def test_il_monaco_ripete_anche_un_ts_contro_la_morte_fallito(client, edizione, opzione):
+    cid = await _crea(client, edizione, ("monk", 14, None))
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).status_code == 200
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
+    assert r.status_code == 200 and r.json()["outcome"] == "failure", r.text
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [opzione], "dice": [15]})
+    assert r.status_code == 200, r.text
+    assert r.json()["death"]["successes"] == 1
