@@ -119,7 +119,7 @@ def _rage_state(ctx: RuleContext, params: dict) -> StateSpec | None:
     # Ira Persistente (15): dura 10 minuti e finisce solo con la perdita dei sensi o un'armatura pesante
     ends = ("unconscious", "heavy_armor") if level >= 15 else ("unconscious", "incapacitated", "turn_end_unextended", "heavy_armor")
     return StateSpec(
-        "rage", rounds=100, ends_on=ends, blocks_casting=True, end_slot="bonus",
+        "rage", rounds=100, ends_on=ends, blocks_casting=True,  # chiuderla a mano è gratis (D-021)
         immune_conditions=("charmed", "frightened") if _subclass(ctx, "berserker") and level >= 6 else (), data=data)
 
 
