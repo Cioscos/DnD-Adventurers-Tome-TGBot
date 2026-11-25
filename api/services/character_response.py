@@ -183,7 +183,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         elif on_use and on_use.spends and ab.max_uses is not None and owner is not None:
             free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.free_use = on_use.available is None or bool(on_use.available(free_ctx))
-        if on_use and on_use.spends:
+        if on_use and on_use.spends and on_use.spends_slot_when is None:  # pagabile anche con uno slot (Fuga Velata): la riserva vuota non lo spegne
             held = pool_key(char, on_use.spends)
             pool = next((a for a in response.abilities if a.feature_key == held), None)
             ab.spends_left = (pool.uses or 0) if pool is not None and pool.max_uses is not None else None

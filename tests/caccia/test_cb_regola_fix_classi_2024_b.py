@@ -151,3 +151,26 @@ async def test_attacco_preciso_e_finta_valgono_anche_per_l_attacco_con_incantesi
 async def test_le_manovre_dopo_un_colpo_valgono_anche_per_l_attacco_con_incantesimo(client):
     cid, dardo = await _maestro_mago(client, "precision", "disarming", "menacing")
     assert {"fighter.maneuver_disarming", "fighter.maneuver_menacing"} <= await _opzioni_attacco(client, cid, dardo)
+
+
+@pytest.mark.caccia(id="CB-4517", fonte="2024 · Warlock · Patrono Fatato, Fuga Velata e Passi del Fatato · pag. 159; Lanciare senza slot · pag. 235-236",
+                    zona="regola:2024/warlock", voce="regola",
+                    copre=["carta:2024/classes/warlock.md#Fuga Velata / Misty Escape (Patrono Fatato 6, pag. 159)",
+                           "carta:2024/classes/warlock.md#Passi del Fatato / Steps of the Fey (Patrono Fatato 3, pag. 159)",
+                           "carta:2024/general.md#Lanciare senza slot / Casting Without Slots (pag. 235-236)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_fuga_velata_senza_passi_del_fatato_si_paga_con_uno_slot(client):
+    # la Fuga cambia il tempo di lancio di Passo Velato, non lo rende gratuito: senza usi di Passi del Fatato lo paga uno slot di 2°+
+    from tests.integration.rules.test_2014_paladin import _new_turn
+    from tests.integration.rules.test_2014_warlock import _pact_slots
+    from tests.integration.rules.test_2024_warlock_patrons import ESCAPE, STEPS, _make
+    cid = await _make(client, "archfey", 6, charisma=10)  # Carisma 10: un solo uso di Passi del Fatato
+    use = f"/characters/{cid}/features/{ESCAPE}/use"
+    assert (await client.post(use, json={"params": {"effect": "plain"}})).status_code == 200
+    assert (await _ability(client, cid, STEPS))["uses"] == 0
+    assert (await _ability(client, cid, ESCAPE)).get("spends_left") != 0  # il «Usa» della pagina Turno resta acceso
+    await _new_turn(client, cid)
+    r = await client.post(use, json={"params": {"effect": "plain", "pay": "slot", "slot_level": "3"}})
+    assert r.status_code == 200, r.text
+    assert [s["used"] for s in await _pact_slots(client, cid)] == [1]
+    assert (await _ability(client, cid, STEPS))["uses"] == 0

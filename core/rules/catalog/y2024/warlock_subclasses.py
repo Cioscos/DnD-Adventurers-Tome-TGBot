@@ -213,9 +213,26 @@ def _escape_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     return _both(cast["it"].strip(), cast["en"].strip())
 
 
+# Fuga Velata cambia solo il tempo di lancio: Passo Velato (2°) si paga con un uso di Passi del Fatato o con uno slot (2024 pag. 159, 235)
+_ESCAPE_PAY = {"steps": ("Un uso di Passi del Fatato", "One Steps of the Fey use"), "slot": ("Uno slot di 2° livello o più", "A level 2+ spell slot")}
+
+
+def _escape_slot_levels(ctx: RuleContext) -> list[str]:
+    return [str(n) for n in sorted({s.level for s in ctx.char.spell_slots if s.used < s.total and s.level >= 2})]
+
+
+def _escape_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
+    return (422, "invalid_choice") if params.get("pay") == "slot" and params.get("slot_level") is None else None
+
+
 ESCAPE_USE = OnUse(
     slot="reaction", spends=STEPS, state=_escape_state, target_effect=_escape_target, temp_hp_by=_escape_temp, message=_escape_message,
-    choices=(UseChoice("effect", _both("Effetto aggiunto", "Added effect"), lambda _c: list(STEP_EFFECTS), lambda k: _both(*STEP_EFFECTS[k])),))
+    cost_by=lambda _c, p: 0 if p.get("pay") == "slot" else 1, spends_slot="slot_level",
+    spends_slot_when=lambda _c, p: p.get("pay") == "slot", check=_escape_check,
+    choices=(UseChoice("effect", _both("Effetto aggiunto", "Added effect"), lambda _c: list(STEP_EFFECTS), lambda k: _both(*STEP_EFFECTS[k])),
+             UseChoice("pay", _both("Costo", "Cost"), lambda _c: list(_ESCAPE_PAY), lambda k: _both(*_ESCAPE_PAY[k]), optional=True),
+             UseChoice("slot_level", _both("Livello dello slot", "Slot level"), _escape_slot_levels,
+                       lambda level: _both(f"Slot di {level}° livello", f"Level {level} slot"), optional=True)))
 
 
 def _halved(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
