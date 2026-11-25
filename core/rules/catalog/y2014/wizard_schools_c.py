@@ -120,9 +120,13 @@ def _overchannel_hurt(ctx: RuleContext, inputs: dict) -> str | None:
 
 
 def _overchannel_available(ctx: RuleContext) -> bool:
-    """«Un incantesimo da mago» di 1°-5° che infligge danno (2014 pag. 87)."""
+    """«Un incantesimo da mago» di 1°-5° che infligge danno (2014 pag. 87); nel 2024 lanciato in questo turno «con uno slot di
+    livello 1-5» (pag. 174)."""
     if ctx.spell is None or not ctx.spell.damage_dice or not _wizard_spell(ctx):
         return False
+    if ctx.edition == "2024":
+        cast = _last_cast(ctx)
+        return cast.get("spell") == ctx.spell.id and 1 <= (cast.get("slot") or 0) <= 5
     return 1 <= (ctx.casting_level or ctx.spell.level) <= 5
 
 
