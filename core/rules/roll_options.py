@@ -405,8 +405,9 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         key = f"ally:{donor.id}:{spec.key}"
         label = {lang: text.format(donor=donor.name) for lang, text in spec.label.items()}
         found[key] = RollOption(replace(spec, key=key, for_ally=False, label=label), ctx, f"feature:{spec.key}", donor)
+    own = ctx.attack_mode not in ("beast", "companion")
     return [o for o in found.values()
-            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
+            if (own or o.donor or o.spec.companion) and any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
 
 
 def roll_options_for(ctx: RuleContext) -> list[RollOption]:

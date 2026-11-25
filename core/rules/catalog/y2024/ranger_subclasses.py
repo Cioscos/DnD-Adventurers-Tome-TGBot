@@ -150,26 +150,26 @@ def _has_beast(kind: str):
 
 
 BEAST_CHARGE = RollOptionSpec(
-    key=f"{CK}.beast_charge", phase="before", rolls=("attack",), extra_dice=lambda _c, _i: "1d6", available=_has_beast("land"),
+    key=f"{CK}.beast_charge", phase="before", rolls=("attack",), companion=True, extra_dice=lambda _c, _i: "1d6", available=_has_beast("land"),
     label=_both("Bestia della Terra: ha corso in linea retta per 6 m verso il bersaglio? +1d6 dello stesso tipo, Prono se Grande o più piccolo",
                 "Beast of the Land: did it move 20 ft straight toward the target? +1d6 of the same type, Prone if Large or smaller"),
     effect=_say("Se il bersaglio è Grande o più piccolo, è Prono.", "If the target is Large or smaller, it is Prone."))
 
 BEAST_GRAPPLE = RollOptionSpec(
-    key=f"{CK}.beast_grapple", phase="before", rolls=("attack",), available=_has_beast("sea"),
+    key=f"{CK}.beast_grapple", phase="before", rolls=("attack",), companion=True, available=_has_beast("sea"),
     label=_both("Bestia del Mare: il bersaglio è Afferrato (CD per sfuggire pari alla tua CD degli incantesimi)",
                 "Beast of the Sea: the target is Grappled (escape DC equal to your spell save DC)"),
     effect=lambda c, _i: _both(f"Il bersaglio è Afferrato: per sfuggire serve CD {_beast_dc(c)}.",
                                f"The target is Grappled: escaping takes DC {_beast_dc(c)}."))
 
 BEAST_FORCE = RollOptionSpec(
-    key=f"{CK}.beast_force", phase="before", rolls=("attack",), available=_beast_attack,
+    key=f"{CK}.beast_force", phase="before", rolls=("attack",), companion=True, available=_beast_attack,
     label=_both("Addestramento Eccezionale: i colpi infliggono danni da forza invece del loro tipo",
                 "Exceptional Training: the strikes deal force damage instead of their usual type"),
     effect=_say("Il Colpo della Bestia infligge danni da forza.", "The Beast's Strike deals force damage."))
 
 BESTIAL_FURY_DAMAGE = RollOptionSpec(
-    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
+    key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), companion=True, once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     pay_if_success=True,  # «la prima volta che colpisce»: su un mancato l'uso torna
     available=lambda c: _beast_attack(c) and hunters_mark_active(c),
     label=_both("Furia Bestiale: il bersaglio è la creatura marcata da Hunter's Mark? Danni da forza in più (una volta per turno)",

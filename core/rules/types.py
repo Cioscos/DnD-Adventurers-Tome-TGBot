@@ -553,6 +553,8 @@ class RollOptionSpec:
     # L'attacco che l'opzione apre non è dell'azione Attacco, anche senza uno slot proprio (i colpi della Raffica di Colpi,
     # pagati da uno stato): non pesa sul limite di attacchi dell'azione.
     outside_action: bool = False
+    # L'opzione vale anche per l'attacco di un compagno (bestia, famiglio): il tiro non è del personaggio, e le altre non si offrono
+    companion: bool = False
     # Dopo un danno subito l'app propone questa reazione d'attacco? ``None``: sì se ha lo slot ``reaction`` (Ritorsione,
     # Replica); ``False`` per le reazioni che nascono da un altro evento (Opportunista).
     offered_on_damage: bool | None = None

@@ -529,3 +529,19 @@ async def test_il_controfascino_non_resta_acceso_dopo_lo_scontro(client, test_se
     assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
     as_user(PLAYER_ID)
     assert not _ha((await client.get(f"/characters/{cid}")).json(), "countercharm")
+
+
+@pytest.mark.caccia(id="CB-4817", fonte="2014 · Stregone · Onde di Caos · pag. 111, Ladro · Assassinare · pag. 78: il tiro per colpire è del personaggio, non del suo compagno; Mago · Portento · pag. 86: di ogni creatura", zona="flusso:compagni-forme", voce="regola",
+                    copre=["GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/companions/{comp_id}/attack"])
+async def test_l_attacco_di_un_compagno_non_prende_le_opzioni_di_chi_lo_comanda(client):
+    cid = await _crea(client, "2014", ("sorcerer", 3, "Magia Selvaggia"), ("rogue", 3, "Assassino"), ("wizard", 2, "Scuola di Divinazione"))
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})).status_code == 200  # i dadi di Portento
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"frightened": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/companions", json={"kind": "familiar", "name": "Gufo", "max_hp": 5, "armor_class": 11, "statblock": _panther()})
+    assert r.status_code == 201, r.text
+    onde = "sorcerer.tides_of_chaos_advantage"
+    assert onde in await _roll_keys(client, cid, "attack")  # sul proprio attacco sì
+    assert set(await _roll_keys(client, cid, "attack", attack_mode="companion")) == {"wizard.portent"}
+    r = await client.post(f"/characters/{cid}/companions/{r.json()['id']}/attack", json={
+        "action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3], "options": [onde]})
+    assert r.status_code == 409, r.text

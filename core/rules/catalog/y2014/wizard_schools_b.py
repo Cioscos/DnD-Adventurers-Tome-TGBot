@@ -12,6 +12,7 @@ from core.rules.types import Modifier, OnUse, RollOptionSpec, RuleContext, State
 
 PORTENT = RollOptionSpec(
     key=f"{CK}.portent", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"), once_per_turn=True, replace_die=True,
+    companion=True,  # il d20 di ogni creatura che vede (pag. 86)
     label={"it": "Portento: sostituisci il d20 con uno dei dadi di preveggenza",
            "en": "Portent: replace the d20 with one of your foretelling dice"})
 
