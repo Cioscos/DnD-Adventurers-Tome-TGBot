@@ -190,7 +190,6 @@ async def test_scudo_di_fuoco_2024_freddo_infligge_danni_da_freddo(client):
 
 @pytest.mark.caccia(id="CB-3870", fonte="2024 · Incantesimi · Santuario · pag. 313", zona="regola:2024/incantesimi-S-Z", voce="interazione",
                     copre=["carta:2024/spells.md#Santuario", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3870: difforme dal manuale, confermato")
 async def test_santuario_2024_finisce_quando_il_protetto_lancia_un_incantesimo(client):
     cid = await _pg(client, "cleric", 1)
     santuario = await _impara(client, cid, "sanctuary")

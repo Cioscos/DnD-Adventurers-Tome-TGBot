@@ -88,8 +88,10 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
         "2014": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia un incantesimo su un nemico.",
                       "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts a spell at an enemy.", MIN1),
-        "2024": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
-                      "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1)}),
+        # 2024 p.313: finisce a ogni tiro per colpire o lancio del protetto (il danno senza tiro lo chiude il giocatore)
+        "2024": replace(_text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
+                              "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1),
+                        ends_on=("attack", "cast", "manual"))}),
     SpellEffect("blink", ("blink",), ("Intermittenza", "Blink"), _SELF, _BLINK),
     SpellEffect("glibness", ("glibness",), ("Loquacità", "Parlantina", "Glibness"), _SELF, both(_text(
         "Nelle prove di Carisma, se il dado dà meno di 15 conta 15.",
