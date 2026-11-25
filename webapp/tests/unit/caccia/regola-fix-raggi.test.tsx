@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
+import { usePromptStore } from '@/lib/rollOptions'
 import type { CharacterFull, Spell } from '@/types'
 
 const { attack, rollDamage, rollOptions, turnState, lastRollRefund } = vi.hoisted(() => ({
@@ -78,5 +79,34 @@ describe('caccia: raggi della Deflagrazione Occulta', () => {
     expect(await screen.findByText(/ray_of 2\/2/)).toBeInTheDocument()
     expect(lastRollRefund).toHaveBeenCalledWith(7)
     expect(rollDamage).not.toHaveBeenCalled()
+  })
+
+  // caccia: {"id": "CB-4692", "fonte": "2024 · Warlock · Deflagrazione Respingente · pag. 157 (colpendo si può spingere); 2014 · pag. 118; per ogni raggio: decisione D-037 (tests/caccia/decisioni.md)", "zona": "regola:2024/warlock", "voce": "interazione", "copre": ["carta:2014/classes/warlock.md#Deflagrazione Respingente / Repelling Blast (Suppliche Occulte, trucchetto deflagrazione occulta, pag. 118)", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"]}
+  it('dopo il colpo si chiedono le opzioni del colpo: vanno col primo danno, il «Mancato» passa al raggio seguente', async () => {
+    const spinta = { key: 'warlock.repelling_blast', phase: 'after_hit', label: 'Respingente', needs: null, input_options: [], preselected: false, multiplier: null, cost: null }
+    const precisione = { ...spinta, key: 'fighter.maneuver_precision', phase: 'after_roll', after: 'add' }
+    rollOptions.mockResolvedValue([spinta, precisione])
+    attack.mockResolvedValueOnce(colpo(15, 1)).mockResolvedValueOnce(colpo(12, 2))
+    rollDamage.mockResolvedValue(danno)
+    const user = monta()
+    await user.click(screen.getByText('lancia'))
+    await user.click(await screen.findByText('character.spells.attack_roll_damage'))
+    await waitFor(() => expect(usePromptStore.getState().request).not.toBeNull())
+    const richiesta = usePromptStore.getState().request!
+    expect([richiesta.phase, richiesta.options.map((o) => o.key), richiesta.afterRoll]).toEqual(['after_hit', [spinta.key], []])
+    richiesta.answer({ options: [spinta.key], option_inputs: {} })
+    await user.click(await screen.findByText('character.spells.roll_damage.roll_button'))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 1, expect.objectContaining({ hit_options: [spinta.key] })))
+    await user.click(await screen.findByText('character.spells.roll_damage.reroll'))
+    await user.click(await screen.findByText('character.spells.roll_damage.roll_button'))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledTimes(2))
+    expect(rollDamage.mock.calls[1][2]).not.toHaveProperty('hit_options')  // già pagata
+    await user.click(await screen.findByText('character.spells.roll_damage.close'))
+    await user.click(await screen.findByRole('button', { name: 'character.spells.next_ray 2/2' }))
+    await user.click(await screen.findByText('character.spells.attack_roll_damage'))
+    await waitFor(() => expect(usePromptStore.getState().request).not.toBeNull())
+    usePromptStore.getState().request!.answer({ options: [], option_inputs: {}, outcome: 'miss' })
+    await waitFor(() => expect(screen.queryByText(/ray_of/)).toBeNull())  // ultimo raggio mancato: il lancio è finito
+    expect(rollDamage).toHaveBeenCalledTimes(2)
   })
 })

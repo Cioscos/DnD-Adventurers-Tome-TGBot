@@ -788,7 +788,7 @@ async def deferred_attack_damage(
     """Secondo tempo dell'attacco: opzioni ``after_hit`` confermate sul danno già tirato."""
     char = await get_owned_full(char_id, user_id, session)
     pending = get_turn(char).get("pending_attack")
-    if not pending or pending["attack_id"] != attack_id:
+    if not pending or pending.get("attack_id") != attack_id:  # un attacco con incantesimo non ha id: si chiude col suo danno
         raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
     item = next((i for i in char.items if i.id == pending["item_id"]), None)
     if pending["item_id"] is not None and item is None:

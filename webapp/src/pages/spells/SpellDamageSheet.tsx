@@ -3,7 +3,7 @@ import { notifyCastError, apiErrorCode } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
-import type { OptionResult } from '@/api/client'
+import type { OptionResult, RollChoice } from '@/api/client'
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -58,6 +58,8 @@ interface SpellDamageSheetProps {
   slotAlreadyConsumed?: boolean
   /** 20 naturale al tiro per colpire: i dadi raddoppiano. Il critico viene solo da lì (regole 5e). */
   initialCritical?: boolean
+  /** Opzioni dopo il colpo scelte per questo attacco: valgono per il suo primo tiro di danno. */
+  hitChoice?: RollChoice
   /** Danno tirato: con più raggi il prossimo si può tirare. */
   onRolled?: () => void
   onClose: () => void
@@ -75,6 +77,7 @@ export default function SpellDamageSheet({
   asRitual = false,
   slotAlreadyConsumed = false,
   initialCritical = false,
+  hitChoice,
   onRolled,
   onClose,
   onBack,
@@ -116,6 +119,7 @@ export default function SpellDamageSheet({
   const effectiveCastingLevel = (slotLevel && slotLevel > 0) ? slotLevel : (spell?.level ?? 0)
 
   const castRefused = useRef(false)
+  const hitUsed = useRef(false)  // «Ritira» ritira i dadi: le opzioni dopo il colpo sono già pagate
   const mutation = useMutation({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
@@ -203,11 +207,13 @@ export default function SpellDamageSheet({
         main_rolls,
         extra_rolls,
         ...(choice.options.length > 0 ? choice : {}),
+        ...(hitChoice?.options.length && !hitUsed.current ? { hit_options: hitChoice.options, hit_option_inputs: hitChoice.option_inputs } : {}),
       })
     },
     onSuccess: (data) => {
       haptic.success()
       refreshAfterOptions(qc, charId, data.option_result)
+      hitUsed.current = true
       setResult(data)
       onRolled?.()
     },

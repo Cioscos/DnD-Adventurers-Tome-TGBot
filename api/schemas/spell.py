@@ -239,6 +239,9 @@ class RollDamageRequest(RollOptionsBody):
     extra_damage_type: str | None = None
     # Tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida contro le scelte dell'incantesimo
     damage_type: str | None = None
+    # Opzioni ``after_hit`` dell'attacco con incantesimo in sospeso: il tiro di danno dice che ha colpito
+    hit_options: list[str] = Field(default_factory=list, max_length=30)
+    hit_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
 
     @field_validator("extra_dice")
     @classmethod

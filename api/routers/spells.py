@@ -63,7 +63,7 @@ from core.rules.types import RuleContext
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
-from core.rules.roll_options import option_names, scale_damage
+from core.rules.roll_options import AppliedOptions, option_names, scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
@@ -751,6 +751,9 @@ async def spell_attack(
     carry.pop(SPELL_RAYS, None)
     if cast_rays:
         carry[SPELL_RAYS] = cast_rays
+    # In sospeso come un attacco con arma, per le opzioni ``after_hit`` del suo danno (Deflagrazione Respingente, manovre 2024)
+    carry["pending_attack"] = {"spell_id": spell.id, "options": opts.keys, "result": {
+        "to_hit_die": die, "mode": outcome.mode, "is_critical": is_critical, "is_fumble": is_fumble}}
     if option_rolls:
         carry[SPELL_ATTACK_DICE] = {"spell_id": spell.id, "dice": pairs(opts.rolled_dice), "block": attack_block.model_dump(mode="json")}
     char.turn_state = carry
@@ -1075,6 +1078,7 @@ async def roll_spell_damage(
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
     base_type = chosen_damage_type(char, spell, body.damage_type) or _cast_choice_type(char, spell) or spell.damage_type  # il tipo scelto al lancio
+    hit = _hit_options(session, char, spell, body)  # prima delle opzioni del danno, che cancellano il tiro salvato
     opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level, damage_type=canonical_damage_type(base_type))
     main_type = opts.damage_type or base_type  # Incantesimo Trasmutato
     await deliver_temp_gifts(session, char, opts)  # Incantesimi Potenti Migliorati
@@ -1095,10 +1099,15 @@ async def roll_spell_damage(
     carried = carry.pop(SPELL_ATTACK_DICE, None)  # i dadi dell'attacco con incantesimo appena fatto: valgono per questo tiro di danno
     char.turn_state = carry
     carried = carried if carried and carried["spell_id"] == spell.id else None
-    carried_dice = carried["dice"] if carried else []
+    carried_block = OptionResult(**carried["block"]) if carried else None
+    hit_rolls, hit_total = roll_option_dice(char, hit, body.is_critical)
+    attack_block = option_result(hit, hit_rolls, hit_total, previous=carried_block)
+    carried_dice = [*(carried["dice"] if carried else []), *pairs(hit.rolled_dice)]
+    hit_flat = hit_total - sum(v for _, v in hit.rolled_dice) + hit.bonus
+    multiplier = opts.multiplier * hit.multiplier
     total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
-             + sum(v for _, v in carried_dice))
-    total = scale_damage(max(0, total), opts.multiplier)  # il danno arriva a 0, mai sotto (2014 pag. 196; 2024 pag. 27)
+             + sum(v for _, v in carried_dice) + hit_flat)
+    total = scale_damage(max(0, total), multiplier)  # il danno arriva a 0, mai sotto (2014 pag. 196; 2024 pag. 27)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
     parts = damage_parts([("main", main_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
@@ -1112,6 +1121,8 @@ async def roll_spell_damage(
         breakdown_parts.append(f"{'+' if extra_bonus >= 0 else ''}{extra_bonus}")
     if carried_dice:
         breakdown_parts.append(f"+{[v for _, v in carried_dice]}")
+    if hit_flat:
+        breakdown_parts.append(f"{hit_flat:+d}")
     if opts.keys:
         breakdown_parts.append(f"+{option_rolls}{opts.bonus:+d}" if option_rolls else f"{opts.bonus:+d}")
     breakdown = " ".join(breakdown_parts) + f" = {total}"
@@ -1159,7 +1170,7 @@ async def roll_spell_damage(
         scaled_dice=f"{base_count}d{sides}",
         main_kind=f"d{sides}",
         main_rolls=main_rolls,
-        option_result=option_result(opts, option_rolls, option_total, previous=OptionResult(**carried["block"]) if carried else None),
+        option_result=option_result(opts, option_rolls, option_total, previous=attack_block),
         extra_kind=extra_kind,
         extra_rolls=all_extra,
         extra_damage_type=second_type if second_rolls else None,
@@ -1171,18 +1182,35 @@ async def roll_spell_damage(
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
                  + [[extra_sides, v] for v in extra_rolls])
-    dice = base_dice + pairs(opts.rolled_dice) + carried_dice
+    dice = base_dice + carried_dice + pairs(opts.rolled_dice)  # nell'ordine di ``extra_rolls``: prima quelli dell'attacco
     result.reroll_dice = dice
     turn = get_turn(char)
     turn["last_damage"] = {
         "roll_id": uuid.uuid4().hex, "spell_id": spell.id, "dice": dice,
-        "main": len(main_rolls), "base": len(base_dice), "added": [], "multiplier": opts.multiplier, "mod": 0,
-        "flat": base_bonus + extra_bonus + option_total - sum(v for _, v in opts.rolled_dice) + opts.bonus,
+        "main": len(main_rolls), "base": len(base_dice), "added": [], "multiplier": multiplier, "mod": 0,
+        "flat": base_bonus + extra_bonus + option_total - sum(v for _, v in opts.rolled_dice) + opts.bonus + hit_flat,
         "groups": [[p["label"], p["type"], p["kind"], len(p["rolls"])] for p in parts],
         "result": result.model_dump(mode="json"),
     }
     char.turn_state = turn
     return result
+
+
+def _hit_options(session: AsyncSession, char: Character, spell: Spell, body: RollDamageRequest) -> AppliedOptions:
+    """Le opzioni ``after_hit`` dell'attacco in sospeso con questo incantesimo, pagate; il danno lo chiude. Senza un colpo
+    (nessun attacco, 1 naturale o danno già tirato) non se ne possono usare."""
+    pending = get_turn(char).get("pending_attack") or {}
+    hit = AppliedOptions()
+    if pending.get("spell_id") == spell.id and not pending["result"]["is_fumble"]:
+        hit = use_options(session, char, "attack", SimpleNamespace(options=body.hit_options, option_inputs=body.hit_option_inputs),
+                          phase="after_hit", spell=spell)
+    elif body.hit_options:
+        raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": body.hit_options[0]})
+    if pending.get("spell_id") == spell.id:
+        turn = get_turn(char)
+        turn.pop("pending_attack", None)
+        char.turn_state = turn
+    return hit
 
 
 # Incantesimi di livello con TS e danno in cui il TS superato non dimezza (``docs/superpowers/rules/{2014,2024}/spells.md``):

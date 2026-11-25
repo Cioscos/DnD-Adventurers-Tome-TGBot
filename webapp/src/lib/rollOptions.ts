@@ -216,8 +216,8 @@ export async function askRollOptions(
   // `needs` di un'altra fase: il server lo azzera se è già confermata, altrimenti l'opzione non si può scegliere.
   const options = inPhase.filter((o) => (!o.needs || inPhase.some((p) => p.key === o.needs))
     && (!context?.ownSlotOnly || !!o.slot || !!o.outside_action))
-  // Su un 1 naturale una somma non basta: resta mancato.
-  const afterRoll = phase === 'after_hit'
+  // Su un 1 naturale una somma non basta: resta mancato. Per un incantesimo le offre già il modale dell'esito.
+  const afterRoll = phase === 'after_hit' && query.spell_id === undefined
     ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
         && !(context?.fumble && o.after === 'add'))
     : []

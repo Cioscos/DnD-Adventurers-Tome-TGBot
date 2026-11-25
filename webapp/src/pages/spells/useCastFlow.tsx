@@ -17,7 +17,7 @@ import Sheet from '@/components/ui/Sheet'
 import AllyTargetSheet, { type Ally } from '@/components/rules/AllyTargetSheet'
 import RollNotes from '@/components/rules/RollNotes'
 import SpellEffectAsk from '@/components/rules/SpellEffectAsk'
-import type { OptionResult } from '@/api/client'
+import type { OptionResult, RollChoice } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
@@ -43,7 +43,7 @@ const damageOnCast = (spell: Spell) =>rollsDamageOnCast(spell, useEffectPickStor
 
 /** `ray`: il raggio seguente dello stesso lancio, senza lanciare di nuovo. */
 type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode; ray?: boolean }
-/** `hit`: dichiarato a segno, il d20 non si ritocca più. `rayDone`: il raggio è risolto (danno tirato) e ne resta un altro. */
+/** `hit`: dichiarato a segno, il d20 non si ritocca più. `rayDone`: il raggio è risolto (danno tirato o mancato) e ne resta un altro. */
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean; hit?: boolean; rayDone?: boolean }
 const raysLeft = (result: SpellAttackResult) => (result.rays ?? 0) > (result.ray ?? 0)
 
@@ -93,7 +93,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const [effectAsk, setEffectAsk] = useState<{ spell: Spell; level: number; next: () => void } | null>(null)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Danno dopo il tiro per colpire: slot già consumato, critico preimpostato.
-  const [damageAfterAttack, setDamageAfterAttack] = useState<{ critical: boolean } | null>(null)
+  const [damageAfterAttack, setDamageAfterAttack] = useState<{ critical: boolean; hit?: RollChoice } | null>(null)
 
   const spellcasting = char?.spellcasting ?? null
   /** Uno stato attivo autorizza questo incantesimo senza slot (Lettura del Pensiero): il server lo ricontrolla. */
@@ -385,14 +385,26 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   [castMutation.isPending, castMutation.variables,
     attackMutation.isPending, attackMutation.variables])
 
-  const openDamageAfterAttack = () => {
+  /** A segno: le opzioni dopo il colpo (Deflagrazione Respingente, manovre 2024) si scelgono qui e si pagano col danno. */
+  const openDamageAfterAttack = async () => {
     if (!attackState) return
+    const { result, spell } = attackState
+    const hit = result.is_fumble ? undefined : await askRollOptions(charId, { roll: 'attack', spell_id: spell.id }, 'after_hit', {
+      summary: t('character.roll_options.summary', {
+        total: result.to_hit_total, die: result.to_hit_die, bonus: `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`,
+      }),
+    })
+    if (hit?.outcome === 'miss') {
+      await refundMiss()
+      setAttackState(raysLeft(result) ? { ...attackState, hit: true, rayDone: true } : null)
+      return
+    }
     setPendingRitual(attackState.ritual)
     setPendingSlotLevel(attackState.slot?.level ?? 0)
     setPendingSlotId(attackState.slot?.id)
-    setDamageAfterAttack({ critical: attackState.result.is_critical })
-    setRollDamageSpell(attackState.spell)
-    setAttackState(raysLeft(attackState.result) ? { ...attackState, hit: true } : null)  // con altri raggi l'esito torna, chiuso il foglio dei danni
+    setDamageAfterAttack({ critical: result.is_critical, hit })
+    setRollDamageSpell(spell)
+    setAttackState(raysLeft(result) ? { ...attackState, hit: true } : null)  // con altri raggi l'esito torna, chiuso il foglio dei danni
   }
 
   /** Il raggio non colpisce: torna ciò che si paga solo se il tiro riesce, e si passa al seguente. */
@@ -499,6 +511,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 asRitual={pendingRitual}
                 slotAlreadyConsumed={damageAfterAttack !== null}
                 initialCritical={damageAfterAttack?.critical ?? false}
+                hitChoice={damageAfterAttack?.hit}
                 onRolled={() => setAttackState((prev) => prev && { ...prev, rayDone: true })}
                 onClose={closeCastSheet}
                 onBack={castingSpell ? closeDamage : undefined}
@@ -573,7 +586,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           result={attackState.result}
           canRollDamage={!!attackState.spell.damage_dice
             && (!attackState.result.is_fumble || (!!attackState.result.twinned_attack && !attackState.result.twinned_attack.is_fumble))}
-          onRollDamage={openDamageAfterAttack}
+          onRollDamage={() => void openDamageAfterAttack()}
           onClose={() => setAttackState(null)}
           inspirationAvailable={canRerollInspiration(char) && !attackState.hit}
           isRerolling={attackRerollMutation.isPending}

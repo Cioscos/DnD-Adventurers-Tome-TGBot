@@ -122,7 +122,7 @@ def _ranged(ctx: RuleContext) -> bool:
 
 def _hit_ok(ctx: RuleContext, *, ranged: bool, anywhere: bool = False) -> bool:
     """Non ancora scaricata, attacco del lanciatore e del tipo giusto (a distanza o no; ``anywhere``: qualunque attacco con arma)."""
-    return not _data(ctx).get("discharged") and _own_attack(ctx) and (anywhere or _ranged(ctx) == ranged)
+    return not _data(ctx).get("discharged") and _weapon_attack(ctx) and (anywhere or _ranged(ctx) == ranged)
 
 
 def _discharge(key: str) -> Callable:

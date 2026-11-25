@@ -541,3 +541,78 @@ async def test_i_raggi_seguenti_non_sono_un_altro_lancio_e_il_rilancio_vale_per_
                                                                    "damage_dice": "1d10", "damage_type": "fire"})).json()["id"]
     altro = (await _raggio(client, cid, dardo, die=10)).json()
     assert "ray" not in altro and len((await _danno(client, cid, dardo))["main_rolls"]) == 2  # gli altri trucchetti non cambiano
+
+
+# ---------------------------------------------------------------------------
+# Opzioni dopo un colpo («after_hit») sugli attacchi con incantesimo: si confermano col danno (``hit_options``)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.caccia(id="CB-4684", fonte="2014 · Warlock · Deflagrazione Respingente · pag. 118; 2024 · pag. 157 (colpendo, per ogni raggio: decisione D-037, tests/caccia/decisioni.md)",
+                    zona="regola:2024/warlock", voce="interazione",
+                    copre=["carta:2014/classes/warlock.md#Deflagrazione Respingente / Repelling Blast (Suppliche Occulte, trucchetto deflagrazione occulta, pag. 118)",
+                           "carta:2024/classes/warlock.md#Deflagrazione Respingente / Repelling Blast (Suppliche Occulte, livello 2+, trucchetto Warlock che infligge danno con un tiro per colpire, pag. 157)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_la_deflagrazione_respingente_spinge_per_ogni_raggio_a_segno(client, edizione):
+    if edizione == "2014":
+        from tests.integration.rules.test_2014_warlock_invocations import _caster
+        cid, chiave = await _caster(client, 5, "repelling_blast", blast=True), "warlock.repelling_blast"
+    else:
+        from tests.integration.rules.test_2024_warlock import _caster24
+        cid, chiave = await _caster24(client, 5, "repelling_blast__eldritch_blast", cantrips=("eldritch-blast",)), "warlock.repelling_blast__eldritch_blast"
+    sid = next(s["id"] for s in (await _scheda(client, cid))["spells"] if s["srd_index"] == "eldritch-blast")
+    assert (await _raggio(client, cid, sid, die=15)).status_code == 200
+    danno = await _danno(client, cid, sid, hit_options=[chiave])
+    assert danno["option_result"]["keys"] == [chiave] and danno["option_result"]["targets"] == [chiave]
+    assert (await client.get(f"/characters/{cid}/target-effects/{chiave}")).json()["result"]["note"] == "repelling_blast"
+    danni = f"/characters/{cid}/spells/{sid}/roll_damage"
+    assert (await client.post(danni, json={"hit_options": [chiave]})).status_code == 409  # il danno di quel colpo è già tirato
+    assert (await _raggio(client, cid, sid, die=1, ray=True)).status_code == 200
+    assert (await client.post(danni, json={"hit_options": [chiave]})).status_code == 409  # un 1 naturale non spinge
+    assert (await _raggio(client, cid, sid, die=15)).status_code == 200
+    assert (await _danno(client, cid, sid, hit_options=[chiave]))["option_result"]["targets"] == [chiave]
+    assert (await _raggio(client, cid, sid, die=12, ray=True)).status_code == 200
+    assert (await _danno(client, cid, sid, hit_options=[chiave]))["option_result"]["targets"] == [chiave]  # e di nuovo col secondo raggio
+
+
+@pytest.mark.caccia(id="CB-4686", fonte="2024 · Talenti · Dono dell'Offensiva irresistibile, Colpo travolgente · pag. 211 (20 naturale sul d20 di un attacco)",
+                    zona="regola:2024/talenti", voce="interazione",
+                    copre=["carta:2024/feats.md#Dono dell'Offensiva irresistibile / Boon of Irresistible Offense (pag. 211) - Dono epico",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_il_colpo_travolgente_vale_anche_per_il_20_naturale_di_un_incantesimo(client):
+    from tests.integration.rules.test_feats_2024_boons import _boon
+    cid = (await _boon(client, "irresistible_offense", "strength", "warlock"))["id"]
+    chiave = "feat.2024_boon_irresistible_offense_strike"
+    forza = next(s["value"] for s in (await _scheda(client, cid))["ability_scores"] if s["name"] == "strength")
+    sid = await _deflagrazione(client, cid)
+    assert (await _raggio(client, cid, sid, die=20)).status_code == 200
+    danno = await _danno(client, cid, sid, main_rolls=[3, 3], is_critical=True, hit_options=[chiave])
+    assert danno["total"] == 6 + forza
+    assert (await _raggio(client, cid, sid, die=19, ray=True)).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_damage", json={"hit_options": [chiave]})
+    assert (r.status_code, r.json()["detail"]["code"]) == (409, "option_unavailable")
+    # un ritiro che diventa 20 la apre: il d20 che conta è quello finale
+    assert (await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})).status_code == 200
+    assert (await _raggio(client, cid, sid, die=20, with_inspiration=True)).status_code == 200
+    assert (await _danno(client, cid, sid, main_rolls=[3, 3], is_critical=True, hit_options=[chiave]))["total"] == 6 + forza
+
+
+@pytest.mark.caccia(id="CB-4687", fonte="2014 · Incantesimi · Punizione Marchiante, Punizione Tonante · pag. 266, Colpo Intrappolante · pag. 222 (al prossimo colpo con un'arma)",
+                    zona="regola:2014/incantesimi-M-R", voce="interazione",
+                    copre=["carta:2014/spells.md#Punizione Marchiante", "carta:2014/spells.md#Punizione Tonante", "carta:2014/spells.md#Colpo Intrappolante",
+                           "GET /characters/{char_id}/roll-options"])
+@pytest.mark.parametrize("edizione, chiave, nome", [("2014", "branding-smite", "Branding Smite"), ("2014", "thunderous-smite", "Thunderous Smite"),
+                                                    ("2014", "ensnaring-strike", "Ensnaring Strike")])
+async def test_le_punizioni_gia_lanciate_non_si_offrono_su_un_attacco_con_incantesimo(client, edizione, chiave, nome):
+    cid = await _pg(client, edizione, "paladin", 9)
+    sid = await _deflagrazione(client, cid)
+    livello = 2 if chiave == "branding-smite" else 1
+    r = await client.post(f"/characters/{cid}/spells", json={"name": nome, "level": livello, "srd_index": chiave, "is_concentration": True, "is_prepared": True})
+    assert r.status_code == 201, r.text
+    slot = next(s for s in (await _scheda(client, cid))["spell_slots"] if s["level"] >= livello)
+    r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"slot_id": slot["id"], "slot_level": slot["level"]})
+    assert r.status_code == 200, r.text[:300]
+    opzione = f"spell:{chiave.replace('-', '_')}:hit"
+    offerte = lambda q: client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", **q})  # noqa: E731
+    assert opzione not in {o["key"] for o in (await offerte({"spell_id": sid})).json()}
+    assert opzione in {o["key"] for o in (await offerte({})).json()}  # il colpo senz'armi 2014 è un attacco con arma (D-030)

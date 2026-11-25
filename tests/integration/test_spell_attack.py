@@ -162,6 +162,19 @@ async def test_use_spell_unchanged(client):
     assert r.status_code == 400 and r.json()["detail"] == "Spell is not a ritual"
 
 
+async def test_a_pending_spell_attack_is_not_a_weapon_attack_and_the_spell_damage_leaves_a_pending_weapon_hit_alone(client):
+    cid = await _wizard(client)
+    sid = await _spell(client, cid, level=0, damage_dice="1d10")
+    attack = f"/characters/{cid}/spells/{sid}/attack"
+    assert (await client.post(attack, json={"die": 15})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/attack/None/damage", json={})).status_code == 404
+    hit = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 15, "defer_damage": True})).json()
+    damage = f"/characters/{cid}/spells/{sid}/roll_damage"
+    assert (await client.post(damage, json={"hit_options": ["x"]})).status_code == 409
+    assert (await client.post(damage, json={})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={})).status_code == 200
+
+
 def test_best_caster_tie_returns_first(monkeypatch):
     a = SpellCasterStats(class_id=1, class_name="cleric", ability="wisdom", save_dc=13, attack_bonus=5)
     b = SpellCasterStats(class_id=2, class_name="wizard", ability="intelligence", save_dc=13, attack_bonus=5)

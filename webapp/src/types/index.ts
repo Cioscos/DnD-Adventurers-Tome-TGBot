@@ -998,6 +998,9 @@ export interface RollDamageRequest extends Partial<RollChoice> {
   extra_damage_type?: string
   /** Tipo di danno scelto al lancio (Sfera Cromatica...); il server lo riconvalida. */
   damage_type?: string
+  /** Opzioni dopo il colpo (`after_hit`) dell'attacco con questo incantesimo, appena messo a segno. */
+  hit_options?: string[]
+  hit_option_inputs?: RollChoice['option_inputs']
 }
 
 export interface RollHealingRequest extends Partial<RollChoice> {

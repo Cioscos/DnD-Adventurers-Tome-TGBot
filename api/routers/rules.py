@@ -230,7 +230,7 @@ async def last_roll_options(
     last, pending = turn.get("last_roll"), turn.get("pending_attack")
     is_attack = bool(last) and last["roll"] == "attack"
     weapon_attack = is_attack and last["spell_id"] is None
-    if not last or (weapon_attack and not pending):  # il danno è già stato tirato
+    if not last or (weapon_attack and (not pending or "spell_id" in pending)):  # il danno è già stato tirato
         raise _refuse("no_last_roll")
     if last["auto_fail"]:
         raise _refuse("option_unavailable", key=(body.options or [""])[0])
@@ -340,6 +340,9 @@ async def last_roll_options(
             refundable = {}
 
     turn = get_turn(char)  # pagamenti e attacco in sospeso hanno riscritto il turno
+    if is_attack and not weapon_attack and (pending or {}).get("spell_id") == last["spell_id"]:  # l'attacco con incantesimo in sospeso
+        turn["pending_attack"] = {**pending, "options": [*pending["options"], *opts.keys],
+                                  "result": {"to_hit_die": die, "mode": mode, "is_critical": is_critical, "is_fumble": is_fumble}}
     turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": raw_total, "notes": notes,
                          "forced_hit": forced_hit, "refundable": refundable, "concentration": conc, "death": death,
                          "after_used": [*last.get("after_used", []), *opts.keys],
