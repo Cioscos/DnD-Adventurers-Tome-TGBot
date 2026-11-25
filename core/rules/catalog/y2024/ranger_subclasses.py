@@ -17,7 +17,7 @@ from core.rules.catalog.y2014.ranger import (
 )
 from core.rules.catalog.y2014.rogue import _lacks_wisdom_save_proficiency
 from core.rules.catalog.y2024.druid import _free_slot_levels, _level_label
-from core.rules.catalog.y2024.ranger import CK, ED, _mark_dice, _wis_mod, hunters_mark_active
+from core.rules.catalog.y2024.ranger import CK, ED, _mark_dice, _rangers_own_attack, _wis_mod, hunters_mark_active
 from core.rules.companions import PRIMAL_COMPANION
 from core.rules.states import begin_state, has_state
 from core.rules.types import (
@@ -310,7 +310,7 @@ MULTIATTACK_DEFENSE = RollOptionSpec(
 SUPERIOR_PREY = RollOptionSpec(
     key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice, extra_damage_type="force",
     separate_damage=True, crit_doubles=False,  # il dado è di una seconda creatura: fuori dal totale e senza raddoppio al critico
-    available=lambda c: _weapon_attack(c) and hunters_mark_active(c),
+    available=_rangers_own_attack,  # «quando danneggi la creatura marcata»: ogni attacco del ranger, anche senz'armi o con un incantesimo
     label=_both("Preda del Cacciatore Superiore: una seconda creatura entro 9 m dalla marcata subisce i danni di Hunter's Mark (una volta per turno)",
                 "Superior Hunter's Prey: a second creature within 30 ft of the marked one takes Hunter's Mark's damage (once per turn)"))
 

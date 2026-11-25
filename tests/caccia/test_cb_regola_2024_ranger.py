@@ -69,7 +69,6 @@ async def test_paura_di_massa_usa_la_cd_degli_incantesimi_della_scheda(client):
                     copre=["carta:2024/classes/ranger.md#Preda del Cacciatore Superiore / Superior Hunter's Prey (Cacciatore 11, pag. 127)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("way", ["unarmed", "spell"])
-@pytest.mark.xfail(strict=True, reason="CB-2513: difforme dal manuale, confermato")
 async def test_preda_superiore_vale_anche_senza_arma_sulla_creatura_marcata(client, way):
     cid = await _sub(client, 11, "hunter")
     await _cast_mark(client, cid)
