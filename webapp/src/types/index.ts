@@ -437,7 +437,7 @@ export interface AcBreakdown {
 export interface ComputedStats {
   speed: number
   hp_max_effective: number
-  /** Sanguinante (2024): PF sopra 0 e a metà del massimo effettivo o meno. Assente/falso nel 2014. */
+  /** Sanguinante (2024): PF a metà del massimo effettivo o meno, anche a 0 (non da morto). Assente/falso nel 2014. */
   bloodied?: boolean
   resistances: string[]
   immunities: string[]

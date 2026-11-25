@@ -278,8 +278,9 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         attunement_limit=attunement_limit(char),
         scroll_casting=has_use_magic_device(char),
     )
-    response.computed.bloodied = (  # 2024 p.27: di per sé non fa nulla, è un segnale per chi gioca
-        edition == "2024" and 0 < char.current_hit_points * 2 <= response.computed.hp_max_effective)
+    hp_max = response.computed.hp_max_effective
+    response.computed.bloodied = (  # 2024 p.27 e p.362: a metà PF o meno, anche a 0; un morto non ha PF (p.365)
+        edition == "2024" and not char.is_dead and 0 < hp_max and char.current_hit_points * 2 <= hp_max)
     return response
 
 

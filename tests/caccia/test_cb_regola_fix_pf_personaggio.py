@@ -151,3 +151,22 @@ async def test_in_forma_selvatica_2014_si_spendono_i_dadi_vita_della_bestia(clie
     # il d8 della bestia (Costituzione 10) cura la forma: 3 + 6; i PF del druido restano quelli di prima
     assert r.json()["companion"]["current_hp"] == 9
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == pf
+
+
+@pytest.mark.caccia(id="CB-4317", fonte="2024 · Regole generali · Bloodied (Sanguinante) · pag. 362; Punti Ferita / Hit Points · pag. 27 (a metà PF o meno, anche a 0)",
+                    zona="regola:2024/generali", voce="limiti",
+                    copre=["carta:2024/general.md#Bloodied (Sanguinante) (pag. 362)",
+                           "carta:2024/general.md#Punti Ferita / Hit Points (pag. 27)",
+                           "carta:2024/general.md#Dead (Morto) (pag. 365)",
+                           "PATCH /characters/{char_id}/hp", "PATCH /characters/{char_id}/death_saves"])
+async def test_a_zero_pf_si_e_sanguinanti(client):
+    cid = await _pg(client, "fighter", 1, "2024")
+    await _pf(client, cid, 10)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
+    assert r.status_code == 200, r.text
+    assert r.json()["computed"]["bloodied"] is True
+    for _ in range(3):  # un morto non ha PF (pag. 365): niente segnale
+        r = await client.patch(f"/characters/{cid}/death_saves", json={"action": "failure"})
+        assert r.status_code == 200, r.text
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    assert scheda["is_dead"] is True and scheda["computed"]["bloodied"] is False

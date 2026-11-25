@@ -64,7 +64,7 @@ class ComputedStats(BaseModel):
     attunement_limit: int = 3  # sintonie ammesse: 4 con Usare Dispositivi Magici (Furfante 2024)
     scroll_casting: bool = False  # può lanciare dalle pergamene (Usare Dispositivi Magici)
     long_jump_bonus_ft: Optional[int] = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio
-    bloodied: bool = False  # Sanguinante (solo 2024): a metà dei PF massimi o meno, ma sopra 0
+    bloodied: bool = False  # Sanguinante (solo 2024): a metà dei PF massimi o meno, anche a 0 (non da morto né con PF massimi a 0)
 
 
 class SpellCasterStats(BaseModel):
