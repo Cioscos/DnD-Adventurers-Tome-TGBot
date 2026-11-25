@@ -237,8 +237,10 @@ export default function Turn() {
     // Un privilegio che dà un effetto a un alleato, o una cui modalità scelta è rivolta a un altro (Imposizione delle Mani).
     const mode = useChoices[args.ability.id]?.mode
     const rm = args.ability.removal
-    if (rm && (!rm.modes || (mode && rm.modes.includes(mode)))) {
-      const allies = rm.ally && !(rm.bound && mode === 'self') ? await api.characters.sessionAllies(charId).catch(() => []) : []
+    // La cura può anche togliere condizioni (Imposizione delle Mani 2024): su di sé si chiede solo se c'è qualcosa da togliere.
+    const also = !!rm?.also_modes?.includes(mode ?? '') && (mode !== 'self' || rm.conditions.some((c) => char?.conditions?.[c.key]))
+    if (rm && (!rm.modes || also || (mode && rm.modes.includes(mode)))) {
+      const allies = rm.ally && !((rm.bound || also) && mode === 'self') ? await api.characters.sessionAllies(charId).catch(() => []) : []
       setRemovalPick({ ...args, allies })
       return
     }
@@ -251,6 +253,8 @@ export default function Turn() {
     }
     abilityUse.mutate(args)
   }
+
+  const removalAlso = !!removalPick?.ability.removal?.also_modes?.includes(useChoices[removalPick.ability.id]?.mode ?? '')
 
   if (!char) {
     return (
@@ -727,9 +731,9 @@ export default function Turn() {
         <AllyTargetSheet
           title={removalPick.ability.name} allies={removalPick.allies} pending={abilityUse.isPending} onPick={() => {}} onClose={() => setRemovalPick(null)}
           removal={{
-            ...removalPick.ability.removal, maxTargets: removalPick.ability.removal.max_targets, optional: removalPick.ability.removal.optional,
+            ...removalPick.ability.removal, maxTargets: removalPick.ability.removal.max_targets, optional: removalPick.ability.removal.optional || removalAlso,
             costEach: removalPick.ability.removal.cost_each, confirmKey: 'removal_confirm_use',
-            scope: !removalPick.ability.removal.ally ? 'self' : removalPick.ability.removal.bound ? (useChoices[removalPick.ability.id]?.mode === 'self' ? 'self' : 'others') : 'any',
+            scope: !removalPick.ability.removal.ally ? 'self' : removalPick.ability.removal.bound || removalAlso ? (useChoices[removalPick.ability.id]?.mode === 'self' ? 'self' : 'others') : 'any',
             onConfirm: (removal) => abilityUse.mutate({ ability: removalPick.ability, uses: removalPick.uses, amount: removalPick.amount, removal }),
           }} />
       )}

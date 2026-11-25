@@ -1074,6 +1074,29 @@ describe('Turn page', () => {
         { mode: 'cure', removal: { targets: ['self'], conditions: ['poisoned', 'disease'] } }))
     })
 
+    it('2024: heals another creature and removes its conditions with one touch (CB-4478)', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [{ ...lay(), removal: { ...lay().removal, also_modes: ['self', 'other'] } }] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a un altro')
+      await userEvent.click((await screen.findByText('character.turn.use_on')).closest('button') as HTMLButtonElement)
+      await userEvent.click(await screen.findByText('Avvelenato'))
+      await userEvent.click(await screen.findByText('Brun'))
+      await userEvent.click(await screen.findByText('character.turn.removal_confirm_use'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1,
+        { mode: 'other', removal: { targets: [31], conditions: ['poisoned'] } }))
+    })
+
+    it('2024: does not ask what to remove when healing yourself without any of those conditions', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [{ ...lay(), removal: { ...lay().removal, also_modes: ['self', 'other'] } }] })
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a te stesso')
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1, { mode: 'self' }))
+    })
+
     it('does not ask for a target when healing yourself', async () => {
       getChar.mockResolvedValue({ ...char, abilities: [lay()] })
       sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])

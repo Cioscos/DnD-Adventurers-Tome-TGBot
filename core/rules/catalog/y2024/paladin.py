@@ -79,7 +79,8 @@ def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
     return []  # le condizioni sono nel meccanismo comune (``removal``)
 
 
-_LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5)
+_LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5,
+                                also_modes=("self", "other"))  # pag. 109: un solo tocco cura e toglie
 
 LAY_ON_HANDS_USE = OnUse(
     slot="bonus", choose_amount=True, cap_to_missing=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",

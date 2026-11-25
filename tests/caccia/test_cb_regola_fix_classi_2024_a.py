@@ -1,6 +1,7 @@
 """Controlli scritti dal correttore del gruppo classi-2024-a per i dubbi risolti come difetti."""
 import pytest
 
+from tests.integration._encounter_helpers import GM_ID, as_user
 from tests.integration.rules.test_2014_barbarian import _ability, _keys, _weapon
 from tests.integration.rules.test_2024_barbarian import _barbarian, _new_turn, _rage
 from tests.integration.rules.test_2024_barbarian_paths import _use
@@ -10,7 +11,8 @@ from tests.integration.rules.test_2014_monk_ki import _ki, _states
 from tests.integration.rules.test_2014_bard import _use as _use_feature
 from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin_combat import _attack, _listed
-from tests.integration.rules.test_2024_paladin import _paladin24
+from tests.integration.rules.test_2014_paladin_round1_loh import _hero_hp, _hero_state
+from tests.integration.rules.test_2024_paladin import _paladin24, _table24
 from tests.integration.rules.test_2024_paladin_oaths import _oath, _sword
 from tests.integration.rules.test_2024_monk import _monk24
 from tests.integration.rules.test_2014_paladin import _rest
@@ -159,7 +161,6 @@ async def test_arma_consacrata_sceglie_radioso_o_normale_a_ogni_colpo(client):
                     copre=["carta:2024/classes/paladin.md#Imposizione delle Mani / Lay On Hands (Paladino 1, pag. 109)",
                            "carta:2024/classes/paladin.md#Tocco Ristoratore / Restoring Touch (Paladino 14, pag. 111)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-4478: rinviato, un uso che cura e toglie condizioni cambia la richiesta e il pannello del privilegio")
 async def test_imposizione_delle_mani_cura_e_toglie_avvelenato_con_un_solo_tocco(client):
     cid = await _paladin24(client, 5)
     assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10})).status_code == 200
@@ -170,3 +171,30 @@ async def test_imposizione_delle_mani_cura_e_toglie_avvelenato_con_un_solo_tocco
     full = (await client.get(f"/characters/{cid}")).json()
     assert r.json()["healed"] == 5 and not full["conditions"].get("poisoned")
     assert (await _ability(client, cid, "paladin.lay_on_hands"))["uses"] == 25 - 5 - 5, "i 5 punti della condizione non curano"
+
+
+@pytest.mark.caccia(id="CB-4562", fonte="2024 · Paladino · Imposizione delle Mani · pag. 109; Tocco Ristoratore · pag. 111",
+                    zona="regola:2024/paladin", voce="interazione",
+                    copre=["carta:2024/classes/paladin.md#Imposizione delle Mani / Lay On Hands (Paladino 1, pag. 109)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_imposizione_delle_mani_cura_e_toglie_sulla_stessa_creatura_della_serata(client, test_session_factory):
+    _, paladino, eroe = await _table24(client, test_session_factory, level=14)
+    await _hero_hp(test_session_factory, eroe, 5, conditions={"poisoned": True, "frightened": True})
+    as_user(GM_ID)
+    loh = "paladin.lay_on_hands"
+    r = await _use_feature(client, paladino, loh, amount=4,
+                           params={"mode": "other", "removal": {"targets": ["self"], "conditions": ["poisoned"]}})
+    assert r.status_code == 422, "la rimozione va alla creatura che si cura"
+    r = await _use_feature(client, paladino, loh, amount=4,
+                           params={"mode": "other", "removal": {"targets": [eroe], "conditions": ["poisoned", "frightened"]}})
+    assert r.status_code == 200, r.text
+    assert r.json()["received"] == {"name": "Eroe", "healed": 4}
+    pf, condizioni = await _hero_state(test_session_factory, eroe)
+    assert pf == 9 and not condizioni.get("poisoned") and not condizioni.get("frightened")
+    assert (await _ability(client, paladino, loh))["uses"] == 70 - 4 - 10
+    # chi ha tutti i PF: si toglie la condizione e nessun punto va alla cura
+    assert (await client.post(f"/characters/{paladino}/turn/new")).status_code == 200
+    assert (await client.patch(f"/characters/{paladino}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
+    r = await _use_feature(client, paladino, loh, amount=1, params={"mode": "self", "removal": {"targets": ["self"], "conditions": ["poisoned"]}})
+    assert r.status_code == 200, r.text
+    assert r.json()["healed"] == 0 and (await _ability(client, paladino, loh))["uses"] == 70 - 14 - 5

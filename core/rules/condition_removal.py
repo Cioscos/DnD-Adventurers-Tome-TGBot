@@ -38,6 +38,7 @@ class ConditionRemoval:
     chiudere (Calmare Emozioni). Solo privilegi: ``allowed(ctx)`` restringe per livello o per ciò che la scheda ha;
     ``modes``: valori di ``mode`` per cui l'uso apre il foglio (``None``: sempre); ``bound``: il bersaglio segue la ``mode``
     (``self``: te stesso, ``other``: un altro, anche per i PF); ``optional``: si può usare anche senza togliere nulla;
+    ``also_modes``: modalità che curano e in cui si può anche togliere, sulla stessa creatura (Imposizione delle Mani 2024);
     ``cost_each``: usi spesi per ogni voce tolta (Imposizione delle Mani: 5); ``auto(ctx, params)``: condizioni che cadono da
     sole su chi usa il privilegio, senza foglio (Ira), con lo stesso servizio."""
     conditions: tuple[str, ...] = ()
@@ -49,6 +50,7 @@ class ConditionRemoval:
     footer: Text | None = None
     allowed: "Callable[[Any], tuple[str, ...]] | None" = None
     modes: tuple[str, ...] | None = None
+    also_modes: tuple[str, ...] = ()
     bound: bool = False
     optional: bool = False
     cost_each: int = 0
@@ -62,7 +64,7 @@ class ConditionRemoval:
 def view(removal: ConditionRemoval, ctx: Any = None) -> dict:
     """Ciò che la UI mostra nel foglio comune: lo stesso per un incantesimo e per un privilegio."""
     return {"count": removal.count, "max_targets": removal.max_targets, "ally": removal.ally, "optional": removal.optional,
-            "bound": removal.bound, "modes": list(removal.modes) if removal.modes else None, "cost_each": removal.cost_each,
+            "bound": removal.bound, "modes": list(removal.modes) if removal.modes else None, "also_modes": list(removal.also_modes), "cost_each": removal.cost_each,
             "conditions": [{"key": c, "label": _name(c, CONDITION_NAMES)} for c in removal.allowed_for(ctx)],
             "untracked": [{"key": u, "label": UNTRACKED[u]} for u in removal.untracked]}
 

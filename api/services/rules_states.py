@@ -343,22 +343,24 @@ async def _plan_removal(session: AsyncSession, char, ctx: RuleContext, rm, param
     """``(condizioni, voci non tracciate, bersagli, esplicita)`` che quest'uso toglie, o ``None``. Lo stesso corpo ``removal``
     {targets, conditions} degli incantesimi; 422 se la scelta, i bersagli o la modalità non sono ammessi, tutto prima di spendere."""
     req = params.get("removal")
+    also = params.get("mode") in rm.also_modes  # la cura resta, togliere è in più
     if req is None:
         if rm.auto:  # cadono da sole su chi usa il privilegio (Ira): stesso servizio, senza foglio
             picks = rm.auto(ctx, params)
             return (*plan(rm, picks, rm.allowed_for(ctx)), [char], False) if picks else None
-        if rm.optional or (rm.modes is not None and params.get("mode") not in rm.modes):
+        if rm.optional or also or (rm.modes is not None and params.get("mode") not in rm.modes):
             return None
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     targets, picks = (req.get("targets"), req.get("conditions")) if isinstance(req, dict) else (None, None)
     bad = (not isinstance(targets, list) or (picks is not None and not isinstance(picks, list))
-           or (rm.modes is not None and params.get("mode") not in rm.modes))
-    if not bad and rm.bound:  # il bersaglio segue la modalità: te stesso, oppure un altro
+           or (rm.modes is not None and params.get("mode") not in (*rm.modes, *rm.also_modes)))
+    if not bad and (rm.bound or also):  # il bersaglio segue la modalità: te stesso, oppure un altro
         bad = len(targets) != 1 or (targets[0] == "self") != (params.get("mode") == "self")
     if bad:
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
-    conds, untracked = ([], []) if picks == [] and rm.optional else plan(rm, picks, rm.allowed_for(ctx))
-    if not (conds or untracked) and not rm.optional:
+    optional = rm.optional or also
+    conds, untracked = ([], []) if picks == [] and optional else plan(rm, picks, rm.allowed_for(ctx))
+    if not (conds or untracked) and not optional:
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     return conds, untracked, await resolve_targets(session, char, rm, targets), True
 
@@ -390,17 +392,20 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             and any((char.conditions or {}).get(c) for c in INCAPACITATING)):
         raise _err(status.HTTP_409_CONFLICT, "incapacitated")
     removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
+    removal_cost = 0  # punti in più, oltre a quelli della cura (``also_modes``)
     if on_use.removal is not None:
+        also = params.get("mode") in on_use.removal.also_modes
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
                                                                       class_level=row.level), on_use.removal, params)
         if removal_plan is not None and removal_plan[3] and on_use.removal.cost_each:  # il costo lo decide il server
             conds, untracked, targets = removal_plan[0], removal_plan[1], removal_plan[2]
             # si pagano le voci che toglie davvero: una condizione che il bersaglio non ha non costa nulla
             paid = [c for c in conds if any(t is None or (t.conditions or {}).get(c) for t in targets)]
-            if not (paid or untracked):
+            if not (paid or untracked) and not (also and not conds):
                 raise _err(status.HTTP_409_CONFLICT, "nothing_to_remove")
-            amount = on_use.removal.cost_each * (len(paid) + len(untracked))
-        if removal_plan is not None and removal_plan[3] and on_use.removal.bound:  # anche i PF vanno a chi si è scelto
+            price = on_use.removal.cost_each * (len(paid) + len(untracked))
+            amount, removal_cost = (amount, price) if also else (price, 0)
+        if removal_plan is not None and removal_plan[3] and (on_use.removal.bound or also):  # anche i PF vanno a chi si è scelto
             params["target_character_id"] = getattr(removal_plan[2][0], "id", None)
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
@@ -466,7 +471,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         temp_targets = [await ally_target(session, char, tid) for tid in wanted]
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
-    cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
+    cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount + removal_cost
     # «Ripristina» spendendo un uso di un altro privilegio (Presenza Intimidatoria: un uso di Ira)
     spends = on_use.alt_spends if on_use.alt_spends and (params or {}).get(on_use.alt_param) else on_use.spends
     if spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
@@ -484,10 +489,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             from api.services.effects import get_passive_modifiers as _hb  # import locale: effects richiama on_conditions
             from core.rules.modifiers import effective_hp_max as _max
             missing = max(0, _max(healed_one, await _hb(session, healed_one, "character.hit_points_max")) - healed_one.current_hit_points)
-            if missing == 0:
+            if missing == 0 and not removal_cost:
                 raise _err(status.HTTP_409_CONFLICT, "no_benefit")
             capped, amount = amount > missing, min(amount, missing)
-            cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
+            cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount + removal_cost
     slot = on_use.slot_by(ctx_choice, params or {}) if on_use.slot_by else on_use.slot
     # chi rinuncia a un attacco dell'azione Attacco già iniziata (Soffio) non spende di nuovo l'azione
     if slot and not (on_use.forgoes_attack and slot == "action" and get_turn(char)["action_attacks"] > 0):

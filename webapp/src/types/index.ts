@@ -15,7 +15,7 @@ export type AbilityModifierKind = 'absolute' | 'relative'
 /** Cosa si può togliere e a chi (Task 48): lo stesso per un incantesimo e per un privilegio. */
 export type RemovalInfo = {
   count: number | null; max_targets: number; ally: boolean
-  optional?: boolean; bound?: boolean; modes?: string[] | null; cost_each?: number
+  optional?: boolean; bound?: boolean; modes?: string[] | null; also_modes?: string[]; cost_each?: number
   conditions: { key: string; label: { it: string; en: string } }[]; untracked: { key: string; label: { it: string; en: string } }[]
 }
 
