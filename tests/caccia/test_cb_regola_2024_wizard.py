@@ -100,7 +100,6 @@ async def _riposo(client, cid, tipo, **altro):
                            "carta:2024/classes/wizard.md#Vedere Invisibilità / See Invisibility (Divinatore 10, pag. 173)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("lancio", ["terzo_occhio", "rituale"])
-@pytest.mark.xfail(strict=True, reason="CB-2711: difforme dal manuale, confermato")
 async def test_divinazione_esperta_non_rende_slot_a_un_lancio_senza_slot(client, lancio):
     cid = await _mago(client, 10, "diviner")
     await _spendi(client, cid, 1, 2)
