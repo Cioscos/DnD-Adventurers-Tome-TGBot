@@ -360,7 +360,7 @@ async def _charge_pact_use(session: AsyncSession, row: Ability | None) -> None:
     """Spende l'uso del privilegio con un UPDATE condizionato: due lanci insieme non spendono lo stesso uso (409 ``no_uses``,
     e l'errore annulla tutto il lancio)."""
     if row is not None:
-        await _spend_atomically(session, row, 1)
+        await _spend_atomically(session, row, 1, exact=True)  # un uso per incantesimo (Toccato dalle fate): due tocchi non ne spendono due
 
 
 @router.get("/{char_id}/spells", response_model=list[SpellRead])

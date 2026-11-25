@@ -1,6 +1,9 @@
 """Controlli delle revisioni delle correzioni regole 2026-11-24: lo stesso errore trovato altrove."""
 import pytest
+from fastapi import HTTPException
 
+from api.routers.spells import _charge_pact_use
+from core.db.models import Ability
 from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg, _scheda
 from tests.caccia.test_cb_regola_2014_razze import _specie
 from tests.caccia.test_cb_regola_2024_incantesimi_a_c import _dal_catalogo, _pg as _pg24
@@ -235,3 +238,22 @@ async def test_la_prima_specie_2024_toglie_cio_che_dava_la_razza_2014(client):
     armi = set(elfo24["general_proficiencies"]["weapons"])
     assert "Spada lunga" in armi and "Arco lungo" not in armi
     assert elfo24["skills"]["perception"] is True and "skill_removed:perception" not in cambi
+
+
+@pytest.mark.caccia(id="CB-4714", fonte="2024 · Talenti · Toccato dalle fate (ciascuno lanciabile una volta senza slot per Riposo Lungo) · pag. 204",
+                    zona="regola:2024/talenti", voce="ripetizione",
+                    copre=["carta:2024/feats.md#Toccato dalle fate / Fey-Touched (pag. 204) - Generale (livello 4+)",
+                           "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_due_lanci_gratuiti_insieme_dello_stesso_incantesimo_ne_spendono_uno(client, test_session_factory):
+    cid = await _pg24(client, "fighter", 4)
+    async with test_session_factory() as primo:
+        riga = Ability(character_id=cid, name="Toccato dalle fate", max_uses=2, uses=2)
+        primo.add(riga)
+        await primo.commit()
+        await primo.refresh(riga)
+        async with test_session_factory() as secondo:  # il secondo tocco legge gli stessi due usi e spende per primo
+            await _charge_pact_use(secondo, await secondo.get(Ability, riga.id))
+            await secondo.commit()
+        with pytest.raises(HTTPException) as errore:
+            await _charge_pact_use(primo, riga)
+        assert errore.value.detail["code"] == "no_uses"

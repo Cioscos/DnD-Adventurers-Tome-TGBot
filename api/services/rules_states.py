@@ -299,11 +299,13 @@ async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, 
     char.settings = {**(char.settings or {}), ALLY_EXCLUSIVE: held}
 
 
-async def _spend_atomically(session: AsyncSession, ability, cost: int) -> None:
+async def _spend_atomically(session: AsyncSession, ability, cost: int, exact: bool = False) -> None:
     """Spende ``cost`` usi con un UPDATE condizionato (come Preservare Vita): due richieste insieme non spendono gli stessi
-    punti. È il primo atto di scrittura, prima di rileggere chi riceve la cura."""
+    punti. È il primo atto di scrittura, prima di rileggere chi riceve la cura. ``exact``: gli usi devono essere ancora quelli
+    letti, quando la riga segna anche a cosa sono serviti."""
     spent = await session.execute(
-        update(Ability).where(Ability.id == ability.id, Ability.uses >= cost).values(uses=Ability.uses - cost))
+        update(Ability).where(Ability.id == ability.id, Ability.uses == ability.uses if exact else Ability.uses >= cost)
+        .values(uses=Ability.uses - cost))
     if spent.rowcount != 1:
         raise _err(status.HTTP_409_CONFLICT, "no_uses")
     await session.refresh(ability)
