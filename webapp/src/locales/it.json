@@ -246,6 +246,7 @@
       "increase": "Aumenta {{name}}",
       "decrease": "Riduci {{name}}",
       "pick_ability": "Caratteristica da aumentare",
+      "ability_at_max": "{{name}} (già a {{max}}: niente +1)",
       "custom": "Talento personalizzato",
       "custom_name": "Nome del talento",
       "custom_text": "Descrizione",

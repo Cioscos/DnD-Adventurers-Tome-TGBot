@@ -51,8 +51,13 @@ export default function FeatChoiceList({ items, value, onPick, taken, ability = 
           className={FIELD}
         >
           <option value="">{t('character.level_choice.pick_ability')}</option>
-          {picked.abilities.filter((a) => !score || score(a) < picked.cap).map((a) => (
-            <option key={a} value={a}>{t(`common.abilities.${a}`)}</option>
+          {/* al massimo resta sceglibile: si perde solo il +1 (2014 pag. 165, 2024 pag. 199) */}
+          {picked.abilities.map((a) => (
+            <option key={a} value={a}>
+              {score && score(a) >= picked.cap
+                ? t('character.level_choice.ability_at_max', { name: t(`common.abilities.${a}`), max: picked.cap })
+                : t(`common.abilities.${a}`)}
+            </option>
           ))}
         </select>
       )}
