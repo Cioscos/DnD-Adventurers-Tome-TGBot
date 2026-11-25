@@ -93,3 +93,27 @@ async def test_abilita_gia_possedute_rifiutate_nel_2024_per_la_seconda_classe_e_
                           (["arcana", "history", "nature"], 200)):  # gli arnesi da scasso li dà già la multiclasse Ladro
         r = await client.put(f"/characters/{cid}/feats/{riga}/options", json={"options": {"picks": scelte}, "spells": []})
         assert r.status_code == esito, (scelte, r.status_code)
+
+
+@pytest.mark.caccia(id="CB-4606", fonte="decisione D-026 (tests/caccia/decisioni.md): solo trucchetti conosciuti con Magia del Patto; 2024 · Warlock · Deflagrazione Agonizzante · pag. 155, Patto del Tomo · pag. 157",
+                    zona="regola:2024/warlock", voce="regola",
+                    copre=["carta:2024/classes/warlock.md#Deflagrazione Agonizzante / Agonizing Blast (Suppliche Occulte, livello 2+, trucchetto Warlock che infligge danno, pag. 155)",
+                           "carta:2024/classes/warlock.md#Patto del Tomo / Pact of the Tome (Suppliche Occulte, pag. 157)"])
+async def test_le_suppliche_dei_trucchetti_non_valgono_per_quelli_del_tomo_o_di_un_altra_classe(client):
+    from tests.integration.rules.test_2024_warlock import TOME, _caster24, _choice, _full, _offered
+    cid = await _caster24(client, 3, TOME, cantrips=("eldritch-blast",))
+    tomo = _choice(await _full(client, cid), "tome_cantrips")["id"]
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Rintocco dei Morti", "srd_index": "toll-the-dead", "level": 0, "pick_id": tomo})
+    assert r.status_code == 201, r.text
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 1})
+    assert r.status_code == 201
+    mago = next(c["id"] for c in r.json()["classes"] if c["class_name"] == "wizard")
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Tocco Gelido", "srd_index": "chill-touch", "level": 0, "class_id": mago})
+    assert r.status_code == 201, r.text
+    warlock = next(c["id"] for c in (await _full(client, cid))["classes"] if c["class_name"] == "warlock")
+    await client.patch(f"/characters/{cid}", json={"settings": {"advancement": "milestone"}})
+    r = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [{"class_id": warlock, "level": 5}, {"class_id": mago, "level": 1}]})
+    assert r.status_code == 200
+    offerte = await _offered(client, cid)
+    assert "eldritch_spear__eldritch_blast" in offerte  # Deflagrazione Agonizzante l'ha già scelta l'helper
+    assert not {"agonizing_blast__toll_the_dead", "agonizing_blast__chill_touch"} & offerte

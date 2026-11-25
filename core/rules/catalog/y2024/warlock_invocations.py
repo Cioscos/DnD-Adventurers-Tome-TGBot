@@ -51,8 +51,12 @@ def is_cantrip(spell: Any, index: str) -> bool:
                                   or (getattr(spell, "name", None) or "").strip().lower() in _names(index))
 
 
-def knows_cantrip(char: Any, index: str) -> bool:
-    return any(is_cantrip(s, index) and s.level == 0 for s in char.spells or [])
+def knows_cantrip(char: Any, cls: Any, index: str) -> bool:
+    """Conosciuto con Magia del Patto (D-026): non col solo Libro delle Ombre, da un'altra classe o da un talento."""
+    from core.rules.level_choices import FREE_KNOWN_KEY  # import locale: level_choices carica il catalogo
+    free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
+    return any(is_cantrip(s, index) and s.level == 0 and not s.always_prepared and s.id not in free
+               and s.class_id in (None, cls.id) for s in char.spells or [])
 
 
 def _slug(index: str) -> str:
@@ -398,7 +402,7 @@ def prerequisites_met(ctx: RuleContext, key: str, owned: list[str]) -> bool:
         return False
     _family, _, slug = key.partition("__")
     index = next((i for i in CANTRIPS if _slug(i) == slug), None)  # Lezioni dei Primi: il suffisso è un talento, non un trucchetto
-    return index is None or knows_cantrip(ctx.char, index)
+    return index is None or knows_cantrip(ctx.char, ctx.class_row, index)
 
 
 # Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). Lezioni dei Primi senza
