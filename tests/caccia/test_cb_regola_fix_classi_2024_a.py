@@ -170,4 +170,3 @@ async def test_imposizione_delle_mani_cura_e_toglie_avvelenato_con_un_solo_tocco
     full = (await client.get(f"/characters/{cid}")).json()
     assert r.json()["healed"] == 5 and not full["conditions"].get("poisoned")
     assert (await _ability(client, cid, "paladin.lay_on_hands"))["uses"] == 25 - 5 - 5, "i 5 punti della condizione non curano"
-
