@@ -108,9 +108,10 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("globe_of_invulnerability", ("globe-of-invulnerability",), ("Globo di Invulnerabilità", "Globe of Invulnerability"), _SELF, both(_text(
         "Sfera di 3 m: gli incantesimi di 5° livello o inferiore lanciati da fuori non la penetrano. Zona: tienine conto a mano.",
         "A 10 ft sphere: spells of 5th level or lower cast from outside do not enter. A zone: account for it by hand.", MIN1, concentration=True))),
-    SpellEffect("magic_circle", ("magic-circle",), ("Cerchio Magico", "Magic Circle"), _SELF, both(_text(
+    SpellEffect("magic_circle", ("magic-circle",), ("Cerchio Magico", "Magic Circle"), _SELF, both(replace(_text(
         "Cilindro di 3 m: celestiali, elementali, folletti, immondi e non morti ne sono ostacolati. Zona: tienine conto a mano.",
-        "A 10 ft cylinder: celestials, elementals, fey, fiends and undead are hindered by it. A zone: account for it by hand.", HOUR))),
+        "A 10 ft cylinder: celestials, elementals, fey, fiends and undead are hindered by it. A zone: account for it by hand.", HOUR),
+        rounds_by_slot=lambda slot: HOUR * max(slot - 2, 1)))),  # 2014 p.221 e 2024 p.293: +1 ora per slot oltre il 3°
     SpellEffect("leomunds_tiny_hut", ("tiny-hut", "leomunds-tiny-hut"), ("Capanna di Leomund", "Leomund's Tiny Hut"), _SELF, both(_text(
         "Cupola di 3 m che ripara dagli elementi e dalle creature esterne. Zona: nessun effetto sulla scheda.",
         "A 10 ft dome that shelters from the elements and outside creatures. A zone: no effect on the sheet.", HOUR8))),

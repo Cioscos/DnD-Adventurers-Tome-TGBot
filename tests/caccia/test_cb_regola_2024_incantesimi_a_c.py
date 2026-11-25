@@ -128,7 +128,7 @@ async def test_il_danno_di_arma_spirituale_2024_somma_il_modificatore_da_incanta
 
 @pytest.mark.caccia(id="CB-3665", fonte="2024 · Incantesimi · Cerchio Magico · pag. 293", zona="regola:2024/incantesimi-A-C", voce="limiti",
                     copre=["carta:2024/spells.md#Cerchio Magico", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.parametrize("slot, ore", [(3, 1), pytest.param(4, 2, marks=pytest.mark.xfail(strict=True, reason="CB-3665: difforme dal manuale, confermato")), pytest.param(5, 3, marks=pytest.mark.xfail(strict=True, reason="CB-3665: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, ore", [(3, 1), (4, 2), (5, 3)])
 async def test_cerchio_magico_2024_dura_un_ora_in_piu_per_ogni_slot_oltre_il_terzo(client, slot, ore):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     cerchio = await _dal_catalogo(client, cid, "magic-circle")
