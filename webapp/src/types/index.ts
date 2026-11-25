@@ -236,7 +236,7 @@ export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
   /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
   weapon_choice?: boolean
-  /** Produrre Fiamma 2024: il lancio accende la fiamma, che si scaglia solo finché è accesa (`lit`); assente per gli altri. */
+  /** Produrre Fiamma 2024, Lama Infuocata: il lancio accende la fiamma, con cui si attacca solo finché è accesa (`lit`); assente per gli altri. */
   lit?: boolean
   /** Il danno lo dà l'opzione all'attacco (punizione, Manto del Crociato, Favore Divino): il lancio non tira i dadi dell'incantesimo. */
   hit_damage?: boolean

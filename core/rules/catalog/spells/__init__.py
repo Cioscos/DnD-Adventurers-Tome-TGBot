@@ -29,7 +29,7 @@ def spell_effect(edition: str, srd_index: str | None, name: str | None = None) -
 
 
 def hurled_lit(char: Any, srd_index: str | None, name: str | None) -> bool | None:
-    """Incantesimo che si scaglia dal suo stato (Produrre Fiamma 2024): se è acceso; ``None`` per ogni altro."""
+    """Incantesimo che attacca dal suo stato (Produrre Fiamma 2024, Lama Infuocata): se è acceso; ``None`` per ogni altro."""
     found = spell_effect(character_edition(char), srd_index, name)
     if found is None or not found[1].hurled:
         return None

@@ -49,6 +49,10 @@ _FLAME_2024 = SpellVariant(  # pag. 308: il lancio (azione bonus) accende la fia
     track=True, rounds=MIN10, hurled=True,
     text=txt("La fiamma fa luce intensa per 6 m e fioca per altri 6 m: finché dura la scagli con un'azione.",
              "The flame sheds bright light for 20 ft and dim light for 20 ft more: while it lasts you hurl it with an action."))
+_BLADE = SpellVariant(  # 2014 pag. 247, 2024 pag. 275: il lancio (azione bonus) crea la lama, ogni attacco è un'azione con il suo tiro (D-047)
+    track=True, concentration=True, rounds=MIN10, hurled=True,
+    text=txt("La lama fa luce intensa per 3 m e fioca per altri 3 m: finché dura ci attacchi in mischia con un'azione, con il tiro per colpire degli incantesimi.",
+             "The blade sheds bright light for 10 ft and dim light for 10 ft more: while it lasts you make a melee spell attack with it as an action."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("chromatic_orb", ("chromatic-orb",), ("Globo Cromatico", "Sfera Cromatica", "Chromatic Orb"), SpellTarget("self"), both(_ORB)),
@@ -59,4 +63,5 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("spirit_guardians", ("spirit-guardians",), ("Guardiani Spirituali", "Spiriti Guardiani", "Spirit Guardians"), SpellTarget("self"),
                 {"2014": _GUARDIANS_2014, "2024": _GUARDIANS_2024}),
     SpellEffect("produce_flame", ("produce-flame",), ("Produrre Fiamma", "Produce Flame"), SpellTarget("self"), {"2024": _FLAME_2024}),
+    SpellEffect("flame_blade", ("flame-blade",), ("Lama Infuocata", "Flame Blade"), SpellTarget("self"), both(_BLADE)),
 )

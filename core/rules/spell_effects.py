@@ -78,7 +78,7 @@ class SpellVariant:
     weapon_die: Callable[[int], str] | None = None  # il dado dell'arma scelta, secondo il livello del personaggio
     on_close: Callable[[dict], dict] | None = None  # stato che lo stato sul bersaglio lascia alla fine (Velocità: la letargia), come ``data["on_close"]``
     extra_action: bool = False  # a ogni turno del bersaglio un'azione in più, limitata (Velocità)
-    hurled: bool = False  # il tiro per colpire non è il lancio: si fa finché lo stato dura, con un'azione (Produrre Fiamma 2024)
+    hurled: bool = False  # il tiro per colpire non è il lancio: si fa finché lo stato dura, con un'azione (Produrre Fiamma 2024, Lama Infuocata)
 
     def duration(self, slot: int) -> int | None:
         """Durata in round dell'incantesimo lanciato con lo slot ``slot``."""

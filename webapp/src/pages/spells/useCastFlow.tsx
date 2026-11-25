@@ -39,7 +39,9 @@ const STEP_VARIANTS = {
 /** Dadi al lancio con le scelte appena fatte (Glifo: solo le rune esplosive aprono il foglio danni). */
 /** Lo slot più alto aumenta solo il danno iniziale: nei turni dopo si tira al livello dell'incantesimo (Dardo stregato, 2014 pag. 228, 2024 pag. 343). */
 const INITIAL_UPCAST_ONLY = new Set(['witch-bolt'])
-const damageOnCast = (spell: Spell) =>rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
+/** Il lancio è anche l'attacco: no se accende solo la fiamma o crea la lama (Produrre Fiamma 2024, Lama Infuocata). */
+const attacksOnCast = (spell: Spell) => isAttackSpell(spell) && spell.effect?.lit !== false
+const damageOnCast = (spell: Spell) => spell.effect?.lit !== false && rollsDamageOnCast(spell, useEffectPickStore.getState().picked[spell.id]?.choices ?? {})
 
 /** `ray`: il raggio seguente dello stesso lancio, senza lanciare di nuovo. */
 type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode; ray?: boolean }
@@ -143,7 +145,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
       const pick = useEffectPickStore.getState().picked[cast.spell.id]
-      // Scagliare una fiamma accesa o tirare il raggio seguente non è un lancio: nessuna opzione di lancio da chiedere
+      // Attaccare con una fiamma accesa o tirare il raggio seguente non è un lancio: nessuna opzione di lancio da chiedere
       const prepared = cast.ray || cast.spell.effect?.lit
         ? { confirm: [], options: [], option_inputs: {} }
         : await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
@@ -253,12 +255,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const startCast = useCallback((spell: Spell, mode: RollMode) => {
     setCastMode(mode)
     useEffectPickStore.setState({ picked: {} })  // un lancio nuovo non eredita i bersagli dell'ultimo
+    if (spell.effect?.lit && isAttackSpell(spell)) {
+      beginAttack({ spell, slot: null, ritual: false, mode })
+      return
+    }
     if (spell.level === 0) {
       // Trucchetto — nessuno slot; la concentrazione si gestisce nello sheet danni se presente.
       withEffect(spell, 1, () => {
-        if (spell.effect?.lit === false) {
-          castMutation.mutate({ spell })
-        } else if (isAttackSpell(spell)) {
+        if (attacksOnCast(spell)) {
           beginAttack({ spell, slot: null, ritual: false, mode })
         } else if (damageOnCast(spell) || isHealingSpell(spell)) {
           setPendingRitual(false)
@@ -284,7 +288,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     void (async () => {
       const spent = await spentTurnSlot(spell)
       if (spent) { haptic.error(); toast.error(t(`character.spells.turn_spent.${spent}`)); return }
-      if (await confirmTurnRules(charId, spell.id)) startCast(spell, mode)
+      if (spell.effect?.lit || await confirmTurnRules(charId, spell.id)) startCast(spell, mode)
     })()
   }, [spentTurnSlot, charId, startCast, t])
 
@@ -300,7 +304,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   }, [charId])
 
   const proceedSlotCastNow = useCallback((spell: Spell, slot: SpellSlot) => {
-    if (isAttackSpell(spell)) {
+    if (attacksOnCast(spell)) {
       beginAttack({ spell, slot, ritual: false, mode: castMode })
       return
     }
@@ -317,7 +321,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => { void withRemoval(spell, () => withEffect(spell, slot.level, () => proceedSlotCastNow(spell, slot))) }, [withRemoval, withEffect, proceedSlotCastNow])
 
   const proceedRitualCastNow = useCallback((spell: Spell) => {
-    if (isAttackSpell(spell)) {
+    if (attacksOnCast(spell)) {
       beginAttack({ spell, slot: null, ritual: true, mode: castMode })
       return
     }
@@ -386,6 +390,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   [castMutation.isPending, castMutation.variables,
     attackMutation.isPending, attackMutation.variables])
 
+  const concentrationLevel = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
   /** A segno: le opzioni dopo il colpo (Deflagrazione Respingente, manovre 2024) si scelgono qui e si pagano col danno. */
   const openDamageAfterAttack = async () => {
     if (!attackState) return
@@ -401,7 +406,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       return
     }
     setPendingRitual(attackState.ritual)
-    setPendingSlotLevel(attackState.slot?.level ?? 0)
+    // la lama già creata (Lama Infuocata) fa i danni dello slot del suo lancio
+    setPendingSlotLevel(attackState.slot?.level ?? (spell.effect?.lit && spell.level > 0 ? concentrationLevel : undefined) ?? 0)
     setPendingSlotId(attackState.slot?.id)
     setDamageAfterAttack({ critical: result.is_critical, hit })
     setRollDamageSpell(spell)
@@ -423,11 +429,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   /** Incantesimo attivo che fa danni anche nei turni dopo (Guardiani spirituali, Raggio di luna): si ritira senza slot. */
   const canRollActiveDamage = (spell: Spell) =>
-    char?.concentrating_spell_id === spell.id && rollsDamageAgain(spell)
+    char?.concentrating_spell_id === spell.id && rollsDamageAgain(spell) && !(spell.effect?.lit && isAttackSpell(spell))
   const rollActiveDamage = (spell: Spell) => {
-    const level = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
     setPendingRitual(false)
-    setPendingSlotLevel(INITIAL_UPCAST_ONLY.has(spell.srd_index ?? '') ? spell.level : level ?? spell.level)
+    setPendingSlotLevel(INITIAL_UPCAST_ONLY.has(spell.srd_index ?? '') ? spell.level : concentrationLevel ?? spell.level)
     setPendingSlotId(undefined)
     setDamageAfterAttack({ critical: false })  // lo slot l'ha già speso il lancio
     setRollDamageSpell(spell)

@@ -662,10 +662,11 @@ async def spell_attack(
         if not cast_rays or cast_rays["ray"] >= cast_rays["rays"]:
             raise HTTPException(status_code=409, detail={"code": "no_ray_left"})
         cast_rays = {**cast_rays, "ray": cast_rays["ray"] + 1}
-    elif lit is not None:  # Produrre Fiamma 2024: non è un lancio, si scaglia la fiamma accesa con un'azione Magia
+    elif lit is not None:  # Produrre Fiamma 2024, Lama Infuocata: non è un lancio, si attacca con la fiamma accesa con un'azione (2024: Magia)
         if not lit:
             raise HTTPException(status_code=409, detail={"code": "flame_not_lit"})
-        refuse_surge_magic(char)
+        if character_edition(char) == "2024":
+            refuse_surge_magic(char)
         _mark_turn_slot(char, spell, _slot_marks(char), await active_encounter_row(session, char.id) is not None, kind="action")
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)

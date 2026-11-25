@@ -713,3 +713,60 @@ async def test_spiriti_guardiani_2024_radiosi_o_necrotici_scelti_al_lancio(clien
         r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 3})
         assert r.status_code == 200 and r.json()["damage_type"] == tipo, r.text
         assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4874", fonte="decisione D-047 (tests/caccia/decisioni.md): il lancio (azione bonus) crea la lama, ogni attacco è un'azione con il suo tiro; 2014 · Lama Infuocata · pag. 247; 2024 · Lama infuocata · pag. 275",
+                    zona="regola:2014/incantesimi-G-L", voce="interazione",
+                    copre=["carta:2014/spells.md#Lama Infuocata", "carta:2024/spells.md#Lama infuocata", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "POST /characters/{char_id}/spells/{spell_id}/attack"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_lama_infuocata_si_crea_col_lancio_e_attacca_con_l_azione_anche_nei_turni_dopo(client, test_session_factory, edizione):
+    from tests.integration._encounter_helpers import GM_ID, seed_session
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _pg(client, edizione, "druid", 7, wisdom=16)
+    r = await client.post(f"/characters/{cid}/spells", json={
+        "name": "Lama Infuocata", "srd_index": "flame-blade", "level": 2, "attack_save": "ATK", "casting_time": "1 azione bonus", "range_area": "Incantatore",
+        "duration": "Concentrazione, fino a 10 minuti", "is_concentration": True, "is_prepared": True, "damage_dice": "3d6", "damage_type": "fire"})
+    assert r.status_code == 201, r.text
+    spell = r.json()["id"]
+    await _seat(test_session_factory, cid)
+    url, slot = f"/characters/{cid}/spells/{spell}", await _slot(client, cid, 4)
+    r = await client.post(f"{url}/attack", json={"die": 15, **slot})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "flame_not_lit", r.text[:200]
+    assert (await client.post(f"{url}/use", json=slot)).status_code == 200
+    turno = await _turno(client, cid)
+    assert (turno["bonus_used"], turno["action_used"]) == (True, False)
+    scheda = await _scheda(client, cid)
+    riga = next(s for s in scheda["spells"] if s["id"] == spell)
+    assert (riga["effect"]["lit"], riga["effective_casting_time"], scheda["settings"]["concentration_level"]) == (True, "1 azione", 4)
+    libero = next(s for s in scheda["spell_slots"] if s["id"] == slot["slot_id"])["available"]
+    for _ in range(2):  # lo stesso turno del lancio e quello dopo: un'azione, nessun altro slot
+        assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == 200
+        assert (await _turno(client, cid))["action_used"] is True
+        await client.post(f"/characters/{cid}/turn/new")
+    scheda = await _scheda(client, cid)
+    assert next(s for s in scheda["spell_slots"] if s["id"] == slot["slot_id"])["available"] == libero
+    assert scheda["concentrating_spell_id"] == spell
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})  # senza concentrazione la lama svanisce
+    assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == 409
+
+
+@pytest.mark.caccia(id="CB-4875", fonte="decisione D-047 (tests/caccia/decisioni.md): nel 2014 l'attacco con la lama è un'azione qualsiasi, nel 2024 è l'azione Magia; 2014 · Azione Impetuosa · pag. 83; 2024 · Azione Impetuosa · pag. 91",
+                    zona="regola:2024/incantesimi-G-L", voce="edizioni",
+                    copre=["carta:2024/spells.md#Lama infuocata", "POST /characters/{char_id}/spells/{spell_id}/attack"])
+@pytest.mark.parametrize("edizione, esito", [("2014", 200), ("2024", 409)])
+async def test_la_lama_infuocata_attacca_con_l_azione_in_piu_solo_nel_2014(client, edizione, esito):
+    cid = await _pg(client, edizione, "fighter", 2)
+    assert (await client.patch(f"/characters/{cid}", json={"settings": {"advancement": "milestone"}})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "druid", "level": 3})).status_code == 201
+    r = await client.post(f"/characters/{cid}/spells", json={
+        "name": "Flame Blade", "srd_index": "flame-blade", "level": 2, "attack_save": "ATK", "casting_time": "1 bonus action",
+        "duration": "Concentration, up to 10 minutes", "is_concentration": True, "is_prepared": True, "damage_dice": "3d6", "damage_type": "fire"})
+    url = f"/characters/{cid}/spells/{r.json()['id']}"
+    assert (await client.post(f"{url}/use", json=await _slot(client, cid, 2))).status_code == 200
+    assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == 200
+    r = await client.post(f"/characters/{cid}/features/fighter.action_surge/use", json={})
+    assert r.status_code == 200, r.text[:200]
+    assert (await client.post(f"{url}/attack", json={"die": 15})).status_code == esito
