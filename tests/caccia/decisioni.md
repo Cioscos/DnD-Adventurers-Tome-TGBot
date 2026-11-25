@@ -48,3 +48,13 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-042 | Compagno del Ranger 2014 con una bestia fuori regola | Avviso superabile con conferma (409 + force), non rifiuto secco | 2026-11-25 |
 | D-043 | Sonno 2014: la riserva cresce con lo slot? | Sì, +2d8 per slot oltre il 1° | 2026-11-25 |
 | D-044 | Fuga Velata 2024: solo con Passi del Fatato? | No, si paga anche con uno slot di 2° o più | 2026-11-25 |
+| D-045 | Raggio Rovente: un tiro per raggio? (2014 p.267, 2024 p.313) | Sì, come la D-037: un tiro per colpire e 2d6 per ogni raggio | 2026-11-25 |
+| D-046 | Guardiani Spirituali 2024: radiosi o necrotici? (p.319) | Scelta al lancio, ricordata, come la D-031 | 2026-11-25 |
+| D-047 | Lama Infuocata: lancio e attacco insieme? | No: il lancio (azione bonus) crea la lama, ogni attacco è un'azione con il suo tiro per colpire, anche nei turni dopo | 2026-11-25 |
+| D-048 | 2024: Ispirazione su un attacco con incantesimo | Il rilancio tiene le opzioni già confermate sul primo tiro | 2026-11-25 |
+| D-049 | Mezzelfo 2014: abilità e lingua | La creazione chiede anche le 2 abilità e la lingua extra | 2026-11-25 |
+| D-050 | Variante dell'ingombro (2014) su un personaggio 2024 | Ignorata: non ha effetto nel 2024 | 2026-11-25 |
+| D-051 | Affinità Elementale: un tiro di danni per lancio | Il limite vale per tutto il lancio e non si riapre nei turni dopo | 2026-11-25 |
+| D-052 | Anima Adamantina 2014 e Sopravvissuto Disciplinato 2024 sui TS contro la morte | Sì: anche lì il bonus di competenza | 2026-11-25 |
+| D-053 | D-020 nel 2024: finestra diversa per classe? | No, finestra unica per tutte le classi | 2026-11-25 |
+| D-054 | Punizione Divina Migliorata 2014 col colpo senz'armi | No, resta com'è: non rientra nella D-030 | 2026-11-25 |
