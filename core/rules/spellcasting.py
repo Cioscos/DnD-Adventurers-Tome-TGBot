@@ -210,12 +210,15 @@ def concentration_dc(edition: Edition, damage: int) -> int:
     return min(dc, 30) if edition == "2024" else dc
 
 
-# shortcut: il talento 2014 non è nel catalogo, si riconosce dal nome anche se scritto a mano; da togliere se ci entra.
+# shortcut: il talento 2014 scritto a mano non ha feature_key, si riconosce dal nome.
 _RITUAL_FEAT_NAMES = {"incantatore rituale", "ritual caster"}
 
 
-def _has_ritual_feat(char: Any) -> bool:
-    return any(a.feature_key == "feat.ritual_caster" or (a.name or "").strip().lower() in _RITUAL_FEAT_NAMES
+def _feat_ritual(char: Any, spell: Any = None) -> bool:
+    """Incantatore Rituale 2014 (pag. 168): celebra i rituali del suo libro, scelti col talento o copiati dopo (senza classe).
+    Senza incantesimo: il personaggio ha il talento."""
+    return any((a.feature_key == "feat.ritual_caster" or (a.name or "").strip().lower() in _RITUAL_FEAT_NAMES)
+               and (spell is None or spell.class_id is None or spell.srd_index in ((a.options or {}).get("rituals") or []))
                for a in char.abilities)
 
 
@@ -335,7 +338,7 @@ def can_ritual(char: Any, spell: Any = None) -> bool:
     edition = character_edition(char)
     if spell is not None and granted_ritual(char, spell):
         return True
-    if _has_ritual_feat(char) or _book_rituals(char, spell):
+    if _feat_ritual(char, spell) or _book_rituals(char, spell):
         return True
     if edition == "2014":  # il Lancio Rituale è della classe a cui appartiene l'incantesimo, non di tutto il personaggio
         return has_ritual_caster(_spell_rows(char, spell))
@@ -356,7 +359,7 @@ def _ritual_unprepared(char: Any, spell: Any) -> bool:
     if character_edition(char) == "2024":
         return True
     # 2014: chi non prepara li conosce, il talento ha un suo libro.
-    return not _has_ritual_feat(char) and any(row_class_key(c) in ("cleric", "druid") for c in rows)
+    return not _feat_ritual(char, spell) and any(row_class_key(c) in ("cleric", "druid") for c in rows)
 
 
 def bonus_cast(char: Any, spell: Any) -> bool:

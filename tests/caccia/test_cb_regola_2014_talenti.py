@@ -65,7 +65,6 @@ async def test_fortunato_lascia_scegliere_il_d20_da_tenere(client):
 @pytest.mark.caccia(id="CB-3012", fonte="2014 · Talenti · Incantatore Rituale · pag. 168", zona="regola:2014/talenti", voce="regola",
                     copre=["carta:2014/feats.md#Incantatore Rituale / Ritual Caster (pag. 168)", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3012: difforme dal manuale, confermato")
 async def test_incantatore_rituale_non_rende_rituale_un_incantesimo_fuori_dal_libro(client):
     ch = await _char14(client, "sorcerer")  # Intelligenza 13: prerequisito del talento
     cid = ch["id"]
@@ -80,7 +79,6 @@ async def test_incantatore_rituale_non_rende_rituale_un_incantesimo_fuori_dal_li
 @pytest.mark.caccia(id="CB-3013", fonte="2014 · Talenti · Incantatore Rituale · pag. 168; Chierico · Incantesimi · pag. 58", zona="regola:2014/talenti",
                     voce="interazione",
                     copre=["carta:2014/feats.md#Incantatore Rituale / Ritual Caster (pag. 168)", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3013: difforme dal manuale, confermato")
 async def test_incantatore_rituale_non_toglie_al_chierico_l_obbligo_di_preparare_i_suoi_rituali(client):
     ch = await _char14(client, "cleric")  # Saggezza 13: prerequisito del talento
     cid = ch["id"]
