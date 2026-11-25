@@ -254,3 +254,30 @@ async def test_invisibilita_rilanciata_da_invisibili_resta_attiva_con_la_concent
     scheda = await _scheda(client, lanciatore)
     assert scheda["concentrating_spell_id"] == spell and scheda["conditions"].get("invisible") is True
     assert {"spell:invisibility", "spell_cast:invisibility"} <= {s["key"] for s in scheda["active_states"]}
+
+
+@pytest.mark.caccia(id="CB-4613", fonte="decisione D-036 (tests/caccia/decisioni.md): si riempiono solo i campi vuoti delle righe create dal sistema; 2024 · Incantesimi · Spiriti Guardiani · pag. 319, Tempesta di ghiaccio · pag. 287",
+                    zona="regola:2024/incantesimi-S-Z", voce="persistenza",
+                    copre=["carta:2024/spells.md#Spiriti Guardiani", "GET /characters/{char_id}"])
+async def test_le_righe_concesse_gia_create_riempiono_solo_i_campi_vuoti(client, test_session_factory):
+    from sqlalchemy import select
+
+    from core.db.models import Character, Spell
+    from core.rules.feature_sync import GRANTED_CREATED
+    cid = await _pg(client, "2014", "cleric", 5, "war")
+
+    async def riga(indice, **campi):
+        async with test_session_factory() as s:
+            spell = (await s.execute(select(Spell).where(Spell.character_id == cid, Spell.srd_index == indice))).scalar_one()
+            for nome, valore in campi.items():
+                setattr(spell, nome, valore)
+            await s.commit()
+            return spell.attack_save, spell.damage_dice, spell.damage_type, spell.higher_levels_dice
+
+    async with test_session_factory() as s:
+        assert {"spirit-guardians", "spiritual-weapon"} <= set((await s.get(Character, cid)).settings[GRANTED_CREATED])
+    await riga("spirit-guardians", attack_save=None, damage_dice=None, higher_levels_dice=None)  # com'era prima della correzione
+    await riga("spiritual-weapon", damage_dice="9d9", damage_type=None)  # i dadi scritti dall'utente restano
+    assert (await client.patch(f"/characters/{cid}/xp", json={"set": 14000})).status_code == 200  # la salita di livello risincronizza
+    assert await riga("spirit-guardians") == ("SAVE", "3d8", None, "1d8")
+    assert (await riga("spiritual-weapon"))[:3] == ("ATK", "9d9", "force")
