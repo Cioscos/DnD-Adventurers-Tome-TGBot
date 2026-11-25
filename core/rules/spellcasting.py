@@ -416,7 +416,7 @@ _MATERIAL = re.compile(r"^M(?![A-Za-z])", re.IGNORECASE)
 
 
 # shortcut: riconosce il testo libero dei componenti (it/en), costo in monete e verbo «consum*»; rivederlo se cambia il formato dell'SRD
-_COSTLY_CONSUMED = re.compile(r"(?=.*\d\s*(?:mo|gp|mp|pp|ma|sp|ar|cp)\b)(?=.*consum)", re.IGNORECASE | re.DOTALL)
+_COSTLY_CONSUMED = re.compile(r"(?=.*\d\+?,?\s*(?:mo|gp|mp|pp|ma|sp|ar|cp|monete|copper)\b)(?=.*consum)", re.IGNORECASE | re.DOTALL)
 
 
 def _form_materials(char: Any, spell: Any) -> str | None:

@@ -201,7 +201,6 @@ async def test_santuario_2024_finisce_quando_il_protetto_lancia_un_incantesimo(c
                            "carta:2024/spells.md#Simbolo", "carta:2024/spells.md#Vera Resurrezione", "carta:2024/spells.md#Visione del Vero",
                            "GET /characters/{char_id}/spells/{spell_id}/cast-check"])
 @pytest.mark.parametrize("indice", ["arcane-lock", "hallow", "simulacrum", "symbol", "true-resurrection", "true-seeing"])
-@pytest.mark.xfail(strict=True, reason="CB-3871: difforme dal manuale, confermato")
 async def test_componente_costosa_consumata_del_catalogo_2024_chiede_conferma(client, indice):
     cid = await _pg(client, "sorcerer", 20)
     sid = await _impara(client, cid, indice)
