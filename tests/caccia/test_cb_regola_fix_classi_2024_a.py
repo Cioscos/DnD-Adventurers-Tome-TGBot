@@ -8,6 +8,9 @@ from tests.integration.rules.test_2024_barbarian_strike import _damage, _deferre
 from tests.integration.rules.test_2024_bard import _bard24
 from tests.integration.rules.test_2014_monk_ki import _ki, _states
 from tests.integration.rules.test_2014_bard import _use as _use_feature
+from tests.integration.rules.test_2014_fighter_styles import _item
+from tests.integration.rules.test_2014_paladin_combat import _attack, _listed
+from tests.integration.rules.test_2024_paladin import _paladin24
 from tests.integration.rules.test_2024_monk import _monk24
 
 RAGE = "barbarian.rage"
@@ -72,3 +75,21 @@ async def test_difesa_superiore_una_volta_per_turno_e_si_rinnova_a_un_turno_succ
     assert r.status_code == 200, "a inizio di un turno successivo si può spendere di nuovo e il minuto riparte"
     assert await _ki(client, cid) == 18 - 6
     assert (await _states(client, cid))["superior_defense"]["rounds_left"] == 10
+
+
+@pytest.mark.caccia(id="CB-4475", fonte="2024 · Paladino · Punizione del Paladino · pag. 110; Assalti Radianti · pag. 111; Equipaggiamento · Lancio · pag. 214",
+                    zona="regola:2024/paladin", voce="regola",
+                    copre=["carta:2024/classes/paladin.md#Punizione del Paladino / Paladin's Smite (Paladino 2, pag. 110)",
+                           "carta:2024/classes/paladin.md#Assalti Radianti / Radiant Strikes (Paladino 11, pag. 111)",
+                           "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/items/{item_id}/attack"])
+async def test_punizione_e_assalti_radianti_valgono_con_un_arma_da_mischia_lanciata(client):
+    cid = await _paladin24(client, 11)
+    accetta = await _item(client, cid, "Accetta", damage_dice="1d6", weapon_type="melee", properties=["thrown"])
+    dardo = await _item(client, cid, "Dardo", damage_dice="1d4", weapon_type="ranged", properties=["thrown"])
+    lanciata = {o["key"] for o in await _listed(client, cid, accetta, attack_mode="thrown", grip="one")}
+    assert {"paladin.divine_smite", "paladin.divine_smite_free"} <= lanciata, "lanciata, l'accetta resta un'arma da mischia"
+    assert not {"paladin.divine_smite", "paladin.divine_smite_free"} & {
+        o["key"] for o in await _listed(client, cid, dardo, attack_mode="thrown", grip="one")}, "il dardo è un'arma a distanza"
+    colpo = await _attack(client, cid, accetta, attack_mode="thrown")
+    assert colpo.status_code == 200, colpo.text
+    assert "paladin.radiant_strikes" in (colpo.json().get("option_result") or {}).get("keys", [])

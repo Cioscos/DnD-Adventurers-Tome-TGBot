@@ -12,6 +12,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any
 
+from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import FIGHTING_STYLE_GROUP, feature, style_options
 from core.rules.catalog.y2014.paladin import SAVE_ROLLS, _aura_range, _cha_bonus, _cha_mod, _permanent_note, _say, _spell_dc
 from core.rules.catalog.y2024.fighter import STYLE_ROWS as FIGHTER_STYLE_ROWS, STYLES as FIGHTER_STYLES
@@ -41,8 +42,13 @@ def _both(it: str, en: str) -> dict[str, str]:
 
 
 def _melee_or_unarmed(ctx: RuleContext) -> bool:
-    """Un attacco con un'arma da mischia (non lanciata né a distanza) o un Colpo Senz'armi; mai un incantesimo."""
-    return ctx.spell is None and ctx.attack_mode in ("melee", "offhand")
+    """Un'arma da mischia o un Colpo Senz'armi, mai un incantesimo né un'arma a distanza. Lanciata, l'arma da mischia resta tale
+    (Lancio, pag. 214): le carte 2024 guardano l'arma, non l'attacco."""
+    if ctx.spell is not None:
+        return False
+    if ctx.attack_mode == "thrown":
+        return ctx.item is not None and item_meta(ctx.item).get("weapon_type", "melee") == "melee"
+    return ctx.attack_mode in ("melee", "offhand")
 
 
 # ---------------------------------------------------------------------------
