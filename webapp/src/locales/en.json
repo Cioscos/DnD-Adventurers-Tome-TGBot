@@ -1040,7 +1040,8 @@
       "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
       "reload_confirm": "Reload",
       "damage_type_choice": "of your choice",
-      "upcast_auto": "Higher levels: +{{dice}} per level (already included)",
+      "upcast_auto": "Higher levels: +{{dice}} (already included)",
+      "upcast_manual": "Higher levels: +{{dice}} {{type}}, not in the roll: apply them by hand",
       "schools": {
         "abjuration": "Abjuration",
         "conjuration": "Conjuration",

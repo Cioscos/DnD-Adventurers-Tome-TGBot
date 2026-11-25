@@ -1040,7 +1040,8 @@
       "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
       "reload_confirm": "Ricarica",
       "damage_type_choice": "a scelta",
-      "upcast_auto": "Livelli superiori: +{{dice}} per livello (già incluso)",
+      "upcast_auto": "Livelli superiori: +{{dice}} (già incluso)",
+      "upcast_manual": "Livelli superiori: +{{dice}} {{type}}, non nel tiro: applicali a mano",
       "schools": {
         "abjuration": "Abiurazione",
         "conjuration": "Convocazione",

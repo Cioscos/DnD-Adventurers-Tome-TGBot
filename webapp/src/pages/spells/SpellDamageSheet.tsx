@@ -86,6 +86,7 @@ export default function SpellDamageSheet({
   // Il tipo scelto al lancio, mostrato solo a lancio confermato dal server (un lancio rifiutato non ne ha salvato nessuno).
   const [slotConsumed, setSlotConsumed] = useState(false)
   const pickedType = useEffectPickStore((s) => (spell && (slotConsumed || slotAlreadyConsumed) ? s.picked[spell.id]?.choices?.damage_type : undefined))
+  const pickedUpcastType = useEffectPickStore((s) => (spell ? s.picked[spell.id]?.choices?.upcast_type : undefined))
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
@@ -221,10 +222,16 @@ export default function SpellDamageSheet({
   // Il server dice se un TS superato dimezza: i trucchetti (Fiamma Sacra) e Disintegrazione non fanno danni
   const showHalf = !isAttack && result?.save_halves !== false
   const isCantrip = spell.level === 0
-  const autoUpcast = parseDice(spell.higher_levels_dice)
-  const autoExtra = autoUpcast
-    ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides, qc.getQueryData<CharacterFull>(['character', charId])?.rules_edition)
-    : 0
+  // I dadi dello slot più alto come li conta il server (passo, tetto, dadi senza higher_levels_dice: UPCAST_RULES)
+  const cachedChar = qc.getQueryData<CharacterFull>(['character', charId])
+  const mainDice = parseDice(spell.damage_dice)
+  const autoExtra = mainDice ? upcastExtraDice(spell, effectiveCastingLevel, mainDice.sides, cachedChar?.rules_edition) : 0
+  const upcastType = pickedUpcastType
+    ?? ((slotConsumed || slotAlreadyConsumed) ? cachedChar?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type : undefined)
+  // Di un tipo che non è il principale, senza una seconda parte di quel tipo, il tiro non li ha (Fame di Hadar 2024: l'acido)
+  const upcastByHand = !!upcastType && !upcastBoth(spell.srd_index, cachedChar?.rules_edition)
+    && upcastType !== canonicalDamageType(spell.damage_type)
+    && !(parseDice(spell.extra_damage_dice)?.sides === mainDice?.sides && upcastType === spell.extra_damage_type)
   // U15: la CD del TS sta nel foglio del tiro, non solo nella testata della pagina
   const saveLine = !isAttack && spell.save_dc != null
     ? `${spell.attack_save?.trim().toUpperCase() === 'SAVE' ? t('character.spells.attack_save.save') : spell.attack_save?.trim()} · ${t('character.spells.save_dc', { dc: spell.save_dc })}`
@@ -321,7 +328,9 @@ export default function SpellDamageSheet({
 
           {autoExtra > 0 && (
             <p className="text-sm text-dnd-text-muted font-body italic text-center">
-              {t('character.spells.upcast_auto', { dice: spell.higher_levels_dice })}
+              {upcastByHand
+                ? t('character.spells.upcast_manual', { dice: `${autoExtra}d${mainDice?.sides}`, type: t(`character.inventory.damage_types.dmg_${upcastType}`, { defaultValue: upcastType }) })
+                : t('character.spells.upcast_auto', { dice: `${autoExtra}d${mainDice?.sides}` })}
             </p>
           )}
 
