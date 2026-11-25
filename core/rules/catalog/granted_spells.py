@@ -677,8 +677,8 @@ _SCHOOLS |= {k: v for k, v in {
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}
 
 # Dati che nel 2024 differiscono da quelli sopra (che sono del 2014): Colonna di fiamme 5d6 + 5d6 (2024 spells.md p.275).
-# shortcut: vale solo per la riga creata al sync, una già creata (o cambio di edizione) la corregge l'utente; +1d6 per livello
-# oltre il 5° nel 2024 vale per entrambi i tipi, il tiro di danno ne dà uno solo (rivederlo con la scalata).
+# shortcut: vale solo per la riga creata al sync, una già creata (o cambio di edizione) la corregge l'utente. Il +1d6 di
+# ciascun tipo per livello oltre il 5° lo dà il tiro di danno (_UPCAST in api/routers/spells.py).
 GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "flame-strike": replace(GRANTED_SPELLS["flame-strike"], damage_dice="5d6", extra_damage_dice="5d6"),
 }
