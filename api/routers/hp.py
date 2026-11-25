@@ -82,7 +82,7 @@ from core.game.item_bonuses import item_meta
 from api.schemas.common import ConcentrationSaveResult, OptionResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, keep_manual_temp_hp, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    SPELL_GIVEN, TEMP_GIVEN, TEMP_MANUAL, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, keep_manual_temp_hp, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext, StateSpec
 from api.services.character_response import build_character_response
@@ -117,7 +117,7 @@ def _now() -> str:
     return _utcnow().isoformat(timespec="seconds")
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", "concentration_level", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", "concentration_level", ZERO_HP_USES, TEMP_GIVEN, TEMP_MANUAL, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:

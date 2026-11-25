@@ -303,8 +303,8 @@ async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_di_eroismo(client, 
 @pytest.mark.caccia(id="CB-4615", fonte="decisione D-039 (tests/caccia/decisioni.md): i PF temporanei impostati a mano sopravvivono alla fine degli effetti che ne danno; 2024 · pag. 29",
                     zona="regola:2024/barbarian", voce="interazione",
                     copre=["carta:2024/general.md#Punti Ferita Temporanei / Temporary Hit Points (pag. 29)", "PATCH /characters/{char_id}/hp"])
-@pytest.mark.parametrize("a_mano, resta", [(None, 0), (2, 2)])
-async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_dell_ira_di_un_compagno(client, test_session_factory, a_mano, resta):
+@pytest.mark.parametrize("a_mano, annulla, resta", [(None, False, 0), (2, False, 2), (30, True, 0)])
+async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_dell_ira_di_un_compagno(client, test_session_factory, a_mano, annulla, resta):
     from tests.integration._encounter_helpers import GM_ID, seed_session
     from tests.integration.rules.test_2014_bard_inspiration import _seat
     from tests.integration.rules.test_task46_temp_hp_ally import LIFE, _life
@@ -318,7 +318,10 @@ async def test_i_pf_temporanei_a_mano_sopravvivono_alla_fine_dell_ira_di_un_comp
     as_user(PLAYER_ID)
     assert (await _scheda(client, eroe))["temp_hp"] > 2
     if a_mano:
-        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": "set_temp", "value": a_mano})).status_code == 200
+        r = await client.patch(f"/characters/{eroe}/hp", json={"op": "set_temp", "value": a_mano})
+        assert r.status_code == 200
+        if annulla:  # la correzione annullata non protegge più
+            assert (await client.post(f"/characters/{eroe}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})).status_code == 200
     as_user(GM_ID)
     assert (await client.delete(f"/characters/{barbaro}/active-states/rage")).status_code == 200
     as_user(PLAYER_ID)
