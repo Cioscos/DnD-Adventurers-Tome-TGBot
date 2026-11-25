@@ -99,7 +99,6 @@ async def test_i_rituali_del_libro_si_lanciano_solo_come_rituali(client):
 @pytest.mark.caccia(id="CB-2066", fonte="2014 · Warlock · Tutt'Uno con le Ombre · pag. 119", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Tutt'Uno con le Ombre / One with Shadows (Suppliche Occulte, livello 5, pag. 119)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2066: difforme dal manuale, confermato")
 async def test_tutt_uno_con_le_ombre_finisce_quando_compi_un_azione(client):
     cid = await _caster(client, 5, "one_with_shadows", "fiendish_vigor")
     assert (await _use(client, cid, "warlock.one_with_shadows", params={"light": "dark"})).status_code == 200

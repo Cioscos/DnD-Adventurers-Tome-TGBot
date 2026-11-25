@@ -60,6 +60,9 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     else:
         st[_FLAGS[slot]] = True
     _save(char, st)
+    if slot in ("action", "reaction"):  # chi compie un'azione o una reazione chiude gli stati ``act`` (Tutt'Uno con le Ombre 2014)
+        from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
+        end_states(char, "act")
     return st
 
 
