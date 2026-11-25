@@ -41,6 +41,10 @@ _GUARDIANS_2014 = SpellVariant(  # la carta dice «secondo l'allineamento»: lo 
     choices=(_types("radiant", "necrotic"),), track=True, concentration=True, rounds=MIN10,
     text=txt("Entro 4,5 m la velocità è dimezzata e chi entra o inizia lì il turno fa il TS Saggezza o subisce 3d8 del tipo scelto (metà se riesce): li tiri dalla pagina degli incantesimi.",
              "Within 15 ft speed is halved, and a creature that enters or starts its turn there makes a WIS save or takes 3d8 of the chosen type (half on a success): you roll it from the spells page."))
+_GUARDIANS_2024 = SpellVariant(  # pag. 319, come nel 2014 (D-046)
+    choices=(_types("radiant", "necrotic"),), track=True, concentration=True, rounds=MIN10,
+    text=txt("Entro 4,5 m la velocità è dimezzata e chi ci entra, ci finisce il turno o è raggiunto dall'area fa il TS Saggezza, una volta per turno, o subisce 3d8 del tipo scelto (metà se riesce): li tiri dalla pagina degli incantesimi.",
+             "Within 15 ft speed is halved, and a creature that enters, ends its turn there or is reached by the area makes a WIS save, once per turn, or takes 3d8 of the chosen type (half on a success): you roll it from the spells page."))
 _FLAME_2024 = SpellVariant(  # pag. 308: il lancio (azione bonus) accende la fiamma, scagliarla è un'azione Magia e non la spegne
     track=True, rounds=MIN10, hurled=True,
     text=txt("La fiamma fa luce intensa per 6 m e fioca per altri 6 m: finché dura la scagli con un'azione.",
@@ -53,6 +57,6 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("dragons_breath", ("dragons-breath",), ("Soffio del Drago", "Dragon's Breath"), SpellTarget("ally"), {"2024": _BREATH}),
     SpellEffect("conjure_elemental", ("conjure-elemental",), ("Evoca Elementale", "Conjure Elemental"), SpellTarget("self"), {"2024": _ELEMENTAL}),
     SpellEffect("spirit_guardians", ("spirit-guardians",), ("Guardiani Spirituali", "Spiriti Guardiani", "Spirit Guardians"), SpellTarget("self"),
-                {"2014": _GUARDIANS_2014}),
+                {"2014": _GUARDIANS_2014, "2024": _GUARDIANS_2024}),
     SpellEffect("produce_flame", ("produce-flame",), ("Produrre Fiamma", "Produce Flame"), SpellTarget("self"), {"2024": _FLAME_2024}),
 )

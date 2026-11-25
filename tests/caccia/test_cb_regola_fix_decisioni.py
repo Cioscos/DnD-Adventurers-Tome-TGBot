@@ -694,3 +694,22 @@ async def test_raggio_rovente_tira_per_colpire_e_fa_2d6_raggio_per_raggio(client
     assert disponibili(await _scheda(client, cid)) == prima - 1  # un lancio solo
     await client.post(f"/characters/{cid}/turn/new")
     assert (await _raggio(client, cid, sid, die=12, **await _slot(client, cid, 2))).json()["rays"] == 3
+
+
+@pytest.mark.caccia(id="CB-4873", fonte="decisione D-046 (tests/caccia/decisioni.md): tipo scelto al lancio e ricordato per i tiri dei turni dopo, come la D-031; 2024 · Incantesimi · Spiriti Guardiani · pag. 319",
+                    zona="regola:2024/incantesimi-S-Z", voce="regola",
+                    copre=["carta:2024/spells.md#Spiriti Guardiani", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+@pytest.mark.parametrize("tipo", ["radiant", "necrotic"])
+async def test_spiriti_guardiani_2024_radiosi_o_necrotici_scelti_al_lancio(client, tipo):
+    cid = await _pg(client, "2024", "cleric", 5, "war")  # la riga la concede il Dominio della Guerra
+    spell = next(s["id"] for s in (await _scheda(client, cid))["spells"] if s["srd_index"] == "spirit-guardians")
+    for choices in (None, {"damage_type": "cold"}):
+        r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": choices})
+        assert r.status_code == 422, r.status_code
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": {"damage_type": tipo}})
+    assert r.status_code == 200, r.text
+    for _ in range(2):  # lo stesso tipo anche nel turno dopo
+        r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 3})
+        assert r.status_code == 200 and r.json()["damage_type"] == tipo, r.text
+        assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200

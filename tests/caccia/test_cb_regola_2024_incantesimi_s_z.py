@@ -238,7 +238,7 @@ async def test_spuntone_mentale_3d8_psichici_piu_1d8_per_slot_e_meta_al_ts(clien
 async def test_spiriti_guardiani_dal_catalogo_2024_concentrazione_e_3d8_piu_1d8_per_slot(client):
     cid = await _pg(client, "cleric", 7)
     sid = await _impara(client, cid, "spirit-guardians")
-    scheda = await _lancia(client, cid, sid, 4)
+    scheda = await _lancia(client, cid, sid, 4, choices={"damage_type": "radiant"})  # il tipo si sceglie al lancio (D-046)
     assert (scheda["concentrating_spell_id"], scheda["settings"]["concentration_rounds_left"]) == (sid, 100)  # 10 minuti
     corpo = await _danno(client, cid, sid, 4)
     assert (corpo["scaled_dice"], corpo["damage_type"], corpo["save_halves"]) == ("4d8", "radiant", True)
