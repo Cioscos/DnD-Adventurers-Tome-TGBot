@@ -555,3 +555,13 @@ async def test_schivata_prodigiosa_del_ranger_non_si_usa_da_accecato(client):
     assert "ranger.uncanny_dodge" in await _roll_keys(client, cid, "damage_taken")
     assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"blinded": True}})).status_code == 200
     assert "ranger.uncanny_dodge" not in await _roll_keys(client, cid, "damage_taken")
+
+
+@pytest.mark.caccia(id="CB-4819", fonte="2014 · Ranger · Condividere Incantesimi · pag. 106; Gittata · pag. 202 («Incantatore» è la gittata personale)", zona="regola:2014/ranger", voce="regola",
+                    copre=["carta:2014/classes/ranger.md#Condividere Incantesimi / Share Spells (Signore delle Bestie 15, pag. 106)",
+                           "GET /characters/{char_id}/roll-options"])
+async def test_condividere_incantesimi_vale_con_la_gittata_incantatore(client):
+    cid = await _crea(client, "2014", ("ranger", 15, "Signore delle Bestie"))
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Scurovisione", "level": 2, "range_area": "Incantatore"})
+    assert r.status_code == 201, r.text
+    assert "ranger.share_spells_extend" in await _roll_keys(client, cid, "cast", spell_id=r.json()["id"])

@@ -325,8 +325,8 @@ UNCANNY_DODGE = RollOptionSpec(
 # ---------------------------------------------------------------------------
 
 def _self_only_spell(ctx: RuleContext) -> bool:
-    """Un incantesimo che ha come bersaglio solo chi lo lancia: portata «Personale» (senza un'area)."""
-    return ctx.spell is not None and (ctx.spell.range_area or "").strip().lower() in ("personale", "self")
+    """Un incantesimo che ha come bersaglio solo chi lo lancia: portata «Personale» o «Incantatore» (senza un'area)."""
+    return ctx.spell is not None and (ctx.spell.range_area or "").strip().lower() in ("personale", "incantatore", "self")
 
 
 SHARE_SPELLS_EXTEND = RollOptionSpec(
