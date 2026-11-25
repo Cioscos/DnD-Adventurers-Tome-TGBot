@@ -23,7 +23,7 @@ from api.services import telegram_notify
 from api.services.telegram_notify import recipient_lang
 from api.services.campaigns import STASH_USER_ID
 from api.services.dice_stats import D20_TOTAL
-from api.services.rules_turn import set_surprised
+from api.services.rules_turn import set_others_turn, set_surprised
 from core.data.labels import condition_label
 from core.db.models import (
     BotUser, Campaign, CampaignMember, Character, CharacterHistory, Combatant, Encounter,
@@ -338,13 +338,14 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
 
 
 async def free_surprised(db: AsyncSession, gs: GameSession) -> None:
-    """La sorpresa 2014 è del combattimento: chiusa la sessione nessun GM può più toglierla, quindi cade qui."""
+    """La sorpresa 2014 e il turno di un altro sono del combattimento: chiusa la sessione nessun GM può più toglierli, quindi cadono qui."""
     ids = (await db.execute(select(SessionParticipant.character_id).where(
         SessionParticipant.session_id == gs.id, SessionParticipant.character_id.is_not(None)))).scalars().all()
     if not ids:
         return
     for char in (await db.execute(select(Character).where(Character.id.in_(ids)))).scalars():
         set_surprised(char, False)
+        set_others_turn(char, False)
 
 
 async def close_game_session(db: AsyncSession, gs: GameSession) -> None:

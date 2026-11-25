@@ -331,3 +331,21 @@ async def test_uno_scudo_imbracciato_che_diventa_un_arma_non_da_piu_ca(client):
     r = await client.patch(f"/characters/{cid}/items/{iid}", json={"item_type": "weapon", "item_metadata": {"damage_dice": "1d4"}})
     assert r.status_code == 200, r.text
     assert r.json()["shield_armor_class"] == 0
+
+
+@pytest.mark.caccia(id="CB-4787", fonte="2014 · Ranger · Sterminatore di Nemici · pag. 105", zona="regola:2014/ranger", voce="persistenza",
+                    copre=["POST /sessions/{session_id}/close", "GET /characters/{char_id}/roll-options"])
+async def test_chiusa_la_serata_a_meta_scontro_non_e_piu_il_turno_di_un_altro(client, test_session_factory, monkeypatch, come_utente):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    come_utente(GM_ID)
+    cid = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]["character_id"]
+    come_utente(PLAYER_ID)
+    assert (await client.patch(f"/characters/{cid}/ability_scores/wisdom", json={"value": 16})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "ranger", "level": 20, "hit_die": 10})).status_code == 201
+    spada = await _sword(client, cid)
+    come_utente(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # turno del goblin
+    assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
+    come_utente(PLAYER_ID)
+    assert "ranger.foe_slayer_attack" in await _roll_keys(client, cid, "attack", item_id=spada)
