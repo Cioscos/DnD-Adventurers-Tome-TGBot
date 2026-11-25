@@ -108,7 +108,6 @@ async def test_magia_da_guerra_vale_dopo_un_trucchetto_di_un_altra_classe(client
 
 @pytest.mark.caccia(id="CB-1763", fonte="2014 · Guerriero · Incantesimi del Cavaliere Mistico · pag. 75; Talenti · Incantatore da Guerra · pag. 168", zona="regola:2014/fighter", voce="interazione",
                     copre=["carta:2014/classes/fighter.md#Incantesimi / Eldritch Knight Spellcasting (Cavaliere Mistico 3, pag. 75)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-1763: difforme dal manuale, confermato")
 async def test_il_cavaliere_mistico_puo_prendere_un_talento_che_chiede_di_lanciare_incantesimi(client):
     cid = await _guerriero(client, 4, "eldritch_knight")
     assert (await _scheda(client, cid))["spellcasting"]["casters"]  # lancia incantesimi (Intelligenza)

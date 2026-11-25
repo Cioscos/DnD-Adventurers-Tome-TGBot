@@ -71,7 +71,6 @@ async def _lancia_gratis(client, cid, sid):
                     copre=["carta:2024/feats.md#Robusto / Tough (pag. 202) - Origine",
                            "carta:2024/classes/fighter.md#Dono Epico / Epic Boon (Guerriero 19, pag. 92)",
                            "POST /characters/{char_id}/choices/{choice_id}/resolve"])
-@pytest.mark.xfail(strict=True, reason="CB-3461: difforme dal manuale, confermato")
 async def test_il_dono_epico_del_19_ammette_un_altro_talento_per_cui_si_e_qualificati(client):
     ch = await _pg(client, "fighter", 1)
     r = await client.patch(f"/characters/{ch['id']}/xp", json={"set": 305000})
@@ -91,7 +90,6 @@ async def test_il_dono_epico_del_19_ammette_un_altro_talento_per_cui_si_e_qualif
                            "POST /characters/{char_id}/feats"])
 @pytest.mark.parametrize(("classe", "sottoclasse", "chiave"), [("fighter", "Cavaliere Mistico", "eldritch_knight"),
                                                               ("rogue", "Mistificatore Arcano", "arcane_trickster")])
-@pytest.mark.xfail(strict=True, reason="CB-3462: difforme dal manuale, confermato")
 async def test_il_terzo_incantatore_soddisfa_il_prerequisito_incantesimi(client, classe, sottoclasse, chiave):
     ch = await _pg(client, classe, 4, sottoclasse)
     assert ch["classes"][0]["subclass_key"] == chiave, ch["classes"]
@@ -145,7 +143,6 @@ async def test_avvelenatore_da_competenza_nel_kit_da_avvelenatore(client):
 
 @pytest.mark.caccia(id="CB-3467", fonte="2024 · Talenti · Artigiano · pag. 200", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Artigiano / Crafter (pag. 200) - Origine", "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3467: difforme dal manuale, confermato")
 async def test_artigiano_sceglie_solo_strumenti_della_tabella_creazione_rapida(client):
     ch = await _pg(client, "fighter", 1)
     riga = _righe(await _preso(client, ch["id"], "2024_crafter"), "2024_crafter")[0]
@@ -158,7 +155,6 @@ async def test_artigiano_sceglie_solo_strumenti_della_tabella_creazione_rapida(c
 @pytest.mark.caccia(id="CB-3468", fonte="2024 · Talenti · Maestro d'armi · pag. 209", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Maestro d'armi / Weapon Master (pag. 209) - Generale (livello 4+)",
                            "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3468: difforme dal manuale, confermato")
 async def test_maestro_d_armi_sceglie_solo_un_arma_in_cui_si_e_competenti(client):
     ch = await _pg(client, "wizard", 4)
     riga = _righe(await _preso(client, ch["id"], "2024_weapon_master", "strength"), "2024_weapon_master")[0]
@@ -213,7 +209,6 @@ async def test_fondersi_con_le_ombre_rende_invisibile(client):
 
 @pytest.mark.caccia(id="CB-3472", fonte="2024 · Talenti · Regole comuni (+1 fino a 20) · pag. 199; Attore · pag. 202", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Attore / Actor (pag. 202) - Generale (livello 4+, Carisma 13+)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3472: difforme dal manuale, confermato")
 async def test_un_talento_con_piu_uno_si_prende_anche_con_la_caratteristica_a_20(client):
     ch = await _pg(client, "fighter", 4, charisma=20)
     r = await _prendi(client, ch["id"], "2024_actor", "charisma")

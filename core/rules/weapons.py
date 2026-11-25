@@ -74,6 +74,8 @@ WEAPONS: dict[str, Weapon] = {
     "musket": _w("Musket", "Moschetto", "martial", "slow", "ranged"),
     "pistol": _w("Pistol", "Pistola", "martial", "vex", "ranged"),
 }
+# Tabella Armi del PHB 2014 (pag. 149), chiave -> nome italiano: senza armi da fuoco, con la Rete (Maestro d'Armi 2014)
+WEAPON_NAMES_2014 = {**{k: w.it for k, w in WEAPONS.items() if k not in ("musket", "pistol")}, "net": "Rete"}
 
 # Altri nomi italiani in uso: l'app e il compendio dicono «Falcione», il documento delle regole «Gliaia».
 _ALIASES = (("glaive", "Gliaia"), ("morningstar", "Stella del mattino"))  # il secondo è il nome dell'SRD italiano
@@ -310,16 +312,17 @@ def _mastery_label(key: str) -> dict:
             "summary": {"it": MASTERY_IT[w.mastery], "en": w.mastery.capitalize()}}
 
 
+def proficient_with(char: Any, key: str) -> bool:
+    """Competenza nel tipo d'arma ``key`` della tabella (categoria e proprietà dalla tabella, non da un oggetto)."""
+    w = WEAPONS[key]
+    props = [p for p, on in (("light", w.light), ("finesse", w.finesse)) if on]
+    return is_weapon_proficient(char, SimpleNamespace(name=w.it, item_metadata={"weapon_category": w.category, "properties": props}))
+
+
 def mastery_choice(levels: dict[int, int], melee_only: bool = False, swaps: int = 1) -> ChoiceSpec:
     """La scelta delle armi: fra quelle in cui il personaggio è competente; ``swaps`` cambi per riposo lungo (manuale 2024)."""
 
     def options(ctx: RuleContext) -> list[str]:
-        out = []
-        for key, w in WEAPONS.items():
-            props = [p for p, on in (("light", w.light), ("finesse", w.finesse)) if on]
-            probe = SimpleNamespace(name=w.it, item_metadata={"weapon_category": w.category, "properties": props})
-            if not (melee_only and w.ranged) and is_weapon_proficient(ctx.char, probe):
-                out.append(key)
-        return out
+        return [key for key, w in WEAPONS.items() if not (melee_only and w.ranged) and proficient_with(ctx.char, key)]
 
     return ChoiceSpec(group=MASTERY_GROUP, levels=levels, options=options, replaceable=True, replace_per_long_rest=swaps, label=_mastery_label)

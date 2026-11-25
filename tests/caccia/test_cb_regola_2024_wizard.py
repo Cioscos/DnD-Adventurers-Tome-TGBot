@@ -124,7 +124,6 @@ async def test_divinazione_esperta_non_rende_slot_a_un_lancio_senza_slot(client,
     ("spellbook", 3, None, None, 2, 2),  # 6 di 1° al 1° livello, 2 al 2° (max 1°), 2 al 3° (max 2°)
     ("divination_savant", 5, "diviner", "divination", 3, 1),  # due di livello massimo 2, poi uno di 3° al 5°
 ])
-@pytest.mark.xfail(strict=True, reason="CB-2712: difforme dal manuale, confermato")
 async def test_le_scelte_di_incantesimi_dei_livelli_passati_hanno_il_tetto_di_quel_livello(client, gruppo, livello, sottoclasse, scuola,
                                                                                             livello_inc, ammessi):
     cid = await _mago(client, livello, sottoclasse)

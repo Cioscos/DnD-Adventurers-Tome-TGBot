@@ -6,6 +6,7 @@ import uuid
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal, Optional
 
 from fastapi import HTTPException
@@ -19,10 +20,11 @@ from core.data.feats import ALL_ABILITIES, LIST_ABILITY as _LIST_ABILITY, MI_ABI
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from api.services.history import add_history
 from core.data.skills import SKILL_ABILITY_MAP
+from core.data.spell_slots import caster_kind, normalize_class_name
 from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType, Spell
 from core.rules.catalog._common import has_fighting_style, styles_taken
 from core.rules.proficiencies import armor_trained, normalize
-from core.rules.catalog import features_for
+from core.rules.catalog import active_features, features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
@@ -221,6 +223,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
             or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
             or any(owned[i].level > _pick_cap(char, cls, ch) for i in ids)  # un trucchetto resta un trucchetto
+            or (ch.spell_pick == "book" and not _book_room(char, cls, ch, [owned[i].level for i in ids]))
             or (ch.spell_exact and any(owned[i].level != ch.spell_level for i in ids))  # un Arcanum è del suo grado
             or (ch.spell_school and any(normalize_school(owned[i].school) != ch.spell_school for i in ids))  # un Sapiente, la sua scuola
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
@@ -235,11 +238,26 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     _history(session, char, f"{ch.group}: {', '.join(owned[i].name for i in ids)}")
 
 
-def max_pick_level(char: Character, cls: CharacterClass) -> int:
+def max_pick_level(char: Character, cls: CharacterClass, level: int | None = None) -> int:
     """Livello più alto che la classe ``cls`` lancia secondo la sua tabella degli slot: in multiclasse la scheda dice
-    «per classe», non la tabella sommata."""
-    regular = slots_for(character_edition(char), [cls]).regular
-    return max((level for level, total in regular.items() if total > 0), default=0)
+    «per classe», non la tabella sommata. ``level``: quello che lanciava a quel livello di classe."""
+    row = cls if level is None else SimpleNamespace(class_name=cls.class_name, level=level, subclass_key=cls.subclass_key,
+                                                    spellcasting_ability=cls.spellcasting_ability)
+    regular = slots_for(character_edition(char), [row]).regular
+    return max((lv for lv, total in regular.items() if total > 0), default=0)
+
+
+def _book_room(char: Character, cls: CharacterClass, ch, levels: list[int]) -> bool:
+    """Libro del mago e Sapienti: ogni posto della scelta ha il tetto degli slot del livello da mago in cui arriva (2014
+    pag. 114, 2024 pag. 165 e 173), non quello di oggi. ``True`` se gli incantesimi già scelti più ``levels`` ci stanno."""
+    caps, prev = [], 0
+    for lv in sorted(lv for lv in ch.levels if lv <= cls.level):
+        caps += [max_pick_level(char, cls, lv)] * (ch.levels[lv] - prev)
+        prev = ch.levels[lv]
+    known = {(s.srd_index or s.name): s.level for s in char.spells}
+    taken = [known.get(k, 0) for k in (cls.options or {}).get(ch.group, [])] + list(levels)
+    # per ogni livello X, gli incantesimi di livello X o più non superano i posti con tetto X o più
+    return all(sum(t >= x for t in taken) <= sum(c >= x for c in caps) for x in range(1, max(levels, default=0) + 1))
 
 
 def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
@@ -248,6 +266,8 @@ def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
     if ch.spell_exact:
         return ch.spell_level
     top = max_pick_level(char, cls)
+    if ch.spell_pick == "book":
+        top = next((lv for lv in range(top, 0, -1) if _book_room(char, cls, ch, [lv])), 0)
     return top if ch.spell_level is None else min(top, ch.spell_level)
 
 
@@ -344,6 +364,8 @@ async def reopen_tome(session: AsyncSession, char: Character) -> None:
     from core.rules.catalog import active_features  # import locale
     if not any(spec.key == "warlock.pact_of_the_tome" for spec, _row in active_features(char)):
         raise HTTPException(422, detail={"code": "no_pact_of_the_tome"})
+    if character_edition(char) != "2024":  # 2014 pag. 116: i trucchetti si scelgono quando si riceve il Libro, non al riposo
+        raise HTTPException(422, detail={"code": "tome_reopen_2024_only"})
     free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])
     for cls in char.classes:
         options = dict(cls.options or {})
@@ -361,6 +383,33 @@ async def reopen_tome(session: AsyncSession, char: Character) -> None:
     _history(session, char, "Libro delle Ombre: scelte da rifare")
 
 
+# livello di classe da cui la classe lancia: mezzi incantatori dal 2° nel 2014 (Paladino pag. 97, Ranger pag. 104), dal 1° nel 2024
+_CASTS_FROM = {"2014": {"full": 1, "pact": 1, "half": 2, "third": 3}, "2024": {"full": 1, "pact": 1, "half": 1, "third": 3}}
+# shortcut: la razza 2014 è testo libero, quelle del manuale con un incantesimo innato si riconoscono dal nome; da togliere con un catalogo
+_CASTING_RACES_2014 = ("elfo alto", "alto elfo", "high elf", "drow", "elfo oscuro", "dark elf", "gnomo delle foreste", "forest gnome",
+                       "tiefling")
+
+
+def _casts_spells(char: Character) -> bool:
+    """Prerequisito dei talenti da incantatore. 2024 «Incantesimi o Magia del Patto» (pag. 209): una classe che lancia al suo
+    livello, il terzo incantatore dalla sottoclasse anche senza caratteristica salvata. 2014 «capacità di lanciare almeno un
+    incantesimo» (pag. 168), da qualsiasi fonte: anche un talento completato, un privilegio o la razza."""
+    edition = character_edition(char)
+    for row in char.classes:
+        if normalize_class_name(row.class_name) is None:  # classe custom: la caratteristica salvata
+            if row.spellcasting_ability:
+                return True
+            continue
+        kind = caster_kind(row, edition)
+        if kind and row.level >= _CASTS_FROM[edition][kind]:
+            return True
+    if edition == "2024":
+        return False
+    race = (char.race or "").lower()
+    return any(name in race for name in _CASTING_RACES_2014) or any(
+        spec.granted_spells or (spec.class_key == "feat" and _feat_spells(row)) for spec, row in active_features(char))
+
+
 def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> None:
     """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento.
 
@@ -370,7 +419,8 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
         raise _bad("feat_wrong_edition")
     if origin == "creation" and spec.category != "origin":
         raise _bad("feat_wrong_category")
-    if origin == "level" and (spec.category == "epic_boon") != boon:
+    # il Dono Epico dà un Dono o un altro talento per cui si è qualificati (2024, Guerriero pag. 92 e le altre classi)
+    if origin == "level" and spec.category == "epic_boon" and not boon:
         raise _bad("feat_wrong_category")
     if (origin == "level" or spec.category == "epic_boon") and char.total_level < spec.min_level:
         raise _bad("feat_prerequisite_level")
@@ -378,7 +428,7 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
         names, minimum = spec.prereq_abilities
         if not any(_score_row(char, n).value >= minimum for n in names):
             raise _bad("feat_prerequisite_ability")
-    if spec.needs_spellcasting and not any(c.spellcasting_ability for c in char.classes):
+    if spec.needs_spellcasting and not _casts_spells(char):
         raise _bad("feat_prerequisite_spellcasting")
     if spec.prereq_armor and not armor_trained(char, spec.prereq_armor):
         raise _bad("feat_prerequisite_armor")
@@ -446,7 +496,9 @@ def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Op
             raise _bad(f"ability must be one of {spec.ability_increase}")
         if spec.edition == "2024" and spec.save_proficiency_from_increase and (char.saving_throws or {}).get(ability):
             raise _bad("save_already_proficient")
-        _bump(char, ability, 1, spec.max_score)
+        row = _score_row(char, ability)
+        if row.value < spec.max_score:  # «fino a un massimo di 20»: al tetto si perde il +1, non il talento (2014 pag. 165, 2024 pag. 199)
+            row.value += 1
         if spec.save_proficiency_from_increase:
             saves = dict(char.saving_throws or {})
             saves[ability] = True
@@ -562,8 +614,8 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità, strumenti, tipo di danno, padronanza e
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
-    from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES
-    from core.rules.weapons import WEAPONS
+    from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES, FAST_CRAFTING_TOOLS
+    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS, proficient_with
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
     if not needs:
@@ -583,15 +635,21 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         if any(s not in SKILL_ABILITY_MAP for s in skills) or any(t not in TOOLS for t in tools):
             raise _bad("feat_options_invalid")
         current = dict(char.skills or {})
+        # 2014 pag. 125: una competenza già posseduta non si riprende, se ne sceglie un'altra (il 2024 è una domanda aperta)
+        if not key.startswith("feat.2024_") and (any(current.get(s) for s in skills)
+                                                 or any((char.tool_proficiencies or {}).get(t) for t in tools)):
+            raise _bad("feat_options_invalid")
         for s in skills:
             current[s] = "expert" if current.get(s) == "expert" else True
         char.skills = current
         add_tools(char, tools)
         saved["picks"] = picks
-    for name, category in (("tools", "artisan"), ("instruments", "instrument")):
+    # Artigiano: solo gli strumenti della tabella Creazione rapida (2024 pag. 200); Musicista: strumenti musicali
+    instruments = tuple(k for k, t in TOOLS.items() if t.category == "instrument")
+    for name, allowed in (("tools", FAST_CRAFTING_TOOLS), ("instruments", instruments)):
         if name in needs:
             keys = _text_list(options.get(name), 3)
-            if any(k not in TOOLS or TOOLS[k].category != category for k in keys):
+            if any(k not in allowed for k in keys):
                 raise _bad("feat_options_invalid")
             saved[name] = keys
             add_tools(char, keys)
@@ -630,16 +688,19 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         char.languages = [*(char.languages or []), *(x for x in saved["languages"] if x.lower() not in have)]
     if "weapons" in needs:  # Maestro d'Armi 2014: quattro armi semplici o da guerra
         weapons = options.get("weapons")
-        if not isinstance(weapons, list) or len(weapons) != 4 or len(set(weapons)) != 4 or any(w not in WEAPONS for w in weapons):
+        if (not isinstance(weapons, list) or len(weapons) != 4 or len(set(weapons)) != 4
+                or any(w not in WEAPON_NAMES_2014 for w in weapons)):
             raise _bad("feat_options_invalid")
         cats = normalize(char.general_proficiencies)
         have = {w.lower() for w in cats["weapons"]}
-        cats["weapons"] = [*cats["weapons"], *(WEAPONS[w].it for w in weapons if WEAPONS[w].it.lower() not in have)]
+        names = [WEAPON_NAMES_2014[w] for w in weapons]
+        cats["weapons"] = [*cats["weapons"], *(n for n in names if n.lower() not in have)]
         char.general_proficiencies = cats
         saved["weapons"] = list(weapons)
-    if "weapon_mastery" in needs:  # Maestro d'armi
+    if "weapon_mastery" in needs:  # Maestro d'armi: un'arma semplice o da guerra in cui si è competenti (2024 pag. 209)
         weapons = options.get("weapon_mastery")
-        if not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS:
+        if (not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS
+                or not proficient_with(char, weapons[0])):
             raise _bad("feat_options_invalid")
         saved["weapon_mastery"] = list(weapons)
     if "list" in needs and not key.startswith("feat.2024_"):  # talenti 2014 con una lista di classe

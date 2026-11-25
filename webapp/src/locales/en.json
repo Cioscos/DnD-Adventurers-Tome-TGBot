@@ -248,6 +248,7 @@
       "increase": "Increase {{name}}",
       "decrease": "Decrease {{name}}",
       "pick_ability": "Ability to increase",
+      "ability_at_max": "{{name}} (already {{max}}: no +1)",
       "custom": "Custom feat",
       "custom_name": "Feat name",
       "custom_text": "Description",

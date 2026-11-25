@@ -64,7 +64,6 @@ async def test_lezioni_dei_primi_si_riprende_salendo_di_livello(client):
 @pytest.mark.caccia(id="CB-2663", fonte="2024 · Warlock · Patto della Lama (arma legata) · pag. 156", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Patto della Lama / Pact of the Blade (Suppliche Occulte, pag. 156)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-2663: difforme dal manuale, confermato")
 async def test_l_arma_magica_da_guerra_legata_al_patto_ha_la_competenza(client):
     cid = await _caster24(client, 3, BLADE, charisma=18, strength=10, dexterity=10)
     spada = await _weapon(client, cid, "Spada lunga +1", "main_hand", damage_dice="1d8", magic_bonus=1, weapon_category="martial")

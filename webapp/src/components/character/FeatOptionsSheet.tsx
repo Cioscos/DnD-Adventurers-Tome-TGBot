@@ -5,7 +5,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { WEAPON_KINDS } from '@/data/weaponMastery'
+import { WEAPON_KINDS, WEAPON_KINDS_2014 } from '@/data/weaponMastery'
 import { profBonus } from '@/lib/dnd'
 import { featByKey } from '@/lib/feats'
 import { uiLang } from '@/lib/lang'
@@ -34,6 +34,9 @@ const SKILL_CHOICES: Record<string, readonly string[]> = {
   '2024_observant': ['insight', 'investigation', 'perception'],
 }
 const ADEPT_TYPES = ['acid', 'cold', 'fire', 'lightning', 'thunder'] as const
+// Artigiano: gli strumenti della tabella Creazione rapida (2024 pag. 200)
+const FAST_CRAFTING_TOOLS = ['carpenters_tools', 'leatherworkers_tools', 'masons_tools', 'potters_tools', 'smiths_tools',
+  'tinkers_tools', 'weavers_tools', 'woodcarvers_tools']
 const ENERGY_TYPES = ['acid', 'cold', 'fire', 'lightning', 'necrotic', 'poison', 'psychic', 'radiant', 'thunder'] as const
 const TOUCHED_SCHOOLS: Record<string, readonly string[]> = {
   '2024_fey_touched': ['divination', 'enchantment'],
@@ -97,7 +100,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const manyKey = needs.find((n) => n === 'maneuvers' || n === 'weapons')
   const manyCount = manyKey === 'weapons' ? 4 : 2
   const manyOptions = manyKey === 'maneuvers' ? (feat?.choices ?? []).map((c) => ({ key: c.key, label: c.name[lang] }))
-    : WEAPON_KINDS.map((w) => ({ key: w.key, label: lang === 'en' ? w.en : w.it }))
+    : WEAPON_KINDS_2014.map((w) => ({ key: w.key, label: lang === 'en' ? w.en : w.it })) // Maestro d'Armi 2014
   const cantripCount = has('spell') ? 2 : 1
   const typeCount = has('damage_types') ? 2 : 1
   const typeOptions = has('damage_types') ? ENERGY_TYPES : ADEPT_TYPES
@@ -180,7 +183,8 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             {hint(t('character.feats.picks_hint', { n: 3 - picks.length }))}
             <div className="flex flex-wrap gap-2">
-              {SKILL_KEYS.map((s) => (
+              {/* 2014 pag. 125: un'abilità già posseduta non si riprende (il server la rifiuta) */}
+              {SKILL_KEYS.filter((s) => !is2014 || !proficient(s)).map((s) => (
                 <Pressable key={s} onClick={() => setPicks(toggled(picks, s, 3))} aria-pressed={picks.includes(s)} className={chip(picks.includes(s))}>
                   {t(`character.skills.${s}`)}
                 </Pressable>
@@ -212,7 +216,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             {hint(t('character.feats.tools_hint', { n: 3 - tools.length }))}
             <div className="flex flex-wrap gap-2">
-              {freeTools(toolCats).map((x) => (
+              {freeTools(toolCats).filter((x) => toolKey !== 'tools' || FAST_CRAFTING_TOOLS.includes(x.key)).map((x) => (
                 <Pressable key={x.key} onClick={() => setTools(toggled(tools, x.key, 3))} aria-pressed={tools.includes(x.key)} className={chip(tools.includes(x.key))}>
                   {toolLabel(x.key, i18n.language)}
                 </Pressable>
