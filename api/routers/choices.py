@@ -58,8 +58,9 @@ class ClassOptionResolve(BaseModel):
     options: list[Annotated[str, Field(max_length=50)]] = Field(max_length=20)
 
 
-# kind della scelta in sospeso -> kind di risposta ammessi
-_ALLOWED = {"asi": ("asi", "feat"), "epic_boon": ("epic_boon",), "class_option": ("class_option",)}
+# kind della scelta in sospeso -> kind di risposta ammessi. Il Dono Epico ammette un altro talento, anche l'Aumento di
+# caratteristica (2024, Guerriero pag. 92 e le altre classi; Talenti pag. 202)
+_ALLOWED = {"asi": ("asi", "feat"), "epic_boon": ("epic_boon", "asi", "feat"), "class_option": ("class_option",)}
 
 
 @router.post("/{char_id}/choices/{choice_id}/resolve", response_model=CharacterFull)

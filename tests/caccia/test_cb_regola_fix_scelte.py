@@ -39,3 +39,23 @@ async def test_chi_conosce_un_trucchetto_di_razza_sa_lanciare_incantesimi(client
     # Eredità Infernale (taumaturgia) e il trucchetto dell'Elfo Alto: il guerriero sa lanciare almeno un incantesimo
     r = await client.post(f"/characters/{r.json()['id']}/feats", json={"feat_key": "war_caster", "ability": None})
     assert r.status_code == atteso, r.text
+
+
+@pytest.mark.caccia(id="CB-4115", fonte="2024 · Guerriero · Dono Epico: un Dono o un altro talento per cui si è qualificati · pag. 92; Talenti · Aumento di caratteristica (Generale) · pag. 202",
+                    zona="regola:2024/talenti", voce="regola",
+                    copre=["carta:2024/classes/fighter.md#Dono Epico / Epic Boon (Guerriero 19, pag. 92)",
+                           "carta:2024/feats.md#Aumento di caratteristica / Ability Score Improvement (pag. 202) - Generale (livello 4+)",
+                           "POST /characters/{char_id}/choices/{choice_id}/resolve"])
+async def test_il_dono_epico_del_19_ammette_l_aumento_di_caratteristica(client):
+    r = await client.post("/characters", json={"name": "Campione", "rules_edition": "2024", "ability_scores": SCORES,
+                                               "initial_class": {"class_name": "fighter", "level": 1}})
+    assert r.status_code == 201, r.text
+    r = await client.patch(f"/characters/{r.json()['id']}/xp", json={"set": 305000})
+    assert r.status_code == 200, r.text
+    scelta = next(c for c in r.json()["pending_choices"] if c["kind"] == "epic_boon")
+    # nel 2024 l'Aumento di caratteristica è un talento Generale: al 19° se ne hanno i requisiti
+    r = await client.post(f"/characters/{r.json()['id']}/choices/{scelta['id']}/resolve",
+                          json={"kind": "asi", "increases": {"strength": 2}})
+    assert r.status_code == 200, r.text
+    assert next(s["value"] for s in r.json()["ability_scores"] if s["name"] == "strength") == 16
+    assert all(c["id"] != scelta["id"] for c in r.json()["pending_choices"])
