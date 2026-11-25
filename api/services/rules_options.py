@@ -50,7 +50,9 @@ def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "bef
     Ogni altro tiro nuovo cancella ``last_roll``: chi lo rende ritoccabile lo riscrive con ``remember_roll``."""
     if getattr(body, "with_inspiration", False):
         stored = get_turn(char).get("last_roll") or {}
-        if stored.get("roll") == roll:
+        # lo stesso tiro: anche la stessa abilità e caratteristica (un TS di concentrazione nel frattempo è un altro tiro);
+        # l'attacco lo controlla spend_inspiration_attack
+        if stored.get("roll") == roll and (roll == "attack" or (stored.get("skill"), stored.get("ability")) == (kw.get("skill"), kw.get("ability"))):
             return AppliedOptions(**{**stored["applied"], "reroll_of": {"dice": stored.get("dice"), "mode": stored.get("mode")}})
         _forget_roll(char)
         return AppliedOptions()

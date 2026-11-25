@@ -248,3 +248,18 @@ async def test_il_dado_del_valore_2024_raddoppia_sul_critico_di_un_incantesimo(c
     r = await client.post(f"/characters/{hero}/spells/{spell}/roll_damage",
                           json={"main_rolls": [4, 5], "is_critical": True, "options": ["bardic_die:damage"]})
     assert r.status_code == 200 and r.json()["total"] == 4 + 5 + 3 + 2, r.text
+
+
+@pytest.mark.caccia(id="CB-4241", fonte="2024 · Ispirazione Eroica · pag. 13: si rilancia il tiro appena fatto", zona="regola:2024/generali",
+                    voce="interazione", copre=["carta:2024/general.md#Ispirazione Eroica / Heroic Inspiration (pag. 13)",
+                                               "POST /characters/{char_id}/saving_throws/{ability}/roll"])
+async def test_il_rilancio_non_prende_i_dadi_di_un_altro_tiro_salvezza(client):
+    cid = await _pg(client)
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    assert (await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"die": 5})).status_code == 200
+    # nel frattempo un altro TS (come quello di concentrazione dopo un danno) con vantaggio
+    r = await client.post(f"/characters/{cid}/saving_throws/constitution/roll", json={"mode": "advantage", "dice": [18, 2]})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"with_inspiration": True, "die": 9})
+    assert r.status_code == 200, r.text
+    assert (r.json()["mode"], r.json()["die"]) == ("normal", 9), r.json()  # non il 18 col vantaggio del TS su Costituzione
