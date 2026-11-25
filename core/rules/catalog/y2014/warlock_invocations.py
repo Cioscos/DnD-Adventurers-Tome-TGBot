@@ -68,6 +68,11 @@ REPELLING = RollOptionSpec(
 
 # Passivo nel 2014 (pag. 119): ogni colpo con l'arma del patto, senza scelta (nel 2024 è facoltativo)
 LIFEDRINKER = Modifier("damage", lambda c: max(1, _mod(c, "charisma")), when=_is_pact_weapon, source=f"feature:{CK}.lifedrinker")
+LIFEDRINKER_TYPE = RollOptionSpec(  # un modificatore non ha tipo: l'esito dice quanti danni del totale sono necrotici
+    key=f"{CK}.lifedrinker", phase="before", rolls=("attack",), automatic=True, available=_is_pact_weapon,
+    label={"it": "Succhiavita: danni necrotici con l'arma del patto", "en": "Lifedrinker: necrotic damage with the pact weapon"},
+    effect=lambda c, _i: {"it": f"Succhiavita: {max(1, _mod(c, 'charisma'))} dei danni del colpo sono necrotici.",
+                          "en": f"Lifedrinker: {max(1, _mod(c, 'charisma'))} of the hit's damage is necrotic."})
 
 
 def _mage_armor_cast(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -223,7 +228,7 @@ _ROWS = (
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", "Suppliche Occulte, livello 12, Patto della Lama, pag. 119", 12,
          ("Quando colpisci con l'arma del patto infliggi danni necrotici extra pari al Carisma (minimo 1).",
           "When you hit with the pact weapon you deal extra necrotic damage equal to your Charisma modifier (minimum 1)."),
-         boon="blade", modifiers=(LIFEDRINKER,)),
+         boon="blade", modifiers=(LIFEDRINKER,), roll_options=(LIFEDRINKER_TYPE,)),
     _will("whispers_of_the_grave", "Sussurri dalla Tomba", "Whispers of the Grave", "Suppliche Occulte, livello 9, pag. 119", 9,
           "speak-with-dead", "parlare con i morti", "speak with dead"),
     _once("bewitching_whispers", "Sussurri Stregati", "Bewitching Whispers", "Suppliche Occulte, livello 7, pag. 119", 7, "compulsion",

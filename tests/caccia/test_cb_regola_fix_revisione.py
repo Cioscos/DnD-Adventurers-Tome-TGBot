@@ -502,3 +502,14 @@ async def test_tutt_uno_con_le_ombre_finisce_anche_cedendo_un_attacco_al_famigli
     r = await _use(client, cid, "warlock.pact_of_the_chain")
     assert r.status_code == 200, r.text
     assert not (await client.get(f"/characters/{cid}")).json()["conditions"].get("invisible")
+
+
+@pytest.mark.caccia(id="CB-4815", fonte="2014 · Warlock · Succhiavita · pag. 119: danni necrotici", zona="regola:2014/warlock", voce="regola",
+                    copre=["carta:2014/classes/warlock.md#Succhiavita / Lifedrinker (Suppliche Occulte, livello 12, Patto della Lama, pag. 119)",
+                           "POST /characters/{char_id}/items/{item_id}/attack"])
+async def test_succhiavita_dice_quanti_danni_sono_necrotici(client):
+    cid = await _caster(client, 12, "lifedrinker", boon="blade", charisma=18, strength=10)
+    r = await client.post(f"/characters/{cid}/items/{await _blade(client, cid)}/attack", json={"to_hit_die": 15})
+    assert r.status_code == 200, r.text
+    effetti = (r.json()["option_result"] or {}).get("effects") or []
+    assert any("necrotici" in e["it"] and "4" in e["it"] and "necrotic" in e["en"] for e in effetti), r.json()
