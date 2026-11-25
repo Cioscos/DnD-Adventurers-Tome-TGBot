@@ -313,7 +313,7 @@ def _half_max(ctx: RuleContext) -> int:
 def _vengeance_effect(ctx: RuleContext, params: dict) -> TargetEffect:
     """Accecate fino alla fine del turno in corso: quello di chi tira contro la morte (il tuo o quello dell'alleato)."""
     mod = _cha(ctx)
-    return TargetEffect(condition="blinded", damage_dice=f"2d8+{mod}" if mod > 0 else "2d8",
+    return TargetEffect(condition="blinded", damage_dice=f"2d8{mod:+d}" if mod else "2d8",
                         ends_at={"anchor": "active", "edge": "end", "count": 1})
 
 

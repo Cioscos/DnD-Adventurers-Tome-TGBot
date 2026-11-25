@@ -105,7 +105,6 @@ async def test_astuzia_magica_a_slot_pieni_da_i_pf_della_resilienza_celestiale(c
 @pytest.mark.caccia(id="CB-2666", fonte="2024 · Warlock · Vendetta Ardente · pag. 161", zona="regola:2024/warlock", voce="limiti",
                     copre=["carta:2024/classes/warlock.md#Vendetta Ardente / Searing Vengeance (Patrono Celestiale 14, pag. 161)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "GET /characters/{char_id}/target-effects/{effect_key}"])
-@pytest.mark.xfail(strict=True, reason="CB-2666: difforme dal manuale, confermato")
 async def test_vendetta_ardente_somma_anche_un_carisma_negativo(client):
     cid = await _make(client, "celestial", 14, charisma=8)
     await _hp(client, cid, op="set_max", value=80)
