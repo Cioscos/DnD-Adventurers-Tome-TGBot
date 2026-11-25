@@ -84,7 +84,6 @@ async def test_il_danno_di_arma_spirituale_somma_il_modificatore_da_incantatore(
 @pytest.mark.caccia(id="CB-3213", fonte="2014 · Incantesimi · Colpo Infuocato · pag. 222", zona="regola:2014/incantesimi-A-C", voce="regola",
                     copre=["carta:2014/spells.md#Colpo Infuocato", "POST /characters/{char_id}/spells",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3213: dati del catalogo corretti; resta CB-3217 (SpellCreate scarta extra_damage_*)")
 async def test_colpo_infuocato_preso_dal_catalogo_infligge_anche_4d6_radiosi(client):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     colpo = await _dal_catalogo(client, cid, "flame-strike")
