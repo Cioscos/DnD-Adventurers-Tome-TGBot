@@ -79,6 +79,13 @@ def _till_my_next_turn() -> dict:
     return {"anchor": "source", "edge": "end", "count": 1}
 
 
+def _dodging_dex_save(ctx: RuleContext) -> bool:
+    """Schivata di Difesa Paziente (pag. 193): vantaggio ai TS su Destrezza; si perde con velocità 0 (afferrato, trattenuto).
+    L'incapacitato chiude già lo stato."""
+    on = {k for k, v in (ctx.char.conditions or {}).items() if v}
+    return ctx.roll == "save" and ctx.ability == "dexterity" and state_on(ctx, "patient_defense") and not on & {"grappled", "restrained"}
+
+
 def _attack_action_done(ctx: RuleContext) -> bool:
     """Subito dopo l'azione Attacco: almeno un attacco dell'azione è già stato fatto in questo turno."""
     return int(_turn(ctx).get("action_attacks") or 0) >= 1
@@ -113,7 +120,7 @@ _STEP_MODES = {"dash": {"it": "Scatto", "en": "Dash"}, "disengage": {"it": "Disi
 
 
 def _step_state(_ctx: RuleContext, params: dict) -> StateSpec:
-    return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "manual"),
+    return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "turn_end", "manual"),
                      data={"mode": params["mode"], "jump_doubled": True})
 
 
@@ -168,18 +175,18 @@ def _evasion_started(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 
 EVASION_SAVE = RollOptionSpec(
-    key=f"{CK}.evasion", phase="before", rolls=("save",), available=lambda c: c.ability == "dexterity" and _can_act(c),
+    key=f"{CK}.evasion", phase="before", rolls=("save",), available=lambda c: c.ability == "dexterity",
     on_confirm=_evasion_started,
     label={"it": "Elusione: l'effetto dimezza i danni con un TS Destrezza?", "en": "Evasion: does the effect halve damage on a Dexterity save?"},
     effect=_say("Elusione: se superi il TS non subisci danni, se lo fallisci subisci la metà. Applica l'esito al danno.",
                 "Evasion: if you pass the save you take no damage, on a failure you take half. Apply the outcome to the damage."))
 EVASION_SUCCESS = RollOptionSpec(
     key=f"{CK}.evasion_success", phase="damage_in", rolls=("damage_taken",), multiplier=0, group="evasion",
-    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE) and _can_act(c),
+    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE),
     label={"it": "Elusione: hai superato il TS, nessun danno", "en": "Evasion: you passed the save, no damage"})
 EVASION_FAILED = RollOptionSpec(
     key=f"{CK}.evasion_failed", phase="damage_in", rolls=("damage_taken",), multiplier=0.5, group="evasion",
-    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE) and _can_act(c),
+    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE),
     label={"it": "Elusione: hai fallito il TS, metà del danno", "en": "Evasion: you failed the save, half damage"})
 
 
@@ -195,12 +202,14 @@ def _save_proficiency(ctx: RuleContext) -> int:
 
 
 def _lacks_save_proficiency(ctx: RuleContext) -> bool:
+    if ctx.roll == "death_save":  # «tutti i tiri salvezza»: anche quello contro la morte, senza caratteristica (D-052)
+        return True
     return (ctx.roll in ("save", "concentration") and bool(ctx.ability)
             and not (ctx.char.saving_throws or {}).get(ctx.ability))
 
 
 DIAMOND_REROLL = RollOptionSpec(
-    key=f"{CK}.diamond_soul", phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=KI),
+    key=f"{CK}.diamond_soul", phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=KI),
     label={"it": "Anima Adamantina: spendi 1 ki e ripeti il tiro salvezza fallito (vale il nuovo risultato)",
            "en": "Diamond Soul: spend 1 ki and reroll the failed saving throw (the new result stands)"})
 
@@ -221,7 +230,7 @@ def _perfect_self_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> N
 
 
 PERFECT_SELF = RollOptionSpec(
-    key=f"{CK}.perfect_self", phase="before", rolls=("initiative",), available=_no_ki_left,
+    key=f"{CK}.perfect_self", phase="before", rolls=("initiative",), automatic=True, available=_no_ki_left,  # nessuna scelta
     on_confirm=_perfect_self_confirmed,
     label={"it": "Perfezione Interiore: non hai più ki, recuperane 4", "en": "Perfect Self: you have no ki left, regain 4"},
     effect=_say("Perfezione Interiore: recuperi 4 punti ki.", "Perfect Self: you regain 4 ki points."))
@@ -277,7 +286,10 @@ PALM_START = RollOptionSpec(
 
 
 def _tranquility_state(ctx: RuleContext) -> StateSpec:
-    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"), data={"dc": _ki_dc(ctx), "save": "wisdom", "others": [f"{CK}.tranquility"]})
+    """Santuario (pag. 272) finisce se attacchi o lanci un incantesimo su un nemico: un lancio senza danni né TS lo lascia
+    (``needs_effect``)."""
+    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"),
+                     data={"dc": _ki_dc(ctx), "save": "wisdom", "others": [f"{CK}.tranquility"], "needs_effect": True})
 
 
 # ---------------------------------------------------------------------------
@@ -413,12 +425,12 @@ FEATURES = (
              "Right after the Attack action, bonus action and 1 ki: two unarmed strikes, each with its own attack roll."),
             "bonus_action", roll_options=(FLURRY_STRIKE,),
             on_use=OnUse(slot="bonus", spends=KI, available=_attack_action_done,
-                         state=StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"charges": 2}))),
+                         state=StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"charges": 2}))),
     feature("patient_defense", CK, ED, 2, "Difesa Paziente / Patient Defense (Monaco 2, pag. 91)",
             ("Difesa Paziente", "Patient Defense"),
             ("Azione bonus e 1 ki: Schivata. Chi ti attacca ha svantaggio al tiro per colpire fino al tuo prossimo turno.",
              "Bonus action and 1 ki: Dodge. Attackers have disadvantage on their attack rolls until your next turn."),
-            "bonus_action",
+            "bonus_action", modifiers=(Modifier("advantage", 1, when=_dodging_dex_save, source=f"feature:{PD}"),),
             on_use=OnUse(slot="bonus", spends=KI, state=StateSpec(
                 "patient_defense", rounds=1, ends_on=("new_turn", "incapacitated", "manual"), data={"others": [PD]}))),
     feature("step_of_the_wind", CK, ED, 2, "Passo del Vento / Step of the Wind (Monaco 2, pag. 91)",
@@ -473,8 +485,8 @@ FEATURES = (
              "Your unarmed strikes count as magical for overcoming resistance and immunity to nonmagical damage."),
             magic_unarmed=True),
     feature("evasion", CK, ED, 7, "Elusione / Evasion (Monaco 7, pag. 92)", ("Elusione", "Evasion"),
-            ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà. Non vale se sei incapacitato.",
-             "On a Dexterity save for half damage: no damage on a success, half on a failure. Not while incapacitated."),
+            ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà.",
+             "On a Dexterity save for half damage: no damage on a success, half on a failure."),
             roll_options=(EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED)),
     feature("stillness_of_mind", CK, ED, 7, "Mente Lucida / Stillness of Mind (Monaco 7, pag. 92)",
             ("Mente Lucida", "Stillness of Mind"),
@@ -553,7 +565,7 @@ FEATURES = (
              "Bonus action, from dim light or darkness: teleport up to 60 ft to an unoccupied space also in dim light; advantage on your first melee attack."),
             "bonus_action", subclass="shadow", roll_options=(STEP_ADVANTAGE,),
             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,),
-                         state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+                         state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     feature("cloak_of_shadows", CK, ED, 11, "Manto di Ombre / Cloak of Shadows (Monaco 11, pag. 93)",
             ("Manto di Ombre", "Cloak of Shadows"),
             ("Con un'azione, in luce fioca o oscurità, diventi invisibile finché non attacchi, non lanci un incantesimo o non entri in luce intensa.",
@@ -572,7 +584,8 @@ FEATURES = (
             ("Conosci Sintonia Elementale e una disciplina; una in più ai livelli 6, 11 e 17, e puoi sostituirne una. Costi in ki, con tetto per livello.",
              "You know Elemental Attunement and one discipline; one more at levels 6, 11 and 17, and you may swap one. Ki costs, capped by level."),
             subclass="four_elements", no_row=True,
-            choices=(ChoiceSpec(group=GROUP, levels={3: 1, 6: 2, 11: 3, 17: 4}, options=_discipline_options, replaceable=True),),
+            choices=(ChoiceSpec(group=GROUP, levels={3: 1, 6: 2, 11: 3, 17: 4}, options=_discipline_options, replaceable=True,
+                                replace_per_level="new_picks"),),
             covered_by="ChoiceSpec elemental_disciplines di questa riga, le righe delle discipline e i lanci col ki (KiSpell); "
                        "test_2014_monk_elements.py"),
     feature("elemental_attunement", CK, ED, 3, "Sintonia Elementale / Elemental Attunement (Monaco 3, Via dei Quattro Elementi, pag. 94)",
@@ -602,7 +615,7 @@ FEATURES = (
              "With the Attack action, 1 ki: unarmed reach +10 ft for the turn and fire damage. On a hit, another ki adds 1d10 fire."),
             subclass="four_elements", option_group=GROUP, option_key="fangs_of_the_fire_snake", roll_options=(FANGS_EXTRA,),
             on_use=OnUse(spends=KI, state=StateSpec(
-                FANGS_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"unarmed_damage_type": "fire", "reach_bonus_ft": 10}))),
+                FANGS_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"unarmed_damage_type": "fire", "reach_bonus_ft": 10}))),
 
     feature("multiclassing", CK, ED, 1, "Multiclasse: Monaco / Multiclassing: Monk (Capitolo 6, pag. 163)",
             ("Multiclasse: Monaco", "Multiclassing: Monk"),

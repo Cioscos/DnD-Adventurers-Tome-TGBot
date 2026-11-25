@@ -15,7 +15,7 @@ export type AbilityModifierKind = 'absolute' | 'relative'
 /** Cosa si può togliere e a chi (Task 48): lo stesso per un incantesimo e per un privilegio. */
 export type RemovalInfo = {
   count: number | null; max_targets: number; ally: boolean
-  optional?: boolean; bound?: boolean; modes?: string[] | null; cost_each?: number
+  optional?: boolean; bound?: boolean; modes?: string[] | null; also_modes?: string[]; cost_each?: number
   conditions: { key: string; label: { it: string; en: string } }[]; untracked: { key: string; label: { it: string; en: string } }[]
 }
 
@@ -236,13 +236,17 @@ export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
   /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
   weapon_choice?: boolean
-  /** Punizione: il danno lo dà l'opzione al colpo, il lancio non tira i dadi dell'incantesimo. */
+  /** Produrre Fiamma 2024, Lama Infuocata: il lancio accende la fiamma, con cui si attacca solo finché è accesa (`lit`); assente per gli altri. */
+  lit?: boolean
+  /** Il danno lo dà l'opzione all'attacco (punizione, Manto del Crociato, Favore Divino): il lancio non tira i dadi dell'incantesimo. */
   hit_damage?: boolean
   /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
   weapon_kinds?: string[]
   /** Il tipo dei dadi in più dello slot più alto scelto all'ultimo lancio (Colpo Infuocato, Fame di Hadar); il server lo conserva. */
   cast_upcast_type?: string | null
   max_targets_by_slot: Record<string, number>
+  /** Solo su un'altra creatura: il foglio dei bersagli non offre «te stesso» (Vincolo di Interdizione). */
+  not_self?: boolean
   /** `when`: si chiede solo se la scelta `[chiave, valore]` è già stata fatta (il tipo delle Rune Esplosive del Glifo). */
   choices: { key: string; label: { it: string; en: string }; options: string[]; when?: [string, string] | null }[]
 }
@@ -281,6 +285,8 @@ export interface Spell {
   is_healing?: boolean
   /** Formula della cura per livello di slot, con modificatore e privilegi (`{ 2: "4d8+7" }`). */
   healing_preview?: Record<number, string> | null
+  /** Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°, Raggio Rovente): assente se il tiro è uno solo. */
+  rays?: number | null
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
   extra_damage_dice?: string | null
@@ -437,7 +443,7 @@ export interface AcBreakdown {
 export interface ComputedStats {
   speed: number
   hp_max_effective: number
-  /** Sanguinante (2024): PF sopra 0 e a metà del massimo effettivo o meno. Assente/falso nel 2014. */
+  /** Sanguinante (2024): PF a metà del massimo effettivo o meno, anche a 0 (non da morto). Assente/falso nel 2014. */
   bloodied?: boolean
   resistances: string[]
   immunities: string[]
@@ -458,6 +464,7 @@ export interface ComputedStats {
   long_jump_bonus_ft?: number | null
   /** Sintonie ammesse: 3, o 4 con Usare Dispositivi Magici (Furfante 2024). */
   attunement_limit?: number
+  casts_spells?: boolean
   /** Può lanciare dalle pergamene (Usare Dispositivi Magici). */
   scroll_casting?: boolean
 }
@@ -493,6 +500,8 @@ export interface SpellcastingInfo {
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
 // e CharacterFull non è assegnabile a CharacterSummary, così effectiveAc non gira su di esso.
 export interface ConditionEffect {
+  /** Più istanze della stessa condizione (una per fonte): la fuga sceglie quale. */
+  id?: number | null
   slug: string
   expiry_anchor?: 'owner' | 'source' | null
   expiry_edge?: 'start' | 'end' | null
@@ -511,6 +520,8 @@ export interface PendingSave {
   id: number
   slug: string
   ability: string
+  /** Il bersaglio può tirare con questa invece di `ability` (Collera della Natura 2014). */
+  alt_ability?: string | null
   dc: number
   status: 'pending' | 'failed' | 'passed'
   created_at: string
@@ -988,6 +999,9 @@ export interface RollDamageRequest extends Partial<RollChoice> {
   extra_damage_type?: string
   /** Tipo di danno scelto al lancio (Sfera Cromatica...); il server lo riconvalida. */
   damage_type?: string
+  /** Opzioni dopo il colpo (`after_hit`) dell'attacco con questo incantesimo, appena messo a segno. */
+  hit_options?: string[]
+  hit_option_inputs?: RollChoice['option_inputs']
 }
 
 export interface RollHealingRequest extends Partial<RollChoice> {
@@ -995,6 +1009,8 @@ export interface RollHealingRequest extends Partial<RollChoice> {
   apply_to_self?: boolean
   /** PG seduti alla stessa serata attiva che ricevono la cura (il server li verifica). */
   target_character_ids?: number[]
+  /** PF di ogni bersaglio (per id, chi lancia compreso) di una cura che si divide. */
+  amounts?: Record<number, number>
 }
 
 /** Esito di POST /characters/{id}/spells/{spell_id}/roll_healing (R41). */
@@ -1031,11 +1047,16 @@ export interface SpellAttackResult {
   cast_option_result?: OptionResult
   /** Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio. */
   twinned_attack?: { die: number; dice: number[]; mode: string; total: number; is_critical: boolean; is_fumble: boolean }
+  /** Il raggio di questo tiro (1…`rays`), per gli incantesimi con un tiro per colpire per raggio. */
+  ray?: number
+  rays?: number
   character: CharacterFull
   homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
 export interface SpellAttackRequest extends Partial<RollChoice> {
+  /** Il raggio seguente del lancio già fatto: nessun nuovo lancio. */
+  ray?: boolean
   slot_id?: number
   slot_level: number | null
   confirm?: string[]
@@ -1276,7 +1297,7 @@ export interface HitDiceResult {
 }
 
 /** `spell_school`: l'incantesimo che ha creato l'evocato (Evocazioni Perduranti, Servitori Non Morti del Mago). */
-export type CompanionPayload = { spell_school?: 'conjuration' | 'necromancy' | null } & Partial<Pick<Companion,
+export type CompanionPayload = { spell_school?: 'conjuration' | 'necromancy' | null; force?: boolean } & Partial<Pick<Companion,
   'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active' | 'feature_key'>>
 
 export interface CompanionAttackResult {

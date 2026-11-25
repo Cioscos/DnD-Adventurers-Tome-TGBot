@@ -190,9 +190,6 @@ const AREA_LABEL: Record<string, LocalizedField> = {
   emanation: { en: 'emanation', it: 'emanazione' },
 }
 
-/** Sleep's higher-level dice are an HP pool, not damage: never prefilled. */
-const NO_UPCAST_PREFILL = new Set(['sleep'])
-
 export function spellToForm(
   e: SpellEntry,
   lang: Lang,
@@ -222,25 +219,45 @@ export function spellToForm(
     attack_save: e.attack_type ?? '',
     school: e.school,
     srd_index: e.index,
-    higher_levels_dice: e.damage_dice && !NO_UPCAST_PREFILL.has(e.index) ? e.higher_levels_dice ?? '' : '',
+    higher_levels_dice: e.damage_dice ? e.higher_levels_dice ?? '' : '',
     extra_damage_dice: e.extra_damage_dice ?? '',
     extra_damage_type: e.extra_damage_type ?? '',
   }
 }
 
+interface UpcastRule { dice?: string; step?: number; maxExtra?: number; both?: boolean }
+
+/** Scalate che «+NdM per livello» non dice, per edizione: mirror di _UPCAST in api/routers/spells.py. */
+const UPCAST_RULES: Record<string, Partial<Record<'2014' | '2024', UpcastRule>>> = {
+  'spiritual-weapon': { '2014': { dice: '1d8', step: 2 } },
+  'flame-blade': { '2014': { dice: '1d6', step: 2 } },
+  'hail-of-thorns': { '2014': { maxExtra: 5 } },
+  sleep: { '2014': { dice: '2d8' } },
+  'flame-strike': { '2024': { both: true } },
+  'jallarzis-storm-of-radiance': { '2024': { both: true } },
+}
+
+/** I dadi in più valgono anche per la seconda parte del danno (Colonna di fiamme 2024). */
+export const upcastBoth = (srdIndex: string | null | undefined, edition: '2014' | '2024' = '2014'): boolean =>
+  !!UPCAST_RULES[srdIndex ?? '']?.[edition]?.both
+
 /**
  * Extra dice the server adds automatically for casting above the spell's level
- * (mirror of roll_damage in api/routers/spells.py: same sides only, never sleep).
+ * (mirror of roll_damage in api/routers/spells.py: same sides only).
  */
 export function upcastExtraDice(
-  spell: { level: number; srd_index?: string | null; higher_levels_dice?: string | null },
+  spell: { level: number; srd_index?: string | null; higher_levels_dice?: string | null; rays?: number | null },
   castingLevel: number,
   baseSides: number,
+  edition: '2014' | '2024' = '2014',
 ): number {
+  const rule = UPCAST_RULES[spell.srd_index ?? '']?.[edition] ?? {}
+  // Con più raggi (Raggio Rovente) lo slot più alto dà raggi, non dadi.
   // Il bonus opzionale (Dardo incantato: 1d4+1) non cambia il numero di dadi.
-  const m = /^(\d+)d(\d+)([+-]\d+)?$/.exec(spell.higher_levels_dice?.trim() ?? '')
-  if (!m || spell.level < 1 || NO_UPCAST_PREFILL.has(spell.srd_index ?? '') || Number(m[2]) !== baseSides) return 0
-  return Number(m[1]) * Math.max(0, castingLevel - spell.level)
+  const m = /^(\d+)d(\d+)([+-]\d+)?$/.exec((rule.dice ?? spell.higher_levels_dice)?.trim() ?? '')
+  if (!m || spell.level < 1 || spell.rays || Number(m[2]) !== baseSides) return 0
+  const gained = Number(m[1]) * Math.floor(Math.max(0, castingLevel - spell.level) / (rule.step ?? 1))
+  return Math.min(gained, rule.maxExtra ?? gained)
 }
 
 /** Localised labels for the range note, supplied by the caller (i18n lives in the locale files). */
@@ -270,11 +287,10 @@ export function equipmentToForm(
     e.range_ft && e.weapon_range === 'ranged' ? `${labels.range}: ${formatLength(e.range_ft, unitSystem)}` : '',
     e.thrown_range_ft ? `${labels.thrown}: ${formatLength(e.thrown_range_ft, unitSystem)}` : '',
   ].filter(Boolean)
-  // shortcut: flat damage ("1", blowgun) becomes "1d1" to satisfy the NdX form rule; revisit if flat damage is supported.
-  const dice = e.damage_dice ?? '' // la Rete non fa danno: niente dado inventato
   return {
     ...base, item_type: 'weapon',
-    damage_dice: /^\d+$/.test(dice) ? `${dice}d1` : dice,
+    // la Rete non fa danno: niente dado inventato; la Cerbottana resta «1» fisso, che un critico non raddoppia
+    damage_dice: e.damage_dice ?? '',
     damage_type: `dmg_${e.damage_type ?? 'slashing'}`,
     weapon_type: e.weapon_range ?? 'melee',
     properties: e.properties ?? [],

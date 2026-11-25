@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import RollModeToggle from '@/components/ui/RollModeToggle'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import AfterRollOptions from '@/components/rules/AfterRollOptions'
@@ -29,6 +30,8 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   const toast = useToast()
   const rollD20 = useD20Roll()
   const [mode, setMode] = useState<RollMode>('normal')
+  // Collera della Natura 2014: il bersaglio sceglie la caratteristica a ogni tiro.
+  const [picked, setPicked] = useState<string | null>(null)
   const [done, setDone] = useState<number[]>([])
   // The save stays in `shown` after a pass, when the server drops it from the list.
   const [shown, setShown] = useState<{ save: PendingSave; res: PendingSaveRollResult } | null>(null)
@@ -52,7 +55,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
           },
         }
       : null)
-  const active = view?.save ?? current
+  const active = view?.save ?? (current && picked ? { ...current, ability: picked } : current)
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['character', charId] })
     qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -62,7 +65,8 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
     mutationFn: async ({ save, reroll }: { save: PendingSave; reroll: boolean }) => {
       const m = reroll ? 'normal' : mode
       const choice = reroll ? undefined : await askRollOptions(charId, { roll: 'save', ability: save.ability })
-      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m, choice), choice), reroll)
+      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m, choice), choice), reroll,
+        ...(save.alt_ability ? [save.ability] : []))
       return { save, res }
     },
     onSuccess: (r) => {
@@ -93,6 +97,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
     }
     refresh()
     setShown(null)
+    setPicked(null)
     const left = saves.filter((s) => s.id !== save.id && !done.includes(s.id))
     setDone((d) => [...d, save.id])
     if (left.length === 0) onClose()
@@ -118,6 +123,27 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
 
         {!view ? (
           <>
+            {current?.alt_ability && (
+              <div role="radiogroup" aria-label={t('pendingSaves.choose_ability')} className="grid grid-cols-2 gap-2">
+                {[current.ability, current.alt_ability].map((a) => (
+                  <Pressable
+                    key={a}
+                    role="radio"
+                    aria-checked={active.ability === a}
+                    haptic="light"
+                    onClick={() => setPicked(a)}
+                    whileTap={{ scale: 0.95 }}
+                    className={`min-h-[44px] rounded-xl border text-sm font-body ${
+                      active.ability === a
+                        ? 'border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright font-semibold'
+                        : 'border-dnd-gold-dim/30 bg-dnd-surface text-dnd-text-muted'
+                    }`}
+                  >
+                    {t(`character.stats.${a}`)}
+                  </Pressable>
+                ))}
+              </div>
+            )}
             <RollModeToggle mode={mode} onChange={setMode} />
             <Button
               size="lg"

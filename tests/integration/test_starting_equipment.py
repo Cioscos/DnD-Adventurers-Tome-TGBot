@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 
 from core.rules.edition import CLASS_KEYS
-from core.rules.starting_equipment import GENERIC, _parse, _srd, describe, resolve, starting_groups
+from core.rules.starting_equipment import _WEIGHT_LB, GENERIC, _parse, _srd, describe, resolve, starting_groups
 
 P = {"simple-weapon": 1}
 SM = {"simple-melee": 1}
@@ -91,6 +91,7 @@ def test_table_matches_sheet(edition, class_key):
 def test_every_key_is_known():
     assert set(EXPECTED) == {(e, c) for e in ("2014", "2024") for c in CLASS_KEYS}
     assert GENERIC.keys().isdisjoint(_srd().keys())
+    assert _WEIGHT_LB.keys() <= GENERIC.keys()  # un peso per una voce che non esiste è un refuso
 
 
 def test_resolve_validates_and_merges():

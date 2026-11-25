@@ -8,7 +8,8 @@ interface Props { char: CharacterFull; value: boolean; onChange: (next: boolean)
  *  Il server toglie solo gli incantesimi scelti per il Libro e rimette le scelte in coda. */
 export default function TomeReopenToggle({ char, value, onChange }: Props) {
   const { t } = useTranslation()
-  if (!(char.abilities ?? []).some((a) => a.feature_key === 'warlock.pact_of_the_tome')) return null
+  // 2014 pag. 116: i trucchetti del Libro si scelgono una volta, quando lo si riceve; la riscelta al riposo è del 2024 (pag. 157)
+  if (char.rules_edition !== '2024' || !(char.abilities ?? []).some((a) => a.feature_key === 'warlock.pact_of_the_tome')) return null
   return (
     <div className="text-left" data-testid="tome-reopen">
       <SwitchToggle checked={value} onChange={onChange} label={t('character.quick_actions.rest_reopen_tome')}

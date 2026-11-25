@@ -12,6 +12,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any
 
+from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import FIGHTING_STYLE_GROUP, feature, style_options
 from core.rules.catalog.y2014.paladin import SAVE_ROLLS, _aura_range, _cha_bonus, _cha_mod, _permanent_note, _say, _spell_dc
 from core.rules.catalog.y2024.fighter import STYLE_ROWS as FIGHTER_STYLE_ROWS, STYLES as FIGHTER_STYLES
@@ -41,8 +42,13 @@ def _both(it: str, en: str) -> dict[str, str]:
 
 
 def _melee_or_unarmed(ctx: RuleContext) -> bool:
-    """Un attacco con un'arma da mischia (non lanciata né a distanza) o un Colpo Senz'armi; mai un incantesimo."""
-    return ctx.spell is None and ctx.attack_mode in ("melee", "offhand")
+    """Un'arma da mischia o un Colpo Senz'armi, mai un incantesimo né un'arma a distanza. Lanciata, l'arma da mischia resta tale
+    (Lancio, pag. 214): le carte 2024 guardano l'arma, non l'attacco."""
+    if ctx.spell is not None:
+        return False
+    if ctx.attack_mode == "thrown":
+        return ctx.item is not None and item_meta(ctx.item).get("weapon_type", "melee") == "melee"
+    return ctx.attack_mode in ("melee", "offhand")
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +79,8 @@ def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
     return []  # le condizioni sono nel meccanismo comune (``removal``)
 
 
-_LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5)
+_LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5,
+                                also_modes=("self", "other"))  # pag. 109: un solo tocco cura e toglie
 
 LAY_ON_HANDS_USE = OnUse(
     slot="bonus", choose_amount=True, cap_to_missing=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",
@@ -213,7 +220,7 @@ def _steed_cast(ctx: RuleContext, params: dict) -> None:
 
 
 STEED_USE = OnUse(
-    slot="action", effect=_steed_cast, texts=(UseText("name", _both("Nome del destriero", "Steed name"), max_len=80, optional=True),),
+    slot="action", magic_action=True, effect=_steed_cast, texts=(UseText("name", _both("Nome del destriero", "Steed name"), max_len=80, optional=True),),
     message=lambda _c, _p: _both("Lanci Trova Destriero senza slot: il destriero è fra i compagni (CA 12, 25 PF, 18 m).",
                                  "You cast Find Steed with no slot: the steed is among your companions (AC 12, 25 HP, 60 ft)."))
 

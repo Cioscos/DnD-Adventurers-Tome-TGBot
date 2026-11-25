@@ -45,6 +45,14 @@ class ChoiceSpec:
     replaceable: bool = False
     # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
     replace_per_long_rest: int = 0  # quanti cambi per riposo lungo (True = 1)
+    # Con ``replace_per_long_rest``: i cambi si contano a parte, non con gli altri gruppi della classe (Aspetto della Natura
+    # Selvaggia accanto alla Padronanza delle Armi del barbaro); senza, la classe ha un solo contatore (Maestria negli Incantesimi)
+    replace_own_count: bool = False
+    # Con ``replaceable``: un cambio, poi serve un riposo breve o lungo (Preda del Cacciatore 2024, «dopo un riposo breve o lungo»)
+    replace_per_rest: bool = False
+    # Con ``replaceable``: un cambio per livello di classe, dopo quello della prima scelta; «each» a ogni livello (Stile di
+    # Combattimento e Metamagia 2024, suppliche), «new_picks» solo ai livelli che danno nuove opzioni del gruppo (manovre, discipline elementali 2014)
+    replace_per_level: Literal["each", "new_picks"] | None = None
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
@@ -104,7 +112,7 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
-    "new_turn", "attack", "cast", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor",
+    "new_turn", "attack", "cast", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor", "action", "reaction",
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
@@ -122,7 +130,8 @@ class StateSpec:
     prossimo «Nuovo turno» di chi lo porta (Canto di Riposo); ``turn_end_counted`` = alla fine del turno che comincia dopo
     quello in cui è nato, con ``data["skip_new_turns"]`` = 1 (Colpo Mistico): ``new_turn`` lo fa scalare invece di
     chiuderlo e fuori da un incontro lo chiude al «Nuovo turno» seguente; ``attack`` / ``cast`` = quando chi lo porta attacca o lancia
-    un incantesimo (Manto di Ombre). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
+    un incantesimo (Manto di Ombre); ``action`` / ``reaction`` = quando spende l'azione o la reazione del turno
+    (Tutt'Uno con le Ombre e Nascondersi in Piena Vista 2014). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
     quando finisce, a meno che ci fosse già per un'altra fonte. ``turn_end_unextended`` = alla fine di un turno di chi lo
     porta in cui non è stato prolungato (attacco, TS imposto o azione bonus: Ira 2024); lo stato nato in quel turno
     (``data["fresh"]``) vive fino alla fine del turno seguente. ``heavy_armor`` = quando chi lo porta indossa un'armatura pesante.
@@ -162,9 +171,12 @@ class TargetEffect:
     nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito.
     ``extends``: se il bersaglio porta già la condizione da chi usa il privilegio, la durata si rinnova senza un nuovo TS
     (prolungamento). ``immune_on_success``: chi supera il TS non è più bersaglio di questo effetto fino al prossimo
-    riposo lungo di chi lo usa (le «24 ore» delle schede)."""
+    riposo lungo di chi lo usa (le «24 ore» delle schede), per sempre se la chiave è in ``states.LASTING_IMMUNITY``.
+    ``immune_on_end``: lo stesso anche quando l'effetto finisce, cioè dal primo uso su quel bersaglio, salvo prolungarlo
+    finché dura (Sguardo Ipnotico 2014)."""
     condition: str | None = None
     save_ability: str | None = None
+    save_alt_ability: str | None = None  # il bersaglio sceglie al tiro fra questa e ``save_ability`` (Collera della Natura 2014)
     save_dc: int | None = None
     rounds: int | None = None
     ends_at: dict | None = None
@@ -174,6 +186,7 @@ class TargetEffect:
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    immune_on_end: bool = False
     # Con un TS: se fallito, la condizione ripete il TS a ``start`` o ``end`` del turno del bersaglio (Collera della Natura)
     repeat_save: str | None = None
     # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non
@@ -181,6 +194,8 @@ class TargetEffect:
     note: str | None = None
     # La condizione cade con la concentrazione di chi la applica (le punizioni: Punizione Collerica, Colpo Accecante...)
     ends_with_concentration: bool = False
+    # Un bersaglio alla volta: applicarlo a un altro toglie la condizione, se viene ancora da chi lo usa, al precedente (Creare Servitore)
+    exclusive: bool = False
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):
@@ -193,12 +208,14 @@ class KiSpell:
     dei Quattro Elementi). ``spell``: ``srd_index``, anche chiave di ``GRANTED_SPELLS``. ``cost``: punti del lancio base.
     ``upcast``: dal 5° livello di classe i punti in più alzano il livello dell'incantesimo di 1 ciascuno, entro il tetto
     per livello (``ki_spell_cap``). ``pool``: la riga ``Ability`` da cui si spende. ``self_only``: il lancio vale solo per
-    chi lo fa, senza altre creature (Cavalcare il Vento, Proiezione Astrale)."""
+    chi lo fa, senza altre creature (Cavalcare il Vento, Proiezione Astrale). ``min_level``: livello di classe da cui
+    l'incantesimo si lancia coi punti (Incantesimi Psionici del 7° e del 9°)."""
     spell: str
     cost: int
     upcast: bool = False
     pool: str = "monk.ki"
     self_only: bool = False
+    min_level: int = 0
 
 
 @dataclass(frozen=True)
@@ -293,7 +310,11 @@ class OnUse:
     maximize_if: "Callable[[RuleContext, dict], bool] | None" = None
     maximize_cost: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
+    magic_action: bool = False  # 2024: l'azione spesa è l'azione Magia (il riassunto non comincia con «Magic action»)
     once_per_turn: bool = False
+    # con ``once_per_turn``: una volta per il proprio turno, il turno di un altro non riapre l'uso (Forza Vivificante: «all'inizio
+    # di ogni tuo turno»); lo riapre solo ``reset_turn``
+    own_turn: bool = False
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
     # Testo ``{it, en}`` calcolato dal server e mostrato sulla riga prima dell'uso (Astuzia Magica: quanti slot tornano); ``None``: niente
@@ -395,7 +416,8 @@ class Modifier:
 
     ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
-    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``jump_bonus`` (piedi in più al
+    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``sense_plus:<tipo>`` (piedi che si
+    sommano alla portata migliore già posseduta, anche scritta nella scheda: Gufo, Vista Ombrale); ``jump_bonus`` (piedi in più al
     salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
@@ -410,6 +432,7 @@ class Modifier:
 
 
 FORGONE = -1  # ``action_weapons``: attacco dell'azione ceduto (bestia, trucchetto, incantesimo), senza arma
+OTHERS_TURN = "others_turn"  # ``Character.turn_state``: è cominciato il turno di un altro (i privilegi «nel tuo turno» tacciono)
 # slot di turno -> chiave booleana in ``Character.turn_state``
 TURN_FLAGS = {
     "action": "action_used",
@@ -433,6 +456,9 @@ class Cost:
     pact_only: bool = False
     # Costo che dipende dal lancio (Incantesimo Raddoppiato: il livello dell'incantesimo): sostituisce ``amount``
     amount_by: "Callable[[RuleContext], int] | None" = None
+    # Con ``feature_key``: la riga senza usi è ricaricata prima del pagamento da un'opzione automatica dello stesso tiro
+    # (Ispirazione Superiore ridà gli usi che Passo a Due spende alla stessa Iniziativa)
+    refilled: "Callable[[RuleContext], bool] | None" = None
 
 
 @dataclass(frozen=True)
@@ -518,6 +544,8 @@ class RollOptionSpec:
     unavailable_hint: dict[str, str] | None = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
+    # Con ``after="reroll"``: il d20 nuovo si aggiunge a quelli già tirati e si usa il migliore, invece di sostituirli (Fortunato 2014)
+    extra_d20: bool = False
     self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (``spell_healing``, o l'iniziativa: lo applica il router del tiro)
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
@@ -525,6 +553,8 @@ class RollOptionSpec:
     # L'attacco che l'opzione apre non è dell'azione Attacco, anche senza uno slot proprio (i colpi della Raffica di Colpi,
     # pagati da uno stato): non pesa sul limite di attacchi dell'azione.
     outside_action: bool = False
+    # L'opzione vale anche per l'attacco di un compagno (bestia, famiglio): il tiro non è del personaggio, e le altre non si offrono
+    companion: bool = False
     # Dopo un danno subito l'app propone questa reazione d'attacco? ``None``: sì se ha lo slot ``reaction`` (Ritorsione,
     # Replica); ``False`` per le reazioni che nascono da un altro evento (Opportunista).
     offered_on_damage: bool | None = None
@@ -661,6 +691,8 @@ class FeatureSpec:
     name: dict[str, str]
     summary: dict[str, str]
     action_type: str | None
+    # Sottoclasse -> attivazione diversa da ``action_type`` (Forma Selvatica 2014: azione bonus per il Circolo della Luna)
+    subclass_action_types: dict[str, str] | None = None
     uses: Uses | None = None
     restoration: str | dict[int, str] = "none"  # dict: livello minimo -> tipo di riposo
     short_rest_recovers: "int | dict[int, int] | None" = None  # dict: livello minimo -> usi recuperati (Ripristino Stregonesco)
@@ -680,7 +712,9 @@ class FeatureSpec:
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
-    granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
+    # gli incantesimi concessi, o scelti con le sue ``choices``, si lanciano solo come rituale (Cercatore di Spiriti, Libro degli Antichi Segreti 2014)
+    granted_ritual_only: bool = False
+    granted_ritual: bool = False  # gli incantesimi concessi si lanciano anche come rituale, oltre che con uno slot (Patto della Catena 2014)
     condition_immunities: tuple[str, ...] = ()  # condizioni che il privilegio impedisce sempre (Interdizione della Natura)
     needs_conscious: bool = False  # ``condition_immunities`` valgono solo con il personaggio cosciente (Aura di Coraggio)
     ignores_components: bool = False  # Arcidruido: le componenti V, S e M senza costo non servono
@@ -797,3 +831,4 @@ class RuleContext:
     proficient: bool = False  # prova già con competenza (strumento): niente mezze competenze («Atleta Straordinario»)
     spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)
     natural_d20: int | None = None  # dopo il tiro: il d20 tenuto del tiro salvato (Fortuna dell'Halfling); None se non noto
+    mode: Any = None  # al tiro: il modo dichiarato dal giocatore (``normal``, ``advantage``, ``disadvantage``); None nell'elenco

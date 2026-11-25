@@ -14,9 +14,9 @@ test('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, ap
   await page.getByPlaceholder('Il nome del tuo eroe').fill(nome)
   await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByRole('button', { name: 'Avanti →' }).click() // background facoltativo
+  await page.getByRole('button', { name: 'Avanti →' }).click() // specie facoltativa
   await page.getByText('Senza classe').click()
-  await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> specie
-  await page.getByRole('button', { name: 'Avanti →' }).click() // specie -> punteggi
+  await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> punteggi
   await page.getByText('Salta: lascia tutti a 10').click()
   await page.getByRole('button', { name: 'Crea', exact: true }).dblclick()
   await expect(page).toHaveURL(/#\/char\/\d+/)
@@ -36,11 +36,11 @@ test('chiudere il wizard con le monete accese e riaprirlo con la stessa classe l
   await page.getByPlaceholder('Il nome del tuo eroe').fill('Annullato')
   await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByRole('button', { name: 'Avanti →' }).click() // background facoltativo
+  await page.getByRole('button', { name: 'Avanti →' }).click() // specie facoltativa
   await page.getByText('Guerriero', { exact: true }).click()
   await page.getByRole('button', { name: 'Atletica' }).click()
   await page.getByRole('button', { name: 'Percezione' }).click()
-  await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> specie
-  await page.getByRole('button', { name: 'Avanti →' }).click() // specie -> punteggi
+  await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> punteggi
   await page.getByText('Salta: lascia tutti a 10').click()
   await monete.click()
   for (let n = 0; n < 5; n++) await page.getByRole('button', { name: 'Indietro' }).click() // fino al nome
@@ -49,10 +49,10 @@ test('chiudere il wizard con le monete accese e riaprirlo con la stessa classe l
   await page.getByPlaceholder('Il nome del tuo eroe').fill('Riaperto')
   await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByText('Guerriero', { exact: true }).click()
   await page.getByRole('button', { name: 'Atletica' }).click()
   await page.getByRole('button', { name: 'Percezione' }).click()
-  await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByRole('button', { name: 'Avanti →' }).click()
   await page.getByText('Salta: lascia tutti a 10').click()
   await expect(monete).toBeVisible()

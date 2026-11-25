@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.rules.edition import character_edition
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, _potency
 from core.rules.types import StateSpec
 
 
@@ -14,6 +14,20 @@ def get_states(char: Any) -> list[dict]:
 
 def has_state(char: Any, key: str) -> bool:
     return any(s.get("key") == key for s in char.active_states or [])
+
+
+CAST_ONCE = "cast_once:"  # turn_state: un bonus già preso da un lancio, ``cast_once:<bonus>:<incantesimo>``; vive quanto il lancio (D-051)
+
+
+def cast_once(bonus: str, spell: Any) -> str:
+    return f"{CAST_ONCE}{bonus}:{spell.id}"
+
+
+def drop_cast_once(char: Any, spell_id: int | None) -> None:
+    """Un nuovo lancio, o la fine della concentrazione, chiude quello di prima: i suoi bonus si riaprono."""
+    turn = char.turn_state or {}
+    if any(k.startswith(CAST_ONCE) and k.endswith(f":{spell_id}") for k in turn):
+        char.turn_state = {k: v for k, v in turn.items() if not (k.startswith(CAST_ONCE) and k.endswith(f":{spell_id}"))}
 
 
 def state_conditions(state: dict) -> dict[str, bool]:
@@ -33,23 +47,42 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
         previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
         wanted = (spec.condition, *spec.also_conditions)
         before = state_conditions(previous) if previous else {}
-        was = {c: before.get(c, bool((char.conditions or {}).get(c))) for c in wanted}
+        # accesa da un altro stato: c'era già solo se c'era già per quello (ogni effetto ha la sua durata, 2014 pag. 290)
+        imposed = {c: w for s in get_states(char) if s.get("key") != spec.key for c, w in state_conditions(s).items()}
+        was = {c: before.get(c, imposed.get(c, bool((char.conditions or {}).get(c)))) for c in wanted}
         state.update(condition=spec.condition, condition_was_on=was[spec.condition])
         if spec.also_conditions:
             state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
+        from core.rules.catalog._common import INCAPACITATING  # import locale: il catalogo importa questo modulo
+        if any(c in INCAPACITATING and not (char.conditions or {}).get(c) for c in wanted):
+            state["data"]["drops_concentration"] = True  # incapacitato: la concentrazione cade (2014 pag. 203), la chiude il flush
         char.conditions = {**(char.conditions or {}), **{c: True for c in wanted}}
     char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
     return state
 
 
+def _spell_potency(char: Any, key: str, data: dict) -> tuple[int, int]:
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il catalogo importa questo modulo
+    effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
+    variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
+    return _potency(variant, data) if variant else (0, 0)
+
+
 def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Come ``begin_state`` per uno stato ``spell:*``: uno stato per coppia (incantesimo, lanciatore). Quello di un altro lanciatore
-    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano."""
+    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano. Lo stesso lanciatore che lo
+    rilancia più debole non toglie il più potente (2014 pag. 205, 2024 pag. 238: vale il bonus più alto, non l'ultimo)."""
     caster = spec.data.get("caster_id")
+    mine = next((s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") == caster), None)
+    if mine and _spell_potency(char, spec.key, mine.get("data") or {}) > _spell_potency(char, spec.key, spec.data):
+        # shortcut: un orologio per lanciatore, il più potente dura quanto il nuovo lancio; servirebbero due orologi se le durate differiscono
+        return mine
     others = [s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") != caster]
     state = begin_state(char, spec, feature_key, name)
     if others:
         char.active_states = [*others, *char.active_states]  # ``begin_state`` li aveva tolti
+    if mine and (given := (mine.get("data") or {}).get("temp_given")):  # i PF temporanei del lancio di prima restano, e finiscono con questo
+        note_spell_temp_hp(char, spec.key, given, caster)
     return state
 
 
@@ -160,6 +193,14 @@ def note_spell_temp_hp(char: Any, state_key: str, amount: int, caster_id: int | 
                          for s in char.active_states or []]
 
 
+def keep_manual_temp_hp(char: Any) -> None:
+    """I PF temporanei sono ora quelli impostati a mano: nessun effetto in corso li toglie più quando finisce (D-039)."""
+    char.active_states = [{**s, "data": {k: v for k, v in s["data"].items() if k != "temp_given"}}
+                          if (s.get("data") or {}).get("temp_given") else s for s in char.active_states or []]
+    settings = {k: v for k, v in (char.settings or {}).items() if k != TEMP_MANUAL}
+    char.settings = {**settings, TEMP_MANUAL: char.temp_hp} if char.temp_hp else settings
+
+
 def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
     """Alla fine di un incantesimo i PF temporanei che aveva dato svaniscono, ma solo se non superano quanto diede: se ora ne ha di più
     alti da un'altra fonte restano. shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo."""
@@ -250,6 +291,7 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+TEMP_MANUAL = "temp_hp_manual"  # settings del ricevente: PF temporanei impostati a mano, che la fine degli effetti non toglie (D-039)
 # PF temporanei tolti al ricevente dalla fine di un incantesimo: {chiave dello stato: {caster_id, amount, name, logged}}, per ridarli con l'annullo.
 SPELL_TEMP_DROPPED = "spell_temp_dropped"
 # Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
@@ -258,7 +300,7 @@ SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
 # Tipo di danno scelto all'ultimo lancio, per incantesimo: {chiave dell'effetto: tipo}. Il tiro di danno legge la voce del proprio incantesimo; un lancio scrive (o toglie) solo la sua.
 SPELL_CAST_TYPE = "spell_cast_type"
 # Sul bersaglio: [{"caster_id", "key"}] degli stati ``spell:*`` spesi da un'opzione (Guida e Resistenza 2014: «poi l'incantesimo termina»);
-# il flush chiude la concentrazione e l'orologio di chi ha lanciato.
+# il flush chiude la concentrazione e l'orologio di chi ha lanciato. Con ``target_only`` (Invisibilità) solo se era l'ultimo bersaglio.
 SPELL_SPENT = "spell_spent"
 # Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
@@ -271,9 +313,13 @@ SUSPENDED_BACK = "conditions_suspended_back"
 # sul ricevente: {condizione tornata: id di chi la sospendeva}, tolta se la condizione cambia (allora un annullo non la sospende)
 RETURNED_FROM = "conditions_returned_from"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
+EXCLUSIVE_TARGETS = "exclusive_targets"  # settings: {chiave dell'effetto: ["combatant", 3] | ["character", 7]}, l'ultimo bersaglio (``TargetEffect.exclusive``)
 
 
 TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}
+# Effetti la cui immunità il riposo lungo non chiude: «se il TS riesce, non si può più usare contro quella creatura»
+# (Comandare Non Morti 2014, pag. 88)
+LASTING_IMMUNITY = frozenset({"wizard.command_undead"})
 
 
 def target_key(combatant: Any) -> str:
@@ -292,10 +338,12 @@ def add_target_immunity(char: Any, effect_key: str, target: str) -> None:
 
 
 def reset_target_immunity(char: Any) -> None:
-    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri."""
+    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri, non quelle per sempre (``LASTING_IMMUNITY``)."""
     settings = char.settings or {}
-    if settings.get(TARGET_IMMUNITY):
-        char.settings = {k: v for k, v in settings.items() if k != TARGET_IMMUNITY}
+    immune = settings.get(TARGET_IMMUNITY) or {}
+    kept = {k: v for k, v in immune.items() if k in LASTING_IMMUNITY}
+    if kept != immune:
+        char.settings = {**{k: v for k, v in settings.items() if k != TARGET_IMMUNITY}, **({TARGET_IMMUNITY: kept} if kept else {})}
 
 
 def reset_zero_hp_uses(char: Any) -> None:

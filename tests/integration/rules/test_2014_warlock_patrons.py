@@ -373,7 +373,8 @@ async def test_the_arcanum_choices_and_rows_follow_the_level(client, level):
         assert (pending is not None) == (level >= need)
         assert (f"warlock.mystic_arcanum_{grade}" in keys) == (level >= need)
         if pending:
-            assert pending["count"] == 1 and pending["spell_pick"] == {"free": True, "max_level": grade, "list": None, "exact": True}
+            # 2014 p.116: «un incantesimo da warlock» del grado (CB-2063)
+            assert pending["count"] == 1 and pending["spell_pick"] == {"free": True, "max_level": grade, "list": "warlock", "exact": True}
             row = await _ability(client, cid, f"warlock.mystic_arcanum_{grade}")
             assert row["max_uses"] == 1 and row["restoration_type"] == "long_rest"
 

@@ -128,10 +128,17 @@ def _giant(giant: str, **kw: Any) -> FeatureSpec:
     return data_trait("goliath", f"giant_ancestry_{giant}", 1, 192, option_group="giant", option_key=giant, passive=False, **_PB_LONG, **kw)
 
 
+def _spell_attack(ctx: RuleContext) -> bool:
+    return (getattr(ctx.spell, "attack_save", None) or "").strip().upper() == "ATK"
+
+
 def _on_hit(giant: str, dice: str, damage: str, it: str, en: str) -> FeatureSpec:
-    return _giant(giant, roll_options=(RollOptionSpec(
-        key=_G + giant, phase="after_hit", rolls=("attack",), extra_dice=lambda _c, _i: dice, extra_damage_type=damage,
-        cost=Cost(feature_key=_G + giant), label=_both(it, en)),))
+    # Anche l'attacco con incantesimo è un attacco: la variante «_spell» vale sul suo danno (come la Rivelazione celeste)
+    def option(suffix: str, phase: str, rolls: tuple[str, ...], **kw: Any) -> RollOptionSpec:
+        return RollOptionSpec(key=_G + giant + suffix, phase=phase, rolls=rolls, extra_dice=lambda _c, _i: dice, extra_damage_type=damage,
+                              cost=Cost(feature_key=_G + giant), label=_both(it, en), **kw)
+    return _giant(giant, roll_options=(option("", "after_hit", ("attack",)),
+                                       option("_spell", "before", ("spell_damage",), available=_spell_attack)))
 
 
 def _stone_reduction() -> RollOptionSpec:
@@ -225,11 +232,19 @@ def _revelation_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     }[params["form"]]
 
 
+def _revelation_type(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
+    """Il fisso si somma al danno dell'arma o dell'incantesimo: l'esito dice di che tipo è quella parte."""
+    pb = ctx.char.proficiency_bonus
+    if _form(ctx) == "shroud":
+        return _both(f"Rivelazione celeste: {pb} di questi danni sono necrotici", f"Celestial Revelation: {pb} of this damage is necrotic")
+    return _both(f"Rivelazione celeste: {pb} di questi danni sono radianti", f"Celestial Revelation: {pb} of this damage is radiant")
+
+
 def _revelation_damage(phase: str, rolls: tuple[str, ...]) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"species.2024_aasimar_revelation_damage{'' if phase == 'after_hit' else '_spell'}", phase=phase, rolls=rolls,
         once_per_turn=True, group="species.2024_aasimar_revelation_damage", bonus=lambda c, _i: c.char.proficiency_bonus,
-        available=lambda c: _form(c) is not None,
+        available=lambda c: _form(c) is not None, effect=_revelation_type,
         label=_both("Rivelazione celeste: danni extra pari alla competenza (necrotici col Manto, altrimenti radianti), una volta per turno",
                     "Celestial Revelation: extra damage equal to your proficiency (necrotic with the Shroud, radiant otherwise), once per turn"))
 
@@ -279,14 +294,21 @@ GNOME = (
 )
 
 # --- Halfling (pag. 193) ----------------------------------------------------------------------------------------------
+def _rolled_a_one(ctx: RuleContext) -> bool:
+    """Con Vantaggio o Svantaggio il ritiro tocca uno dei due d20, a scelta (pag. 12-13): conta anche l'1 non tenuto."""
+    if ctx.natural_d20 is None:  # nessun tiro salvato di questo tipo
+        return False
+    return 1 in ((((ctx.turn or {}).get("last_roll") or {}).get("dice")) or [ctx.natural_d20])
+
+
 HALFLING = (
     data_trait("halfling", "brave", 1, 193, roll_options=(_advantage(
         "species.2024_halfling_brave", ("save",), "Coraggioso: il tiro salvezza è contro l'essere spaventato? Vantaggio",
         "Brave: is the saving throw against being frightened? Advantage"),)),
     data_trait("halfling", "halfling_nimbleness", 1, 193),
-    # Gratuita e offerta (non automatica): il manuale dice «puoi ritirare». Il d20 tenuto del tiro salvato dev'essere 1
+    # Gratuita e offerta (non automatica): il manuale dice «puoi ritirare». Basta un 1 fra i d20 del tiro salvato
     data_trait("halfling", "luck", 1, 193, roll_options=(RollOptionSpec(
-        key="species.2024_halfling_luck", phase="after_roll", after="reroll", rolls=D20_TESTS, available=lambda c: c.natural_d20 == 1,
+        key="species.2024_halfling_luck", phase="after_roll", after="reroll", rolls=D20_TESTS, available=_rolled_a_one,
         label=_both("Fortuna: hai fatto 1 sul d20, ritiralo (vale il nuovo risultato)", "Luck: you rolled a 1 on the d20, reroll it (the new roll stands)")),)),
     data_trait("halfling", "naturally_stealthy", 1, 193),
 )

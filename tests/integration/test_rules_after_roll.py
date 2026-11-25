@@ -742,3 +742,20 @@ async def test_inspiration_after_before_option_keeps_it_without_paying(client, r
     uses = await _uses(client, cid)
     second = await _skill(client, cid, die=6, with_inspiration=True)
     assert second["bonus"] == first["bonus"] and await _uses(client, cid) == uses
+
+
+async def test_natural_one_rerollable_only_on_one_is_kept_without_defer(client):
+    """Fortuna dell'Halfling 2024 (pag. 193) vale solo su un 1: prima del tiro non si offre, quindi il client non chiede
+    defer_damage. Il server tiene comunque l'attacco in sospeso per poterla usare (CB-3511)."""
+    r = await client.post("/characters", json={"name": "H", "rules_edition": "2024", "species_2024": {"key": "2024_halfling", "options": {}},
+                                               "initial_class": {"class_name": "fighter", "level": 1}})
+    cid = r.json()["id"]
+    item = await _weapon(client, cid)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": item})).json()
+    assert not [o for o in listed if o["phase"] in ("after_roll", "after_hit")]
+    fumble = (await client.post(f"/characters/{cid}/items/{item}/attack", json={"die": 1})).json()
+    assert fumble["attack_id"]
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["species.2024_halfling_luck"], "dice": [15]})
+    assert r.status_code == 200, r.text
+    hit = (await client.post(f"/characters/{cid}/items/{item}/attack", json={"die": 5, "confirm_extra_attack": True})).json()
+    assert "attack_id" not in hit  # senza un 1 nulla da aspettare

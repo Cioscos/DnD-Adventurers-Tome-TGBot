@@ -224,6 +224,16 @@ async def test_patient_defense_ends_at_the_new_turn_and_when_incapacitated(clien
     assert "patient_defense" not in await _states(client, cid)
 
 
+async def test_patient_defense_dex_save_advantage_is_lost_at_speed_zero(client):
+    # 2014, Schivata (pag. 193): vantaggio ai TS su Destrezza, perso se la velocità scende a 0
+    cid = await _monk(client, 2)
+    await _use(client, cid, PATIENT)
+    await _conditions(client, cid, grappled=True)
+    r = await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode"] == "normal"
+
+
 async def test_patient_defense_is_visible_to_gm_and_group(client, test_session_factory, monkeypatch):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)
@@ -519,10 +529,11 @@ async def test_evasion_damage_options_need_the_confirmed_save_and_do_not_survive
     assert EVASION_OK not in await _roll_keys(client, cid, "damage_taken")
 
 
-async def test_evasion_does_not_work_while_incapacitated(client):
+async def test_evasion_still_works_while_incapacitated(client):
+    # 2014, Elusione (Monaco 7, pag. 92): nessuna clausola sull'Incapacitato, che c'è solo nella carta 2024 (pag. 103)
     cid = await _monk(client, 7)
     await _conditions(client, cid, incapacitated=True)
-    assert EVASION not in await _roll_keys(client, cid, "save", ability="dexterity")
+    assert EVASION in await _roll_keys(client, cid, "save", ability="dexterity")
 
 
 # ---------------------------------------------------------------------------
@@ -663,18 +674,14 @@ async def test_empty_body_needs_level_18_four_ki_and_the_action(client):
 # ---------------------------------------------------------------------------
 
 async def test_perfect_self_gives_back_four_ki_at_initiative_only_with_none_left(client):
-    low = await _monk(client, 19)
-    await _set_ki(client, low, 0)
-    assert PERFECT not in await _roll_keys(client, low, "initiative")
-    cid = await _monk(client, 20)
-    assert PERFECT not in await _roll_keys(client, cid, "initiative")  # i ki non sono finiti
-    await _set_ki(client, cid, 1)
-    assert PERFECT not in await _roll_keys(client, cid, "initiative")
-    await _set_ki(client, cid, 0)
-    assert PERFECT in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8, "options": [PERFECT]})
-    assert r.status_code == 200, r.text
-    assert await _ki(client, cid) == 4
+    # 2014, Perfezione Interiore (Monaco 20), pag. 92: automatica a 0 punti ki, non un'opzione da spuntare
+    for level, before, after in ((19, 0, 0), (20, 1, 1), (20, 0, 4)):
+        cid = await _monk(client, level)
+        await _set_ki(client, cid, before)
+        assert PERFECT not in await _roll_keys(client, cid, "initiative")
+        r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
+        assert r.status_code == 200, r.text
+        assert await _ki(client, cid) == after
     effect = r.json()["option_result"]["effects"][0]
     assert "4 punti ki" in effect["it"] and "4 ki points" in effect["en"]
 
@@ -710,7 +717,6 @@ async def test_perfect_self_works_at_the_initiative_of_an_encounter_too(client, 
     as_user(PLAYER_ID)
     assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "monk", "level": 20, "hit_die": 8})).status_code == 201
     await _set_ki(client, cid, 0)
-    assert PERFECT in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 8, "options": [PERFECT]})
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 8})
     assert r.status_code == 200, r.text
     assert await _ki(client, cid) == 4

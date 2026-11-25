@@ -13,7 +13,9 @@ from typing import Any
 from core.data.damage_types import DAMAGE_TYPES
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014 import warlock_invocations as inv
+from core.rules.catalog.y2014.cleric import spell_dc
 from core.rules.catalog.y2014.warlock_invocations import BOON_GROUP, INVOCATIONS, PACT_WEAPON, PREREQUISITES, is_blast
+from core.rules.edition import character_edition
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses, UseToggle,
 )
@@ -34,7 +36,7 @@ def _mod(ctx: RuleContext, ability: str) -> int:
 
 
 def _dc(ctx: RuleContext) -> int:
-    return 8 + ctx.char.proficiency_bonus + _mod(ctx, "charisma")
+    return spell_dc(ctx, "charisma")
 
 
 def _till_my_next_turn() -> dict:
@@ -62,7 +64,7 @@ def available_invocations(ctx: RuleContext) -> list[str]:
             if ctx.class_level >= level and (boon is None or boon in boons) and (not needs_blast or blast)]
 
 
-INVOCATION_CHOICE = ChoiceSpec(group=INVOCATIONS, levels={2: 2, 5: 3, 7: 4, 9: 5, 12: 6, 15: 7, 18: 8}, replaceable=True,
+INVOCATION_CHOICE = ChoiceSpec(group=INVOCATIONS, levels={2: 2, 5: 3, 7: 4, 9: 5, 12: 6, 15: 7, 18: 8}, replaceable=True, replace_per_level="each",
                                options=available_invocations, import_options=lambda _c: list(PREREQUISITES))
 BOON_CHOICE = ChoiceSpec(group=BOON_GROUP, levels={3: 1}, options=lambda _c: ["chain", "blade", "tome"])
 
@@ -88,6 +90,10 @@ PACT_WEAPONS: dict[str, tuple[str, str, tuple[str, ...], str | None]] = {
     "trident": ("1d6", "piercing", ("thrown", "versatile"), "1d8"), "war_pick": ("1d8", "piercing", (), None),
     "warhammer": ("1d8", "bludgeoning", ("versatile",), "1d10"), "whip": ("1d4", "slashing", ("finesse", "reach"), None),
 }
+# Il Patto della Lama 2024 usa la tabella delle armi 2024 (pag. 215): cambiano solo queste tre
+PACT_WEAPONS_2024 = {**PACT_WEAPONS, "lance": ("1d10", "piercing", ("heavy", "reach", "two-handed"), None),
+                     "trident": ("1d8", "piercing", ("thrown", "versatile"), "1d10"),
+                     "war_pick": ("1d8", "piercing", ("versatile",), "1d10")}
 
 
 def _weapon_label(key: str) -> dict[str, str]:
@@ -100,7 +106,8 @@ def _create_pact_weapon(ctx: RuleContext, params: dict) -> None:
     """Crea l'arma del patto in mano: l'arma di prima del patto (se c'era) scompare, quella in mano torna nello zaino.
     Competente (nessuna categoria) e magica (modificatore ``magic_weapon`` sull'oggetto)."""
     from core.db.models import EquipmentSlot, Item  # import locale: i modelli non si importano dal catalogo
-    dice, dtype, props, versatile = PACT_WEAPONS[params["weapon"]]
+    table = PACT_WEAPONS_2024 if character_edition(ctx.char) == "2024" else PACT_WEAPONS
+    dice, dtype, props, versatile = table[params["weapon"]]
     label = _weapon_label(params["weapon"])
     char = ctx.char
     for item in [i for i in char.items if _is_pact(i)]:
@@ -147,7 +154,7 @@ def _arcanum(grade: str, level: int, spell_level: int):
          f"A warlock spell of level {spell_level} of your choice: you cast it once per long rest with no slot, from the spells page."),
         uses=Uses(table={level: 1}), restoration="long_rest", arcanum_group=f"arcanum_{grade}",
         choices=(ChoiceSpec(group=f"arcanum_{grade}", levels={level: 1}, options=_no_options, spell_pick="extra", spell_level=spell_level,
-                            spell_exact=True),))
+                            spell_exact=True, spell_list=CK),))
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +187,8 @@ def _delirium_state(ctx: RuleContext, params: dict) -> StateSpec:
 
 DARK_DELIRIUM_USE = OnUse(
     slot="action", concentration=True, state=_delirium_state, choices=(_mode_choice(),),
-    target_effect=lambda ctx, p: TargetEffect(condition=p["mode"], save_ability="wisdom", save_dc=_dc(ctx), rounds=10))
+    target_effect=lambda ctx, p: TargetEffect(condition=p["mode"], save_ability="wisdom", save_dc=_dc(ctx), rounds=10,
+                                              ends_with_concentration=True))
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +204,7 @@ def _blessing_value(ctx: RuleContext) -> int:
 BLESSING_USE = OnUse(cost=0, temp_hp=lambda c, _rolled: _blessing_value(c))
 
 DARK_LUCK = RollOptionSpec(
-    key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save"), cost=Cost(feature_key=LUCK),
+    key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save", "death_save", "initiative"), cost=Cost(feature_key=LUCK),
     extra_dice=lambda _c, _i: "1d10",
     label={"it": "Fortuna dell'Oscuro: spendi l'uso e somma 1d10 al tiro", "en": "Dark One's Own Luck: spend the use and add 1d10 to the roll"})
 
@@ -282,7 +290,7 @@ THOUGHT_REFLECTION = RollOptionSpec(
 
 CREATE_THRALL_USE = OnUse(
     slot="action", state=StateSpec("create_thrall", ends_on=("manual",), data={"others": [f"{CK}.create_thrall"]}),
-    target_effect=lambda _c, _p: TargetEffect(condition="charmed"))
+    target_effect=lambda _c, _p: TargetEffect(condition="charmed", exclusive=True))  # un nuovo servitore libera il precedente (pag. 118)
 
 
 # ---------------------------------------------------------------------------
@@ -331,7 +339,7 @@ FEATURES = (
     _boon_row("chain", "Patto della Catena / Pact of the Chain (Warlock 3, pag. 115)", ("Patto della Catena", "Pact of the Chain"),
               ("Trova famiglio come rituale, fuori dai conosciuti: forma normale, imp, pseudodrago, quasit o spiritello. Rinunci a un attacco e il famiglio attacca con la sua reazione.",
                "Find familiar as a ritual, outside your known spells: normal form, imp, pseudodragon, quasit or sprite. Give up an attack and the familiar attacks with its reaction."),
-              "special", granted_spells=("find-familiar",), on_use=CHAIN_USE),
+              "special", granted_spells=("find-familiar",), granted_ritual=True, on_use=CHAIN_USE),
     _boon_row("blade", "Patto della Lama / Pact of the Blade (Warlock 3, pag. 115)", ("Patto della Lama", "Pact of the Blade"),
               ("Azione: crei un'arma da mischia del patto in mano, della forma che scegli. Sei competente e conta come magica; una nuova creazione sostituisce la precedente.",
                "Action: you create a pact melee weapon in your hand, in the form you choose. You are proficient and it counts as magical; a new one replaces the old."),

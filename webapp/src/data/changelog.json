@@ -1,6 +1,66 @@
 {
   "entries": [
     {
+      "version": "3.15.0",
+      "date": "2026-11-25",
+      "improved": {
+        "it": [
+          "Deflagrazione Occulta e Raggio Rovente: un tiro per colpire e un danno per ogni raggio, ognuno con il suo critico, i suoi modificatori e il suo bersaglio.",
+          "Attacchi con incantesimo: dopo il colpo si scelgono le opzioni «se colpisci» (Deflagrazione Respingente, manovre 2024, Dono dell'Offensiva Irresistibile…), prima del danno. Rilanciare con l'Ispirazione tiene le opzioni e i dadi già confermati.",
+          "Guardiani Spirituali chiede radiosi o necrotici al lancio. Produrre Fiamma 2024 e Lama Infuocata si accendono con il lancio e attaccano con un'azione, anche nei turni dopo: quelle accese prima dell'aggiornamento vanno rilanciate.",
+          "Guarigione di Massa: i 700 PF si dividono con una quantità per bersaglio. Imposizione delle Mani 2024 cura e toglie condizioni con lo stesso tocco.",
+          "Incantesimi preparati e trucchetti 2024: cambiarli lontano da un riposo lungo chiede conferma. Metamagia 2024 e suppliche del warlock si sostituiscono una per livello guadagnato.",
+          "PF temporanei: il valore impostato a mano resta anche quando finiscono gli effetti che ne danno. Collera della Natura 2014: il bersaglio sceglie Forza o Destrezza.",
+          "Creazione: il mezzelfo 2014 sceglie i due +1, due abilità e una lingua; Versatile non ripete il talento del background. Nel 2024 una competenza già posseduta non si prende due volte.",
+          "Monaco: Anima Adamantina 2014 e Sopravvissuto Disciplinato 2024 valgono anche sui tiri salvezza contro la morte. La Variante dell'ingombro non ha effetto sui personaggi 2024."
+        ],
+        "en": [
+          "Eldritch Blast and Scorching Ray: one attack roll and one damage roll per beam or ray, each with its own critical, modifiers and target.",
+          "Spell attacks: after a hit you choose the “when you hit” options (Repelling Blast, 2024 maneuvers, Boon of Irresistible Offense…) before rolling damage. An Inspiration reroll keeps the options and dice already confirmed.",
+          "Spirit Guardians asks for radiant or necrotic when cast. Produce Flame 2024 and Flame Blade are lit by the cast and attack with an action, on later turns too: those lit before the update must be cast again.",
+          "Mass Heal: the 700 HP are split with an amount per target. Lay on Hands 2024 heals and removes conditions with the same touch.",
+          "2024 prepared spells and cantrips: changing them away from a long rest asks to confirm. 2024 Metamagic and warlock invocations are replaced one per level gained.",
+          "Temporary HP: a value set by hand stays when the effects that grant them end. Nature's Wrath 2014: the target chooses Strength or Dexterity.",
+          "Creation: the 2014 half-elf chooses its two +1, two skills and one language; Versatile does not repeat the background's feat. In 2024 a proficiency you already have cannot be taken twice.",
+          "Monk: Diamond Soul 2014 and Disciplined Survivor 2024 also apply to death saving throws. The encumbrance variant has no effect on 2024 characters."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Oltre 400 differenze fra l'app e i manuali 2014 e 2024 corrette; le principali sono qui sotto. I privilegi delle schede esistenti si aggiornano da soli al primo avvio.",
+          "Incantesimi: durata e concentrazione seguono lo slot usato; danni e scalate riviste in molti incantesimi (Arma Spirituale, Colpo Infuocato, Sciame di Meteore, Dardo Incantato 2024, Evoca Fatato…).",
+          "Lancio: ogni classe prepara solo incantesimi di un livello per cui ha slot; Vincolo di Interdizione non si lancia su sé stessi.",
+          "Incapacitati: niente lanci né privilegi che costano azione, azione bonus o reazione.",
+          "Condizioni: la stessa condizione da fonti diverse tiene un'istanza per fonte, ognuna con durata e CD; liberarsi chiude solo la presa battuta.",
+          "Turni: in uno scontro un solo tiro salvezza contro la morte per turno; l'Ira 2014 finisce se nel turno non attacchi né subisci danni.",
+          "Tiri: un ritiro con vantaggio o svantaggio ritira un solo d20 e tiene il modo del tiro; Fortunato 2014 tira un d20 in più e usa il migliore; l'Ispirazione Eroica 2024 rilancia anche il tiro salvezza contro la morte.",
+          "Classi 2014 e 2024: tutte riallineate alle carte (Frenesia, Magia da Guerra, Delirio Oscuro, Interdizione Arcana, Colpo Accecante, Preda del Cacciatore, Raffica di Colpi, Divinazione Esperta…).",
+          "Forme e compagni: in Forma Selvatica 2024 Forza, Destrezza e Costituzione sono della bestia; nel 2014 in forma si spendono i Dadi Vita della bestia; la bestia del ranger ha i suoi Dadi Vita e una reazione per round, e nel 2014, se non è Media o più piccola con GS 1/4 o meno, l'app chiede conferma.",
+          "Creazione 2014: razza prima della classe, con le sue competenze e resistenze fisse; la sottorazza si sceglie. 2024: lo strumento del background non consuma più la scelta di strumento della classe.",
+          "Talenti: il prerequisito da incantatore guarda chi lancia davvero; un talento con +1 si prende anche con la caratteristica a 20; corretti Toccato dalle fate, Maestro d'Armi, Maestro degli Scudi e altri.",
+          "Equipaggiamento: pesi come da tabella; niente attacchi con un'arma a due mani e la mano secondaria occupata; corrette Rete e Cerbottana.",
+          "Esperienza: assegnare PE non toglie livelli già presi. I punteggi di caratteristica non superano 30.",
+          "Import da D&D Beyond: Robustezza Nanica 2014 e il talento Robusto non contano più due volte nei PF massimi. Chi è già stato importato con uno dei due va corretto a mano o reimportato."
+        ],
+        "en": [
+          "Over 400 differences between the app and the 2014 and 2024 rulebooks fixed; the main ones are below. Features on existing sheets update themselves on the first start.",
+          "Spells: duration and concentration follow the slot used; damage and scaling reviewed in many spells (Spiritual Weapon, Flame Strike, Meteor Swarm, Magic Missile 2024, Summon Fey…).",
+          "Casting: each class prepares only spells of a level it has slots for; Warding Bond cannot be cast on yourself.",
+          "Incapacitated: no casting and no features that cost an action, bonus action or reaction.",
+          "Conditions: the same condition from different sources keeps one instance per source, each with its own duration and DC; escaping ends only the grapple you beat.",
+          "Turns: in an encounter only one death save per turn; the 2014 Rage ends if you neither attack nor take damage.",
+          "Rolls: a reroll with advantage or disadvantage rerolls a single d20 and keeps the roll's mode; Lucky 2014 rolls one extra d20 and uses the best; Heroic Inspiration 2024 also rerolls a death save.",
+          "2014 and 2024 classes: all realigned with the book (Frenzy, War Magic, Dark Delirium, Arcane Ward, Blinding Smite, Hunter's Prey, Flurry of Blows, Expert Divination…).",
+          "Forms and companions: in 2024 Wild Shape Strength, Dexterity and Constitution are the beast's; in 2014 a form spends the beast's Hit Dice; the ranger's beast has its own Hit Dice and one reaction per round, and in 2014 the app asks to confirm unless it is Medium or smaller with CR 1/4 or lower.",
+          "2014 creation: race before class, with its fixed proficiencies and resistances; the subrace must be chosen. 2024: the background tool no longer uses up the class tool choice.",
+          "Feats: the spellcaster prerequisite looks at who really casts; a feat with +1 can be taken even with the ability at 20; fixed Fey Touched, Weapon Master, Shield Master and others.",
+          "Equipment: weights match the table; no attacks with a two-handed weapon while the off hand is occupied; Net and Blowgun fixed.",
+          "Experience: awarding XP does not remove levels already gained. Ability scores do not exceed 30.",
+          "D&D Beyond import: 2014 Dwarven Toughness and the Tough feat no longer count twice in max HP. Characters already imported with either must be corrected by hand or imported again."
+        ]
+      }
+    },
+    {
       "version": "3.14.8",
       "date": "2026-11-24",
       "fixed": {

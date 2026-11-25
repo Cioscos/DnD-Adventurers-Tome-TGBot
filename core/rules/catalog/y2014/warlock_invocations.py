@@ -20,7 +20,8 @@ ED, CK = "2014", "warlock"
 INVOCATIONS = "invocations"
 BOON_GROUP = "pact_boon"
 BLAST = "eldritch-blast"
-BLAST_NAMES = ("deflagrazione occulta", "eldritch blast")
+BLAST_NAMES = ("deflagrazione occulta", "esplosione occulta", "eldritch blast")
+SCORCHING_RAY_NAMES = ("raggio rovente", "scorching ray")
 PACT_WEAPON = "pact_weapon"  # item_metadata: l'arma creata dal Patto della Lama
 INVISIBLE_UNTIL_ACT = "one_with_shadows"
 
@@ -29,6 +30,19 @@ def is_blast(spell: Any) -> bool:
     """Deflagrazione occulta: dallo `srd_index` o, per un incantesimo scritto a mano, dal nome."""
     return spell is not None and ((getattr(spell, "srd_index", None) or "") == BLAST
                                   or (getattr(spell, "name", None) or "").strip().lower() in BLAST_NAMES)
+
+
+def attack_rays(char: Any, spell: Any, level: int | None = None) -> int:
+    """I raggi dell'incantesimo lanciato a ``level``, ciascuno con il suo tiro per colpire e il suo danno: Deflagrazione Occulta
+    (2014 pag. 229, 2024 pag. 267; D-037) e Raggio Rovente (2014 pag. 267, 2024 pag. 313; D-045)."""
+    from core.game.stats import cantrip_dice_multiplier  # import locale: stats usa il catalogo
+    if (getattr(spell, "attack_save", None) or "").strip().upper() != "ATK":
+        return 1
+    if spell.level == 0:
+        return cantrip_dice_multiplier(char.total_level) if is_blast(spell) else 1
+    if spell.srd_index == "scorching-ray" or (spell.name or "").strip().lower() in SCORCHING_RAY_NAMES:
+        return 1 + max(level or 0, spell.level)  # tre raggi, uno in più per slot oltre il 2°
+    return 1
 
 
 def _mod(ctx: RuleContext, ability: str) -> int:
@@ -49,12 +63,7 @@ def _is_pact_weapon(ctx: RuleContext) -> bool:
 # Effetti delle suppliche
 # ---------------------------------------------------------------------------
 
-def _beams(ctx: RuleContext) -> int:
-    from core.game.stats import cantrip_dice_multiplier  # import locale
-    return cantrip_dice_multiplier(ctx.char.total_level)
-
-
-AGONIZING = Modifier("damage", lambda c: _mod(c, "charisma") * _beams(c), when=lambda c: is_blast(c.spell),
+AGONIZING = Modifier("damage", lambda c: _mod(c, "charisma"), when=lambda c: is_blast(c.spell),  # il danno è di un raggio
                      source=f"feature:{CK}.agonizing_blast")
 
 REPELLING = RollOptionSpec(
@@ -64,13 +73,13 @@ REPELLING = RollOptionSpec(
     effect=_say("Il bersaglio è spinto fino a 3 m in linea retta lontano da te.", "The target is pushed up to 10 ft straight away from you."),
     target_effect=lambda _c, _i: TargetEffect(note="repelling_blast"))
 
-LIFEDRINKER = RollOptionSpec(
-    key=f"{CK}.lifedrinker", phase="after_hit", rolls=("attack",), available=_is_pact_weapon,
-    bonus=lambda c, _i: max(1, _mod(c, "charisma")),
-    label={"it": "Succhiavita: danni necrotici extra pari al Carisma (minimo 1) con l'arma del patto",
-           "en": "Lifedrinker: extra necrotic damage equal to your Charisma modifier (minimum 1) with the pact weapon"},
-    effect=lambda c, _i: {"it": f"Danni necrotici extra: {max(1, _mod(c, 'charisma'))}.",
-                          "en": f"Extra necrotic damage: {max(1, _mod(c, 'charisma'))}."})
+# Passivo nel 2014 (pag. 119): ogni colpo con l'arma del patto, senza scelta (nel 2024 è facoltativo)
+LIFEDRINKER = Modifier("damage", lambda c: max(1, _mod(c, "charisma")), when=_is_pact_weapon, source=f"feature:{CK}.lifedrinker")
+LIFEDRINKER_TYPE = RollOptionSpec(  # un modificatore non ha tipo: l'esito dice quanti danni del totale sono necrotici
+    key=f"{CK}.lifedrinker", phase="before", rolls=("attack",), automatic=True, available=_is_pact_weapon,
+    label={"it": "Succhiavita: danni necrotici con l'arma del patto", "en": "Lifedrinker: necrotic damage with the pact weapon"},
+    effect=lambda c, _i: {"it": f"Succhiavita: {max(1, _mod(c, 'charisma'))} dei danni del colpo sono necrotici.",
+                          "en": f"Lifedrinker: {max(1, _mod(c, 'charisma'))} of the hit's damage is necrotic."})
 
 
 def _mage_armor_cast(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -109,7 +118,7 @@ VIGOR_USE = OnUse(slot="action", rolls="1d4", temp_hp=lambda _c, rolled: rolled 
 
 
 def _shadows_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "rest_short", "rest_long", "manual"),
+    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "action", "reaction", "rest_short", "rest_long", "manual"),
                      data={"others": [f"{CK}.one_with_shadows"]})
 
 
@@ -199,7 +208,7 @@ _ROWS = (
     _inv("book_of_ancient_secrets", "Libro degli Antichi Segreti", "Book of Ancient Secrets", "Suppliche Occulte, Patto del Tomo, pag. 118", 2,
          ("Trascrivi nel Libro delle Ombre due rituali di 1° livello di qualsiasi lista: fuori dai conosciuti. Impugnando il libro lanci come rituale anche i tuoi rituali da warlock.",
           "Inscribe two 1st-level rituals from any list in your Book of Shadows, outside your known spells. While holding it you also cast your warlock rituals as rituals."),
-         boon="tome", ritual_casting=True,
+         boon="tome", ritual_casting=True, granted_ritual_only=True,  # i due rituali trascritti: solo come rituali (pag. 118)
          choices=(ChoiceSpec(group="book_rituals", levels={2: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
                              spell_ritual=True),)),
     _will("beast_speech", "Lingue delle Bestie", "Beast Speech", "Suppliche Occulte, pag. 119", 2, "speak-with-animals",
@@ -226,7 +235,7 @@ _ROWS = (
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", "Suppliche Occulte, livello 12, Patto della Lama, pag. 119", 12,
          ("Quando colpisci con l'arma del patto infliggi danni necrotici extra pari al Carisma (minimo 1).",
           "When you hit with the pact weapon you deal extra necrotic damage equal to your Charisma modifier (minimum 1)."),
-         boon="blade", roll_options=(LIFEDRINKER,)),
+         boon="blade", modifiers=(LIFEDRINKER,), roll_options=(LIFEDRINKER_TYPE,)),
     _will("whispers_of_the_grave", "Sussurri dalla Tomba", "Whispers of the Grave", "Suppliche Occulte, livello 9, pag. 119", 9,
           "speak-with-dead", "parlare con i morti", "speak with dead"),
     _once("bewitching_whispers", "Sussurri Stregati", "Bewitching Whispers", "Suppliche Occulte, livello 7, pag. 119", 7, "compulsion",

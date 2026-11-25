@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
@@ -64,6 +64,8 @@ class SpellRead(BaseModel):
     effect: Optional[dict] = None
     # Formula della cura per livello di slot (`{"2": "4d8+7"}`), da mostrare prima del tiro (U22); `None` se non cura
     healing_preview: Optional[dict[int, str]] = None
+    # Raggi con un tiro per colpire e un danno ciascuno (Deflagrazione Occulta dal 5°, Raggio Rovente; D-037, D-045); `None` se il tiro è uno solo
+    rays: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -76,7 +78,7 @@ class SpellRead(BaseModel):
 
 class SpellCreate(BaseModel):
     name: str = Field(pattern=VISIBLE)
-    level: int = 0
+    level: int = Field(0, ge=0, le=9)  # livelli da 0 (trucchetti) a 9
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -93,6 +95,9 @@ class SpellCreate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: bool = False
     # Scelta di incantesimi in sospeso (Segreti Magici) che questo incantesimo risolve; non è una colonna.
@@ -101,7 +106,7 @@ class SpellCreate(BaseModel):
 
 class SpellUpdate(BaseModel):
     name: Optional[str] = Field(None, pattern=VISIBLE)
-    level: Optional[int] = None
+    level: Optional[int] = Field(None, ge=0, le=9)
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -118,6 +123,9 @@ class SpellUpdate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: Optional[bool] = None
 
@@ -170,7 +178,9 @@ class SpellUseRequest(RollOptionsBody):
 
 
 class SpellAttackRequest(RollOptionsBody):
-    """``options``: ``roll="attack"``; ``cast_options``: ``roll="cast"``."""
+    """``options``: ``roll="attack"``; ``cast_options``: ``roll="cast"``. ``ray``: il raggio seguente del lancio già fatto
+    (Deflagrazione Occulta, Raggio Rovente; D-037, D-045), senza un nuovo lancio."""
+    ray: bool = False
     slot_id: int | None = None
     slot_level: int | None = None
     ritual: bool = False
@@ -201,7 +211,7 @@ class SpellSlotRead(BaseModel):
 
 
 class SpellSlotCreate(BaseModel):
-    level: int
+    level: int = Field(ge=1, le=9)  # gli slot servono gli incantesimi dal 1° al 9° livello
     total: int
     used: int = 0
     is_pact: bool = False
@@ -229,6 +239,9 @@ class RollDamageRequest(RollOptionsBody):
     extra_damage_type: str | None = None
     # Tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida contro le scelte dell'incantesimo
     damage_type: str | None = None
+    # Opzioni ``after_hit`` dell'attacco con incantesimo in sospeso: il tiro di danno dice che ha colpito
+    hit_options: list[str] = Field(default_factory=list, max_length=30)
+    hit_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
 
     @field_validator("extra_dice")
     @classmethod
@@ -251,10 +264,12 @@ class LastDamageBody(RollOptionsBody):
 class RollHealingRequest(RollOptionsBody):
     """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali né dadi.
     ``apply_to_self``: chi lancia è anche il bersaglio; ``target_character_ids``: PG seduti alla stessa serata attiva che
-    ricevono la stessa cura (quanti, chi lancia compreso, lo dice ``HealingSpec.targets``)."""
+    ricevono la stessa cura (quanti, chi lancia compreso, lo dice ``HealingSpec.targets``). ``amounts``: i PF di ogni bersaglio
+    (chi lancia compreso, per id) di una cura che si divide; con un bersaglio solo si può tacere: la riceve tutta."""
     casting_level: int | None = None
     apply_to_self: bool = False
-    target_character_ids: list[int] = Field(default_factory=list, max_length=6)
+    target_character_ids: list[int] = Field(default_factory=list, max_length=20)
+    amounts: dict[int, Annotated[int, Field(ge=1)]] = Field(default_factory=dict, max_length=20)
 
 
 class RollHealingResult(BaseModel):

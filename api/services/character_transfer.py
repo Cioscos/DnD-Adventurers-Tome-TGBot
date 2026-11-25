@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
-from api.services.condition_effects import ExpirySpec, SaveSpec, effects_for_character, upsert_effect
+from api.services.condition_effects import ExpirySpec, SaveSpec, effects_for_character, suspended_list, upsert_effect
 from api.services.homebrew.dsl import RuleDSL
 from api.services.wild_shape import start_form
 from api.version import APP_VERSION
@@ -26,7 +26,7 @@ from core.rules.feature_sync import (
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
 from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.states import ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_MANUAL, TEMP_RELEASE, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
@@ -155,8 +155,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
         "condition_effects": [e.__dict__ for e in await effects_for_character(session, char.id)
                               if e.expiry_count is not None or e.save_dc is not None]
-        + list(e for c, e in ((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
-               if c in ((char.settings or {}).get(SUSPENDED_ON) or {})),  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
+        + [e for c, saved in ((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
+           if c in ((char.settings or {}).get(SUSPENDED_ON) or {}) for e in suspended_list(saved)],  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
     })
 
 
@@ -279,8 +279,8 @@ async def import_character(
             await upsert_effect(
                 session, ("character", char.id), e.slug,
                 expiry=ExpirySpec("owner", e.expiry_edge or "start", e.expiry_count) if e.expiry_count else None,
-                save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end") if e.save_ability and e.save_dc else None,
-                source_note=e.source_note)
+                save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end", e.save_alt_ability) if e.save_ability and e.save_dc else None,
+                source_note=e.source_note, replace=False)  # ogni istanza esportata resta, anche con la stessa nota
 
     rolls = (char.settings or {}).get("hp_rolls")
     if isinstance(rolls, dict) and rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate
@@ -308,7 +308,7 @@ async def import_character(
 
     # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
     # gli id dei personaggi di un altro database non valgono qui
-    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, REPLACED_AT_REST, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON)}
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, REPLACED_AT_REST, ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, TEMP_GIVEN, TEMP_RELEASE, TEMP_MANUAL, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON)}
 
     if isinstance(left := char.settings.get("concentration_rounds_left"), int) and left > 9999:  # D-016
         char.settings = {**char.settings, "concentration_rounds_left": 9999}

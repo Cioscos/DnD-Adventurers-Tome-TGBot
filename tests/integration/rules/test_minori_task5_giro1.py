@@ -21,7 +21,7 @@ async def test_giro1_i3_a_patron_spell_without_a_stored_school_still_gets_the_no
     cid = await _make(client, "great_old_one", 5)
     spells = (await _full(client, cid))["spells"]
     by_index = {s["srd_index"]: s["id"] for s in spells if s.get("srd_index")}
-    for index in ("tashas-hideous-laughter", "dissonant-whispers", "phantasmal-force"):
+    for index in ("hideous-laughter", "dissonant-whispers", "phantasmal-force"):
         assert "warlock.psychic_spells_silent" in await _roll_keys(client, cid, "cast", spell_id=by_index[index]), index
     assert "warlock.psychic_spells_silent" not in await _roll_keys(client, cid, "cast", spell_id=by_index["detect-thoughts"])
 

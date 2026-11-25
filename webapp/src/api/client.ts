@@ -183,6 +183,8 @@ export type RollOptionsQuery = {
   damage_type?: string
   /** Solo `damage_taken`: il danno che sta per essere inserito, per le opzioni che valgono solo se porta a 0 PF. */
   damage?: number
+  /** Solo `ability`: prova con uno strumento in cui si è competenti (Conoscenza Potenziata da Psi). */
+  proficient?: boolean
 }
 
 /** Corpo di POST /spells/{id}/use: `slot_id` sceglie il pool, `confirm` le regole accettate dal giocatore. */
@@ -221,6 +223,7 @@ export type RollChoice = {
 export type TargetEffect = {
   condition: string | null
   save_ability: string | null
+  save_alt_ability?: string | null
   save_dc: number | null
   rounds: number | null
   ends_at: { anchor: 'owner' | 'source' | 'active'; edge: 'start' | 'end'; count: number } | null
@@ -417,6 +420,7 @@ export type DeathSaveRollResult = {
   dice?: number[]
   mode?: RollMode
   notes?: string[]
+  bonus?: number
   outcome: 'nat20' | 'nat1' | 'success' | 'failure' | 'revived'
   successes: number
   failures: number
@@ -747,8 +751,8 @@ export const api = {
       }),
     tickRound: (id: number) =>
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
-    escapeCondition: (id: number, slug: string, skill: 'athletics' | 'acrobatics', die?: D20Roll) =>
-      request<{ roll: RollResult; dc: number; escaped: boolean }>(`/characters/${id}/conditions/${slug}/escape?skill=${skill}`, {
+    escapeCondition: (id: number, slug: string, skill: 'athletics' | 'acrobatics', die?: D20Roll, effectId?: number | null) =>
+      request<{ roll: RollResult; dc: number; escaped: boolean }>(`/characters/${id}/conditions/${slug}/escape?skill=${skill}${effectId != null ? `&effect_id=${effectId}` : ''}`, {
         method: 'POST',
         body: die != null ? JSON.stringify(d20Fields(die)) : undefined,
       }),
@@ -808,10 +812,10 @@ export const api = {
     turnOther: (id: number) =>
       request<TurnBlock>(`/characters/${id}/turn/other`, { method: 'POST' }),
     pendingSaves: {
-      roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
+      roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false, ability?: string) =>
         request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {
           method: 'POST',
-          body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration }),
+          body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration, ability }),
         }),
       dismiss: (id: number, saveId: number) =>
         request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),
@@ -982,21 +986,21 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (charId: number, spellId: number, data: Partial<Spell>) =>
-      request<Spell>(`/characters/${charId}/spells/${spellId}`, {
+    update: (charId: number, spellId: number, data: Partial<Spell>, confirm = false) =>
+      request<Spell>(`/characters/${charId}/spells/${spellId}${confirm ? '?confirm=true' : ''}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    remove: (charId: number, spellId: number) =>
-      request<void>(`/characters/${charId}/spells/${spellId}`, { method: 'DELETE' }),
+    remove: (charId: number, spellId: number, confirm = false) =>
+      request<void>(`/characters/${charId}/spells/${spellId}${confirm ? '?confirm=true' : ''}`, { method: 'DELETE' }),
     use: (charId: number, spellId: number, body: SpellUseBody) =>
       request<CharacterFull>(`/characters/${charId}/spells/${spellId}/use`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
     /** Regole che il lancio violerebbe, da confermare prima di tirare i dadi. */
-    castCheck: (charId: number, spellId: number, ritual: boolean) =>
-      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}`),
+    castCheck: (charId: number, spellId: number, ritual: boolean, slotless?: boolean, quickened = false) =>
+      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}${slotless === undefined ? '' : `&slotless=${slotless}`}${quickened ? '&quickened=true' : ''}`),
     /** Tempo e oro per copiare un incantesimo nel Libro del Mago (dimezzati da un «Sapiente»). */
     spellbookCost: (charId: number, level: number, school: string | null, mode: SpellCopyMode) =>
       request<SpellCopyCost>(`/characters/${charId}/spellbook/cost?level=${level}&mode=${mode}${school ? `&school=${encodeURIComponent(school)}` : ''}`),
@@ -1080,12 +1084,12 @@ export const api = {
     recoverAmmo: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/recover-ammo`, { method: 'POST' }),
     /** Lancio da pergamena (Usare Dispositivi Magici): l'esito arriva nelle notifiche della risposta. */
-    scroll: (charId: number, itemId: number, spellLevel: number) =>
+    scroll: (charId: number, itemId: number, spellLevel: number, confirm?: string[]) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/scroll`, {
         method: 'POST',
-        body: JSON.stringify({ spell_level: spellLevel }),
+        body: JSON.stringify({ spell_level: spellLevel, confirm }),
       }),
-    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string> }) =>
+    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string>; confirm?: string[] }) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
         method: 'POST',
         body: JSON.stringify({ spell_index: spellIndex, ...effect }),

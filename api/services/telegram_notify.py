@@ -242,7 +242,7 @@ async def notify_saves(db: AsyncSession, save_ids: list[int]) -> None:
         eff = await db.get(ConditionEffect, ps.effect_id)
         send_detached(send_telegram_message(  # staccato: i chiamanti scrivono sotto il lock del personaggio
             char.user_id,
-            f"🎲 Tiro salvezza: {ability_label(ps.ability)} CD {ps.dc} "
+            f"🎲 Tiro salvezza: {ability_label(ps.ability)}{f' o {ability_label(eff.save_alt_ability)}' if eff.save_alt_ability else ''} CD {ps.dc} "
             f"per liberarti da {condition_label(eff.slug)}",
             button=("Apri la scheda", miniapp_url(f"/char/{char.id}")),
         ))

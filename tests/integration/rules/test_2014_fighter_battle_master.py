@@ -464,15 +464,15 @@ async def test_evasive_footwork_ends_with_the_turn_and_counts_in_the_session_ac(
 
 
 async def test_relentless_gives_back_a_die_at_initiative_only_with_none_left(client):
+    # 2014, Implacabile (Maestro di Battaglia 15), pag. 74: passivo al tiro di iniziativa, non un'opzione da spuntare
     cid = await _master(client, 15)
-    assert "fighter.relentless" not in await _roll_keys(client, cid, "initiative")
     row = await _ability(client, cid, SD)
-    await client.patch(f"/characters/{cid}/abilities/{row['id']}", json={"uses": 0})
-    assert "fighter.relentless" in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8, "options": ["fighter.relentless"]})
-    assert r.status_code == 200, r.text
-    assert await _dice_left(client, cid) == 1
-    assert "fighter.relentless" not in await _roll_keys(client, cid, "initiative")
+    for before, after in ((2, 2), (0, 1)):
+        await client.patch(f"/characters/{cid}/abilities/{row['id']}", json={"uses": before})
+        assert "fighter.relentless" not in await _roll_keys(client, cid, "initiative")
+        r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
+        assert r.status_code == 200, r.text
+        assert await _dice_left(client, cid) == after
 
 
 async def test_relentless_is_for_the_battle_master_from_level_15(client):

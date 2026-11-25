@@ -124,14 +124,16 @@ async def test_blessed_healer_is_not_offered_before_level_6_or_to_other_domains(
         assert r.status_code == 409
 
 
-@pytest.mark.parametrize("index,level,base", [("revivify", 3, 1), ("raise-dead", 5, 1), ("goodberry", 1, 1), ("mass-heal", 9, 700)])
+# Senza Rinascita e Rianimare Morti: riportano in vita solo una creatura morta, su una viva non ridanno PF (2014 pag. 271 e 270)
+@pytest.mark.parametrize("index,level,base", [("goodberry", 1, 1), ("mass-heal", 9, 700)])
 async def test_disciple_of_life_covers_every_spell_of_first_level_or_more_that_restores_hit_points(client, index, level, base):
-    life = await _cleric(client, 1, "life", wisdom=10)
+    # 17°: si preparano solo incantesimi di un livello per cui si hanno slot (2014, Chierico, Incantesimi pag. 58)
+    life = await _cleric(client, 17, "life", wisdom=10)
     spell = await _heal_spell(client, life, index, level, index)
     r = await _roll(client, life, spell)
     assert r.status_code == 200, r.text
     assert r.json()["total"] == base + 2 + level and r.json()["main_rolls"] == []
-    war = await _cleric(client, 1, "war", wisdom=10)
+    war = await _cleric(client, 17, "war", wisdom=10)
     assert (await _roll(client, war, await _heal_spell(client, war, index, level, index))).json()["total"] == base
 
 

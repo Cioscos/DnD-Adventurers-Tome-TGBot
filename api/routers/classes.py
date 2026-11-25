@@ -31,7 +31,7 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.proficiencies import (
     class_proficiencies, mark_seeded, merge_grant, validate_skill_choices,
 )
-from core.rules.level_choices import sync_level_choices
+from core.rules.level_choices import TOOL_SEED_FLAG, sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
@@ -86,7 +86,11 @@ async def create_class_for_character(
     grant = class_proficiencies(character_edition(char), normalize_class_name(body.class_name),
                                 as_multiclass=not is_first_class)
     chosen = body.skill_choices or []
-    if (msg := validate_skill_choices(grant, chosen)) is not None:
+    # 2014 pag. 125 e D-034: un'abilità già posseduta non si sceglie di nuovo. La scelta fuori elenco, se è esaurito, è solo 2014.
+    owned = frozenset(k for k, v in (char.skills or {}).items() if v)
+    if owned & set(chosen):
+        raise HTTPException(status_code=422, detail="class_skill_taken")
+    if (msg := validate_skill_choices(grant, chosen, owned if character_edition(char) == "2014" else frozenset())) is not None:
         raise HTTPException(status_code=422, detail=msg)
 
     hit_die = body.hit_die
@@ -130,6 +134,8 @@ async def create_class_for_character(
         char.current_hit_points = hp
         await session.flush()
 
+    if is_first_class:  # senza classi gli strumenti sulla scheda vengono da altre fonti (background, specie): non sono la sua scelta
+        char.settings = {**(char.settings or {}), TOOL_SEED_FLAG: True}
     await sync_class_feature_abilities(session, char, cls, lang=lang)
     if fresh_hp:  # un personaggio nuovo parte a PF pieni, anche se un privilegio alza il massimo (Resilienza Draconica)
         char.current_hit_points = max(char.current_hit_points, effective_hp_max(char))
@@ -231,7 +237,12 @@ async def distribute_class_levels(
             entry.class_id = (await create_class_for_character(char, entry.new_class, session, lang=lang)).id
 
     classes_by_id = {c.id: c for c in char.classes}
-    gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
+    # Livello da cui si contano i livelli guadagnati: una classe nuova nasce già al suo livello, ma i suoi livelli sono
+    # guadagnati e si tirano come dal 2° in poi (2014 pag. 163); solo il 1° della classe più vecchia ha i PF pieni.
+    first_id = min(classes_by_id)
+    start = {e.class_id: classes_by_id[e.class_id].level if e.new_class is None else int(e.class_id == first_id)
+             for e in body.classes}
+    gained_total = sum(max(0, e.level - start[e.class_id]) for e in body.classes)
     if body.hp_rolls is not None and len(body.hp_rolls) != gained_total:
         raise HTTPException(status_code=422, detail="hp_rolls must have one value per gained level")
     rolls_left = list(body.hp_rolls) if body.hp_rolls is not None else None
@@ -257,13 +268,15 @@ async def distribute_class_levels(
     for entry in body.classes:
         cls = classes_by_id[entry.class_id]
         new_level = entry.level
-        if new_level == cls.level:
+        if new_level == cls.level == start[cls.id]:
             continue
-        gained = max(0, new_level - cls.level)
+        gained = max(0, new_level - start[cls.id])
         mine, rolls_left = (
             (rolls_left[:gained], rolls_left[gained:]) if rolls_left is not None else (None, None)
         )
-        record_rolls(char, cls, cls.level, new_level, mine)
+        record_rolls(char, cls, start[cls.id], new_level, mine)
+        if new_level == cls.level:  # classe nuova al livello con cui è nata: solo i tiri
+            continue
         prev_level = cls.level
         cls.level = new_level
         sync_level_choices(char, cls, prev_level, new_level)

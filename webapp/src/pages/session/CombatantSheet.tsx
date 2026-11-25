@@ -179,15 +179,13 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
             <p className="text-sm text-dnd-text-muted">{t('session.combat.no_conditions')}</p>
           )}
           {activeConds.map(([slug, val]) => {
-            const eff = effects.find((e) => e.slug === slug)
             const label = slug.startsWith('custom:') ? slug.slice('custom:'.length) : formatCondition(slug, val, t)
-            const details = eff
-              ? [
-                  formatExpiry(eff, t, c.name),
-                  formatSave(eff, t, c.name),
-                  formatSource(eff) && t('session.combat.source_label', { name: formatSource(eff) }),
-                ].filter(Boolean)
-              : []
+            // ogni istanza della condizione (una per fonte) con la sua durata, il suo TS e la sua fonte
+            const details = effects.filter((e) => e.slug === slug).flatMap((eff) => [
+              formatExpiry(eff, t, c.name),
+              formatSave(eff, t, c.name),
+              formatSource(eff) && t('session.combat.source_label', { name: formatSource(eff) }),
+            ].filter(Boolean))
             const removing = removeConditionMutation.isPending && removeConditionMutation.variables === slug
             return (
               <div
@@ -196,8 +194,8 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-dnd-amber break-words">{label}</p>
-                  {details.map((d) => (
-                    <p key={d as string} className="text-xs text-dnd-text-muted break-words">{d}</p>
+                  {details.map((d, i) => (
+                    <p key={i} className="text-xs text-dnd-text-muted break-words">{d}</p>
                   ))}
                 </div>
                 <IconButton

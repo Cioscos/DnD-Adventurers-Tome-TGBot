@@ -40,7 +40,7 @@ async def test_import_ddb_creates_character(client, ddb_ok):
     body = r.json()
     ch = body["character"]
     assert ddb_ok == [95893448]
-    assert ch["name"] == "Додрия" and ch["hit_points"] == 212 and ch["current_hit_points"] == 170
+    assert ch["name"] == "Додрия" and ch["computed"]["hp_max_effective"] == 212 and ch["current_hit_points"] == 170
     ac = ch["ac_breakdown"]
     assert ac["base"] + ac["shield"] + ac["magic"] + ac["items"] + ac["homebrew"] == 22
     assert {"imported", "approximated", "skipped"} <= set(body["report"])

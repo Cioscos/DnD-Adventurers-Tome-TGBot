@@ -251,7 +251,7 @@ describe('useCastFlow damageless casts', () => {
   })
 
   it('confirms a damageless levelled spell with slot and concentration', async () => {
-    useSpell.mockResolvedValue(char)
+    useSpell.mockResolvedValue({ ...char, concentrating_spell_id: bless.id })
     updateConc.mockResolvedValue(char)
     renderFlow(bless)
     await userEvent.click(screen.getByText('begin'))
@@ -480,6 +480,39 @@ describe('useCastFlow spell effects', () => {
     await userEvent.click(await screen.findByText('Eroe'))
     expect(await screen.findByTestId('damage-sheet')).toBeInTheDocument()
     expect(useEffectPickStore.getState().picked[8]).toEqual({ targets: [21], choices: undefined })
+  })
+
+  // Glifo di interdizione (2024 spells.md p.279): 5d8 del tipo scelto solo per le rune esplosive, il glifo incantesimo non ha danni
+  const glyph = {
+    id: 10, name: 'Glifo di interdizione', level: 3, attack_save: 'SAVE', is_concentration: false, is_ritual: false, is_prepared: true, damage_dice: '5d8',
+    effect: { target_kind: 'self', max_targets_by_slot: { '3': 1 }, choices: [
+      { key: 'glyph', label: { it: 'Glifo', en: 'Glyph' }, options: ['explosive', 'spell'] },
+      { key: 'damage_type', label: { it: 'Tipo di danno', en: 'Damage type' }, options: ['acid', 'fire'], when: ['glyph', 'explosive'] },
+    ] },
+  } as unknown as Spell
+
+  it('casts a spell glyph without the damage sheet (CB-3764)', async () => {
+    useSpell.mockResolvedValue(char)
+    castCheck.mockResolvedValue([])
+    renderFlow(glyph)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('character.spells.effect_glyph_spell'))
+    await userEvent.click(screen.getByText('character.spells.effect_confirm'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 10, expect.objectContaining({ slot_level: 3, choices: { glyph: 'spell' } })))
+    expect(screen.queryByTestId('damage-sheet')).toBeNull()
+  })
+
+  it('opens the damage sheet for the explosive runes of a glyph (CB-3764)', async () => {
+    castCheck.mockResolvedValue([])
+    renderFlow(glyph)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('character.spells.effect_glyph_explosive'))
+    await userEvent.click(screen.getByText('character.inventory.damage_types.dmg_fire(defaultValue=fire)'))
+    await userEvent.click(screen.getByText('character.spells.effect_confirm'))
+    expect(await screen.findByTestId('damage-sheet')).toBeInTheDocument()
+    expect(useSpell).not.toHaveBeenCalled()
   })
 
   it.each(['invalid_target', 'target_dead', 'invalid_choice'])('shows a dedicated toast for %s', async (code) => {

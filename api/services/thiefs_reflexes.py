@@ -7,15 +7,17 @@ from sqlalchemy.orm import selectinload
 
 from core.db.models import Character, Combatant, Encounter
 from core.rules.catalog import active_features
+from core.rules.edition import character_edition
 
 FEATURE = "rogue.thiefs_reflexes"
 _NAMES = {"it": "Riflessi da Furfante", "en": "Thief's Reflexes"}
 
 
 async def add_second_turns(db: AsyncSession, enc: Encounter, lang: str, now: str) -> list[Combatant]:
-    """Aggiunge, all'avvio dell'incontro, il secondo turno di chi ha Riflessi da Furfante e non è sorpreso. È una riga a parte
-    (``extra_turn_of``) con la stessa iniziativa meno 10: l'ordine di turno la salta dal secondo round."""
-    pcs = [c for c in enc.combatants if c.kind == "pc" and c.character_id and c.initiative is not None and not c.surprised]
+    """Aggiunge, all'avvio dell'incontro, il secondo turno di chi ha Riflessi da Furfante (nel 2014 non se sorpreso, pag. 79; nel
+    2024 nessuna eccezione, pag. 137). È una riga a parte (``extra_turn_of``) con la stessa iniziativa meno 10: l'ordine di turno
+    la salta dal secondo round."""
+    pcs = [c for c in enc.combatants if c.kind == "pc" and c.character_id and c.initiative is not None]
     if not pcs:
         return []
     chars = {c.id: c for c in (await db.execute(
@@ -24,6 +26,8 @@ async def add_second_turns(db: AsyncSession, enc: Encounter, lang: str, now: str
     for pc in pcs:
         char = chars.get(pc.character_id)
         if char is None or not any(spec.key == FEATURE for spec, _row in active_features(char)):
+            continue
+        if pc.surprised and character_edition(char) == "2014":
             continue
         extra = Combatant(
             encounter_id=enc.id, kind="pc", character_id=None, extra_turn_of=char.id, owner_user_id=pc.owner_user_id,

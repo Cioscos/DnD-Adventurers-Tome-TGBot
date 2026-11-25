@@ -17,8 +17,8 @@ from core.rules.catalog._common import (
 from core.rules.catalog.y2014.barbarian import RETALIATION, rage_damage
 from core.rules.states import begin_state
 from core.rules.types import (
-    ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
-    UseToggle, ZeroHpSave,
+    OTHERS_TURN, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses,
+    UseChoice, UseToggle, ZeroHpSave,
 )
 from core.rules.weapons import MASTERY_GROUP, MASTERY_IT, MASTERY_OPTIONS, has_property, mastery_choice, weapon_key, weapon_mastery
 from core.utils.session_view import armor_category
@@ -79,6 +79,12 @@ def _reckless_declared(ctx: RuleContext) -> bool:
     return once_used(ctx.char, RECKLESS)
 
 
+def _reckless_in_rage(ctx: RuleContext) -> bool:
+    """Attacco Irruento usato in questo turno con l'Ira già attiva (Frenesia 2024: «se usi l'Attacco Irruento mentre sei in Ira»)."""
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "reckless"), None)
+    return _reckless_declared(ctx) and bool(((state or {}).get("data") or {}).get("raging"))
+
+
 def _ability_row(ctx: RuleContext, key: str) -> Any:
     return next((a for a in ctx.char.abilities if a.feature_key == key and a.source_class_id == getattr(ctx.class_row, "id", None)), None)
 
@@ -107,14 +113,18 @@ def _rage_state(ctx: RuleContext, params: dict) -> StateSpec | None:
             data["power"] = params.get("power")
             if data["power"] == "lion":
                 others.append(f"{CK}.power_lion")
-    if _subclass(ctx, "world_tree") and level >= 14:
-        data["far_used"] = False
+    if _world_tree_travel(ctx):
+        data["far_used"] = bool(params.get("far"))  # il teletrasporto dell'attivazione può già essere quello da 150 piedi
     data["others"] = others
     # Ira Persistente (15): dura 10 minuti e finisce solo con la perdita dei sensi o un'armatura pesante
     ends = ("unconscious", "heavy_armor") if level >= 15 else ("unconscious", "incapacitated", "turn_end_unextended", "heavy_armor")
     return StateSpec(
-        "rage", rounds=100, ends_on=ends, blocks_casting=True, end_slot="bonus",
+        "rage", rounds=100, ends_on=ends, blocks_casting=True,  # chiuderla a mano è gratis (D-021)
         immune_conditions=("charmed", "frightened") if _subclass(ctx, "berserker") and level >= 6 else (), data=data)
+
+
+def _world_tree_travel(ctx: RuleContext) -> bool:
+    return _subclass(ctx, "world_tree") and ctx.class_level >= 14
 
 
 def _rage_available(ctx: RuleContext) -> bool:
@@ -186,9 +196,10 @@ def _rage_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     if _rage_opt(ctx, "wild") == "eagle":
         it.append("Aquila: Disimpegno e Scatto fanno parte di questa azione bonus.")
         en.append("Eagle: Disengage and Dash are part of this bonus action.")
-    if _subclass(ctx, "world_tree") and ctx.class_level >= 14:
-        it.append(f"Viaggio lungo l'Albero: puoi teletrasportarti fino a {_m(60)} in uno spazio libero che vedi.")
-        en.append("Travel along the Tree: you can teleport up to 60 ft to an unoccupied space you can see.")
+    if _world_tree_travel(ctx):
+        travel = _travel_message(ctx, {"far": params.get("far")})
+        it.append(f"Viaggio lungo l'Albero: {travel['it']}")
+        en.append(f"Travel along the Tree: {travel['en']}")
     return _both(" ".join(it), " ".join(en)) if it else None
 
 
@@ -208,7 +219,10 @@ RAGE_USE = OnUse(
     check=_rage_check, temp_hp=_entry_temp_hp,
     removal=ConditionRemoval(("charmed", "frightened"), count=None, ally=False, auto=_entry_clears), effect=_rage_effect, message=_rage_message,
     toggles=(UseToggle("divine_form", _both("Forma divina (Ira degli Dei)", "Divine form (Rage of the Gods)"),
-                       available=lambda c: _divine_ready(c) and not state_on(c, "rage")),),
+                       available=lambda c: _divine_ready(c) and not state_on(c, "rage")),
+             UseToggle("far", _both("Viaggio lungo l'Albero fino a 45 m, con sei alleati (una volta per Ira)",
+                                    "Travel along the Tree up to 150 ft with six allies (once per Rage)"),
+                       available=lambda c: _world_tree_travel(c) and not state_on(c, "rage"))),
     choices=(
         UseChoice("extend_via", _both("Prolunga l'Ira con", "Extend the Rage by"), options=lambda _c: ["bonus", "save"],
                   option_label=lambda k: {"bonus": _both("Azione bonus", "Bonus action"),
@@ -229,8 +243,10 @@ RAGE_USE = OnUse(
 # ---------------------------------------------------------------------------
 
 def _reckless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    """Fino all'inizio del TUO turno seguente: lo stato finisce al «nuovo turno» di chi lo porta, non a quello di un altro."""
-    begin_state(ctx.char, StateSpec("reckless", rounds=1, ends_on=("new_turn",), data={"others": [RECKLESS]}), RECKLESS, "Attacco Irruento")
+    """Fino all'inizio del TUO turno seguente: lo stato finisce al «nuovo turno» di chi lo porta, non a quello di un altro.
+    ``raging``: l'Ira era attiva quando lo si è usato (Frenesia lo chiede)."""
+    begin_state(ctx.char, StateSpec("reckless", rounds=1, ends_on=("new_turn",), data={"others": [RECKLESS], "raging": raging(ctx)}),
+                RECKLESS, "Attacco Irruento")
 
 
 RECKLESS_ATTACK = RollOptionSpec(
@@ -310,7 +326,7 @@ def _frenzy_dice(ctx: RuleContext, _inputs: dict) -> str:
 FRENZY = RollOptionSpec(
     key=f"{CK}.frenzy", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_frenzy_dice,
     label=_both("Frenesia: danni extra al primo bersaglio colpito del turno", "Frenzy: extra damage to the first target hit this turn"),
-    available=lambda c: raging(c) and _strength_attack(c) and _reckless_declared(c),
+    available=lambda c: raging(c) and _strength_attack(c) and _reckless_in_rage(c),
 )
 
 
@@ -318,7 +334,7 @@ def _divine_fury(kind: str, it: str, en: str) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"{CK}.divine_fury_{kind}", phase="after_hit", rolls=("attack",), group="divine_fury", once_per_turn=True,
         extra_dice=lambda c, _i: f"1d6+{c.class_level // 2}", extra_damage_type=kind, label=_both(it, en),
-        available=lambda c: raging(c) and c.spell is None)
+        available=lambda c: raging(c) and c.spell is None and not (c.char.turn_state or {}).get(OTHERS_TURN))  # nel tuo turno
 
 
 def _fanatical_used(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -399,16 +415,10 @@ ASPECT_NAMES = {"owl": "Owl", "panther": "Panther", "salmon": "Salmon"}
 
 
 def _aspect_choice() -> ChoiceSpec:
+    # un cambio dopo ogni riposo lungo, contato a parte da quello della Padronanza delle Armi;
     # `label` serve solo all'import da Beyond, che chiama l'opzione col nome nudo
     return ChoiceSpec(group="aspect_of_the_wilds", levels={6: 1}, options=lambda _c: list(ASPECT_NAMES), replaceable=True,
-                      label=lambda key: {"name": ASPECT_NAMES[key], "summary": ""})
-
-
-def _owl_range(ctx: RuleContext) -> int:
-    """Scurovisione 60 piedi; se già posseduta, la portata cresce di 60."""
-    have = max((int(s.get("range_ft") or 0) for s in (ctx.char.settings or {}).get("senses") or []
-                if isinstance(s, dict) and s.get("type") == "darkvision"), default=0)
-    return 60 + have
+                      replace_per_long_rest=1, replace_own_count=True, label=lambda key: {"name": ASPECT_NAMES[key], "summary": ""})
 
 
 def _wild(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], action_type: str | None = None, **kw: Any):
@@ -646,7 +656,7 @@ FEATURES = (
             ("Scurovisione 18 m (60 ft); se ce l'hai già, la portata cresce di 18 m (60 ft).",
              "Darkvision 60 ft; if you already have it, its range grows by 60 ft."),
             subclass="wild_heart", option_group="aspect_of_the_wilds", option_key="owl",
-            modifiers=(Modifier("sense:darkvision", _owl_range, source=f"feature:{CK}.aspect_owl"),)),
+            modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.aspect_owl"),)),
     feature("aspect_panther", CK, ED, 6, "Pantera / Panther (Aspetto della Natura Selvaggia, Cammino del Cuore Selvaggio 6, pag. 55)",
             ("Pantera (Aspetto della Natura Selvaggia)", "Panther (Aspect of the Wilds)"),
             ("Velocità di scalare pari alla velocità.", "Climb Speed equal to your Speed."),
@@ -698,7 +708,7 @@ FEATURES = (
             ("A inizio turno in Ira, un'altra creatura entro 3 m ottiene PF temporanei: d6 pari al bonus danni dell'Ira. Svaniscono con l'Ira.",
              "At the start of your turn while raging, another creature within 10 ft gains temporary HP: d6s equal to your Rage damage bonus. They vanish when the Rage ends."),
             "special", subclass="world_tree",
-            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, temp_hp_ally=True, temp_hp_ends_with="rage",
+            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, own_turn=True, temp_hp_ally=True, temp_hp_ends_with="rage",
                          available=lambda c: state_on(c, "rage"),
                          message=lambda _c, _p: _both("I PF temporanei dell'altra creatura svaniscono quando finisce la tua Ira.",
                                                       "The other creature's temporary HP vanish when your Rage ends."))),

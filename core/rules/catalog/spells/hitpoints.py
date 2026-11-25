@@ -41,11 +41,11 @@ def _agathys(ends_at_zero: bool) -> SpellVariant:
                  "the app reminds you on every damage." + (" It ends when the temporary HP are gone." if ends_at_zero else "")))
 
 
-# Vita Falsata: istantanea nel 2024; nel 2014 dura un'ora ma i PF temporanei sono solo quelli tirati (nessuno stato)
+# Vita Falsata: istantanea nel 2024; nel 2014 i PF temporanei valgono «per la durata» (1 ora, p.289): quelli rimasti svaniscono alla fine
 _FALSE_LIFE_2014 = SpellVariant(
-    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d),
-    text=txt("I PF temporanei restano a fine durata (1 ora): se al tavolo li perdi alla fine, toglili tu.",
-             "The temporary HP stay when the duration ends (1 hour): if your table loses them at the end, remove them yourself."))
+    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d), track=True, rounds=HOUR, temp_hp_ends=True,
+    text=txt("I PF temporanei durano 1 ora: alla fine quelli rimasti svaniscono (automatico).",
+             "The temporary HP last 1 hour: those left vanish when it ends (automatic)."))
 _FALSE_LIFE_2024 = SpellVariant(temp_hp=lambda d: roll(2, 4, 4) + _HIGHER(d))
 # Parola del Potere: Fortificare: 120 PF temporanei divisi in parti uguali (la ripartizione a scelta non c'è)
 _FORTIFY = SpellVariant(
@@ -70,29 +70,31 @@ _DEATH_WARD = SpellVariant(
 # --- Legame di Protezione --------------------------------------------------------------------------------------------
 _WARDING_BOND = SpellVariant(
     modifiers=lambda d: (Modifier("ac", 1), Modifier("save", 1), Modifier("resistance:all", 1)),
-    shares_damage=True, clock_ends_on=("unconscious",), rounds=HOUR,
+    shares_damage=True, not_self=True, clock_ends_on=("unconscious",), rounds=HOUR,
     text=txt("Chi lancia subisce lo stesso danno del bersaglio (l'app lo scrive sulla sua scheda) e l'incantesimo finisce se scende a 0 PF. "
              "La distanza (18 m) la controlla il GM. Il danno si gira solo dai danni sulla scheda (non da quelli di altre vie, come le azioni homebrew).",
              "The caster takes the same damage as the target (the app writes it on their sheet) and the spell ends if they drop to 0 HP. "
              "The GM checks the distance (60 ft). The damage is shared only from damage written on the sheet (not from other paths, like homebrew actions)."))
 
 # --- Rigenerazione e cure nel tempo -----------------------------------------------------------------------------------
+# I 4d8+15 iniziali li tira la «Cura» dell'incantesimo (con Discepolo della Vita): qui valgono solo dove non c'è (oggetto, riga senza indice SRD)
 _REGENERATE = SpellVariant(
     heal=lambda d: roll(4, 8, 15), turn_heal=lambda d, c: 1, rounds=HOUR,
-    text=txt("4d8+15 PF subito e 1 PF a inizio di ogni tuo turno (automatici). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
-             "4d8+15 HP now and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
+    text=txt("4d8+15 PF subito (li tira «Cura» dell'incantesimo; da un oggetto sono automatici) e 1 PF a inizio di ogni tuo turno (automatico). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
+             "4d8+15 HP now (the spell's healing roll rolls them; automatic from an item) and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
 _VITALITY_TEXT = txt("2d6 PF a una creatura nell'aura: usa «Cura» sulla scheda del beneficiario (2014 con un'azione bonus a ogni tuo turno; "
                      "2024 alla creazione e a inizio di ogni tuo turno).",
                      "2d6 HP to a creature in the aura: use Heal on the recipient's sheet (2014 with a bonus action on each of your turns; "
                      "2024 on casting and at the start of each of your turns).")
 _AURA_VITALITY = SpellVariant(track=True, concentration=True, rounds=10, text=_VITALITY_TEXT)
 # Preghiera di Guarigione 2024: promemoria «già ricevuta» fino al Riposo Lungo; il Riposo Breve lo fa ogni bersaglio dalla propria scheda
+# 2024 p.307: «una creatura non può essere influenzata di nuovo finché non termina un Riposo Lungo»: il segno cade con il Riposo Lungo del bersaglio
 _PRAYER_OF_HEALING = SpellVariant(
-    track=True, until_rest="long",
+    track=True, until_rest="long", once_per_long_rest=True, ends_on=("rest_long", "manual"),
     text=txt("Fino a cinque creature ottengono i benefici di un Riposo Breve e recuperano 2d8 PF (la cura la tira «Cura» dell'incantesimo): ogni bersaglio fa il Riposo Breve dalla propria scheda. "
-             "Non vale di nuovo su una creatura finché non termina un Riposo Lungo: il segno resta fino ad allora.",
+             "Non vale di nuovo su una creatura finché non termina un Riposo Lungo: il segno resta fino ad allora e l'app rifiuta il lancio su chi lo porta.",
              "Up to five creatures gain the benefits of a Short Rest and regain 2d8 HP (the spell's healing roll rolls it): each target takes the Short Rest from their own sheet. "
-             "It cannot affect a creature again until it finishes a Long Rest: the mark stays until then."))
+             "It cannot affect a creature again until it finishes a Long Rest: the mark stays until then and the app refuses the cast on whoever bears it."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("mage_armor", ("mage-armor",), ("Armatura Magica", "Mage Armor"), SpellTarget("ally"), both(_MAGE_ARMOR)),

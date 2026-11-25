@@ -69,7 +69,7 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     }))
   })
 
-  it('posts an epic boon (no tabs, boons only) with a +1 up to 30', async () => {
+  it('posts an epic boon (boons first, then the other feats) with a +1 up to 30', async () => {
     resolve.mockResolvedValue({ id: 7 })
     const char = {
       ...mkChar(), rules_edition: '2024', total_level: 19, classes: [],
@@ -77,8 +77,8 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     } as unknown as CharacterFull
     renderWithProviders(<PendingChoicesBadge char={char} />)
     await userEvent.click(screen.getByText('character.level_choice.badge'))
-    expect(screen.queryByText('character.level_choice.asi')).toBeNull()
-    expect(screen.queryByText('Attore')).toBeNull()
+    // PHB 2024 pag. 92 (Guerriero 19, Dono Epico): un Dono o un altro talento per cui si è qualificati; Attore chiede Carisma 13
+    expect(screen.getByText('Attore').closest('button')).toBeDisabled()
     // il Dono che richiede incantesimi resta disabilitato per chi non lancia
     expect(screen.getByText('Dono del Richiamo degli incantesimi').closest('button')).toBeDisabled()
     await userEvent.click(screen.getByText('Dono del Fato'))
@@ -87,6 +87,22 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     await waitFor(() => expect(resolve).toHaveBeenLastCalledWith(7, 'boon', {
       kind: 'epic_boon', feat_key: '2024_boon_fate', ability: 'strength',
     }))
+  })
+
+  it('offers the Ability Score Improvement for an epic boon too', async () => {
+    // PHB 2024 pag. 92 (Dono Epico: «o un altro talento per cui si è qualificati») e pag. 202 (Aumento di caratteristica è un talento Generale)
+    resolve.mockResolvedValue({ id: 7 })
+    const char = {
+      ...mkChar(), rules_edition: '2024', total_level: 19, classes: [],
+      pending_choices: [{ id: 'boon', kind: 'epic_boon', class_key: 'Guerriero', level: 19, created_at: '' }],
+    } as unknown as CharacterFull
+    renderWithProviders(<PendingChoicesBadge char={char} />)
+    await userEvent.click(screen.getByText('character.level_choice.badge'))
+    await userEvent.click(screen.getByText('character.level_choice.asi'))
+    await userEvent.click(screen.getByLabelText('character.level_choice.increase:common.abilities.dexterity'))
+    await userEvent.click(screen.getByLabelText('character.level_choice.increase:common.abilities.dexterity'))
+    await userEvent.click(screen.getByText('character.level_choice.confirm'))
+    await waitFor(() => expect(resolve).toHaveBeenLastCalledWith(7, 'boon', { kind: 'asi', increases: { dexterity: 2 } }))
   })
 
   it('lists 2024 general feats and blocks unmet prerequisites', async () => {

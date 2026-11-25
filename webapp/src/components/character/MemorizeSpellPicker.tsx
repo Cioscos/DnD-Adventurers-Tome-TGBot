@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { classKey } from '@/lib/classProgression'
 import type { CharacterFull } from '@/types'
 
 const FEATURE = 'wizard.memorize_spell'
@@ -13,10 +14,14 @@ interface Props { char: CharacterFull; onChange: (next: MemorizeChoice | null) =
 export default function MemorizeSpellPicker({ char, onChange }: Props) {
   const { t } = useTranslation()
   const [half, setHalf] = useState({ out: 0, into: 0 })  // finché non ci sono entrambi non è ancora uno scambio
-  if (!(char.abilities ?? []).some((a) => a.feature_key === FEATURE)) return null
+  const classes = char.classes ?? []
+  const wizard = classes.find((c) => classKey(c.class_name) === 'wizard')
+  if (!wizard || !(char.abilities ?? []).some((a) => a.feature_key === FEATURE)) return null
 
-  const top = Math.max(0, ...(char.spell_slots ?? []).filter((s) => !s.is_pact && s.total > 0).map((s) => s.level))
-  const spells = (char.spells ?? []).filter((s) => s.level >= 1)
+  // Solo gli incantesimi del Mago, fino al livello della sua tabella (specchio di wizard_row e top_slot_level, core/rules/spellbook.py)
+  const ofWizard = (classId?: number | null) => (classId != null ? classId === wizard.id : classes.filter((c) => c.spellcasting_ability).length <= 1)
+  const top = Math.min(9, Math.ceil(wizard.level / 2))
+  const spells = (char.spells ?? []).filter((s) => s.level >= 1 && ofWizard(s.class_id))
   const outs = spells.filter((s) => s.is_prepared && !s.always_prepared)
   const ins = spells.filter((s) => s.in_spellbook && !s.is_prepared && s.level <= top)
   if (outs.length === 0 || ins.length === 0) return null

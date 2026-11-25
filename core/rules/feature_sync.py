@@ -7,14 +7,14 @@ non si perdono: una riga tolta lascia il suo stato in ``settings["archived_featu
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
 from core.game.stats import con_hp_delta, effective_ability_mod, stored_rolls, sync_base_ac
-from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
+from core.db.models import Ability, Character, CharacterClass, ConditionEffect, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
-from core.rules.catalog.granted_spells import GRANTED_SPELLS, granted_spell
+from core.rules.catalog.granted_spells import GRANTED_SPELLS, RENAMED_SPELLS, granted_spell
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
@@ -214,6 +214,44 @@ def _concentrates(data: object, edition: str) -> bool:
     return bool(data.is_concentration or (edition == "2024" and data.concentration_2024))  # type: ignore[attr-defined]
 
 
+async def _realign_renamed(session: AsyncSession, char: Character, rows: list[Spell]) -> list[Spell]:
+    """Le righe con una chiave di prima (``RENAMED_SPELLS``) passano all'indice del catalogo. Se il giocatore ha già quella del
+    catalogo resta la sua, che eredita concentrazione, effetti in corso e testi scritti, e la copia concessa si toglie; una riga
+    che la concessione non ha creato (import da Beyond) non si toglie mai."""
+    old = [r for r in rows if r.srd_index in RENAMED_SPELLS]
+    created, previous = ((char.settings or {}).get(s) or [] for s in (GRANTED_CREATED, GRANTED_SPELL_KEYS))
+    merged = set()
+    for row in old:
+        key = row.srd_index
+        twin = next((r for r in rows if r.srd_index == RENAMED_SPELLS[key]), None)
+        if twin is None:
+            row.srd_index = RENAMED_SPELLS[key]
+            continue
+        merged.add(key)  # la riga che resta è del giocatore: i segni della copia non passano a lei
+        if key not in created:
+            row.srd_index = RENAMED_SPELLS[key]
+            row.always_prepared = row.always_prepared and key not in previous
+            continue
+        twin.is_pinned = twin.is_pinned or row.is_pinned
+        twin.is_prepared = twin.is_prepared or row.is_prepared
+        for column in ("description", "higher_level"):
+            mine, other = getattr(twin, column), getattr(row, column)
+            if other and other != mine:
+                setattr(twin, column, f"{mine}\n\n{other}" if mine else other)
+        if char.concentrating_spell_id == row.id:
+            char.concentrating_spell_id = twin.id
+        await session.execute(update(ConditionEffect).where(ConditionEffect.source_spell_id == row.id).values(source_spell_id=twin.id))
+        if "spells" in char.__dict__ and row in char.spells:  # relazione già caricata: la riga tolta non torna nella risposta
+            char.spells.remove(row)
+        await session.delete(row)
+        rows = [r for r in rows if r is not row]
+    for setting in (GRANTED_SPELL_KEYS, GRANTED_CREATED):
+        keys = (char.settings or {}).get(setting) or []
+        if any(k in RENAMED_SPELLS for k in keys):
+            char.settings = {**char.settings, setting: list(dict.fromkeys(RENAMED_SPELLS.get(k, k) for k in keys if k not in merged))}
+    return rows
+
+
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
     """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
     edizione, livello) l'incantesimo resta e torna a contare come gli altri. Si toglie solo il segno messo da un
@@ -222,7 +260,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         return
     granted = {key: row for spec, row in active_features(char) for key in spec.granted_spells}
     # Query e non `char.spells`: non tutti i chiamanti caricano la relazione.
-    rows = (await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars().all()
+    rows = list((await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars())
+    rows = await _realign_renamed(session, char, rows)
     live = {(st.get("data") or {}).get("stolen_spell") for st in char.active_states or []}
     for row in rows:  # un incantesimo rubato il cui stato non c'è più (chiuso dove le relazioni non erano caricate)
         if (row.srd_index or "").startswith(STOLEN_SPELL) and row.srd_index not in live:
@@ -256,8 +295,11 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
         spell.school = spell.school or granted_spell(key, character_edition(char)).school  # idem per la scuola (Magia Ammaliante)
-        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale)
-            spell.is_concentration = _concentrates(GRANTED_SPELLS[key], character_edition(char))
+        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale, Arma Magica)
+            data = granted_spell(key, character_edition(char))
+            spell.is_concentration = _concentrates(data, character_edition(char))
+            for column in ("attack_save", "damage_dice", "damage_type", "higher_levels_dice"):  # solo se vuoti (D-036)
+                setattr(spell, column, getattr(spell, column) or getattr(data, column))
         if key in previous or not spell.always_prepared:
             owned.append(key)
         spell.always_prepared = spell.is_prepared = True
@@ -530,7 +572,7 @@ def _sync_from_catalog(session: AsyncSession, char: Character, cls: CharacterCla
             spent = _spent(ability)
 
         ability.name = spec.name.get(lang) or spec.name["it"]
-        ability.action_type = spec.action_type
+        ability.action_type = (spec.subclass_action_types or {}).get(cls.subclass_key, spec.action_type)
         ability.is_passive = spec.passive
         # Senza contatore la ricarica non esiste: `none` distingue questa riga da una risorsa illimitata.
         ability.restoration_type = RestorationType.NONE if spec.uses is None else _restoration(spec, cls.level)

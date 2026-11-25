@@ -17,14 +17,14 @@ from core.data.labels import condition_label
 from api.services.history import add_history
 from api.services.beast_companion import drop_primal_beast
 from api.services.telegram_notify import notify_party_emergency
-from api.services.condition_effects import clear_effects_for, item_concentration, release_concentration_effects
+from api.services.condition_effects import clear_effects_for, item_concentration, release_concentration_effects, suspended_list
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_MANUAL, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
@@ -170,8 +170,8 @@ async def apply_conditions(session: AsyncSession, char: Character,
     all other conditions are booleans. Returns {"changed": bool}.
     """
     old_conditions = dict(char.conditions or {})
-    # 2024 (pag. 377): chi diventa Privo di sensi è anche Prono, e lo resta quando si riprende.
-    if changes.get("unconscious") and not old_conditions.get("unconscious") and character_edition(char) == "2024":
+    # Chi diventa Privo di sensi cade Prono (2014 pag. 292; 2024 pag. 377), e lo resta quando si riprende.
+    if changes.get("unconscious") and not old_conditions.get("unconscious"):
         changes = {**changes, "prone": True}
     # Uno stato attivo (Ira Incontenibile) impedisce di aggiungere quelle condizioni; toglierle resta possibile.
     immune = immune_conditions(char) if any(changes.values()) else set()  # solo chi aggiunge ha da guardare le immunità
@@ -294,11 +294,12 @@ def _restore_suspended(session: Session, char: Character) -> None:
         mine = [c for c in entry["conditions"] if marks.get(c) == char.id]  # un altro può averla sospesa dopo
         back = [c for c in mine if c not in immune_conditions(receiver)]
         saved = dict((receiver.settings or {}).get(SUSPENDED_EFFECTS) or {})
-        effects = {c: saved.pop(c) for c in mine if c in saved}
+        # le istanze legate a una concentrazione finita durante la sospensione non tornano
+        effects = {c: [e for e in suspended_list(saved.pop(c)) if not e.get("ends_with_concentration") or _still_concentrating(session, e)]
+                   for c in mine if c in saved}
         if effects:
             receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_EFFECTS}, **({SUSPENDED_EFFECTS: saved} if saved else {})}
-        # legata a una concentrazione finita durante la sospensione: non torna
-        back = [c for c in back if not (c in effects and effects[c].get("ends_with_concentration") and not _still_concentrating(session, effects[c]))]
+        back = [c for c in back if effects.get(c, True)]  # senza istanze rimaste non torna
         for c in mine:
             marks.pop(c)
         if receiver.settings and SUSPENDED_ON in receiver.settings:
@@ -308,8 +309,8 @@ def _restore_suspended(session: Session, char: Character) -> None:
             receiver.settings = {**(receiver.settings or {}), RETURNED_FROM: {**((receiver.settings or {}).get(RETURNED_FROM) or {}), **{c: char.id for c in back}}}
             receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
             for c in back:
-                if c in effects:
-                    _restore_effect(session, effects[c])
+                for e in effects.get(c, []):
+                    _restore_effect(session, e)
                 add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
                              meta={"slug": c, "active": True, "restored": True})
     char.settings = {**(char.settings or {}), SUSPENDED_BACK: returned}
@@ -356,6 +357,11 @@ def _end_spent_spells(session: Session, char: Character) -> None:
     for entry in pending:
         caster = char if entry["caster_id"] == char.id else session.get(Character, entry["caster_id"])
         clock = SPELL_CLOCK_PREFIX + entry["key"][len(SPELL_STATE_PREFIX):]
+        if entry.get("target_only"):  # solo per questo bersaglio (Invisibilità): gli altri restano
+            if caster is not None:
+                from api.services.spell_effects import drop_clock_target  # import locale: spell_effects importa questo modulo
+                drop_clock_target(caster, entry["key"], char.id)
+            continue
         if caster is None or not any(s.get("key") == clock for s in caster.active_states or []):
             continue
         if "concentration_end" in next(s for s in caster.active_states if s.get("key") == clock).get("ends_on", ()):
@@ -404,7 +410,8 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         char.settings = {k: v for k, v in char.settings.items() if k != TEMP_RELEASE}
         for entry in pending:
             receiver = session.get(Character, entry["id"])
-            if receiver is not None and 0 < (receiver.temp_hp or 0) <= entry["amount"]:
+            manual = (receiver.settings or {}).get(TEMP_MANUAL, 0) if receiver is not None else 0  # impostati a mano dopo: restano (D-039)
+            if receiver is not None and manual < (receiver.temp_hp or 0) <= entry["amount"]:
                 add_history(session, receiver.id, "hp_change", f"PF temporanei svaniti: l'Ira di {char.name} è finita ({receiver.temp_hp} → 0)",
                              meta={"op": "TEMP_HP", "amount": 0, "released": True})
                 receiver.temp_hp = 0

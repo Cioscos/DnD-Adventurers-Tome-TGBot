@@ -226,11 +226,17 @@ def merge_grant(char: Any, grant: ProficiencyGrant, lang: str = "it", skills: tu
         char.skills = current
 
 
-def validate_skill_choices(grant: ProficiencyGrant, chosen: list[str]) -> str | None:
-    """Messaggio d'errore se la scelta non rispetta elenco e numero della concessione, altrimenti `None`."""
+def validate_skill_choices(grant: ProficiencyGrant, chosen: list[str], owned: frozenset[str] = frozenset()) -> str | None:
+    """Messaggio d'errore se la scelta non rispetta elenco e numero della concessione, altrimenti `None`.
+
+    ``owned`` (2014 pag. 125): abilità già sulla scheda. Non si scelgono di nuovo; se dell'elenco ne restano meno di quante
+    se ne scelgono, se ne prende un'altra qualsiasi."""
     if len(set(chosen)) != len(chosen):
         return "Duplicate skill"
-    if any(s not in grant.skills_from for s in chosen):
+    if owned & set(chosen):
+        return "class_skill_taken"
+    exhausted = len([s for s in grant.skills_from if s not in owned]) < grant.skills_count
+    if any(s not in (ALL_SKILLS if exhausted else grant.skills_from) for s in chosen):
         return "Skill not allowed for this class"
     if len(chosen) > grant.skills_count:
         return f"At most {grant.skills_count} skills"
@@ -287,8 +293,10 @@ def is_weapon_proficient(char: Any, item: Any) -> bool:
     meta = _meta(item)
     category = meta.get("weapon_category")
     profs = _profs(char, "weapons", "other")
-    if category not in ("simple", "martial") or _unseeded_empty(char, profs):
-        return True
+    if category not in ("simple", "martial") or meta.get("pact_weapon") or _unseeded_empty(char, profs):
+        return True  # arma del patto, evocata o legata: competenza (Patto della Lama 2014 pag. 115, 2024 pag. 156)
+    if getattr(char, "classes", None) == [] and not (getattr(char, "settings", None) or {}).get(SEEDED_FLAG):
+        return True  # senza classe le armi della razza non sono un limite: come la semina all'avvio
     if category in profs or _canon(str(getattr(item, "name", ""))) in profs:
         return True
     from core.rules.weapons import WEAPONS, weapon_key  # import locale: weapons legge il registro dei talenti
@@ -354,6 +362,12 @@ def seed_character(char: Any, lang: str = "it") -> None:
     _keep_inventory_proficient(char, lang)
 
 
+# Concessioni che il catalogo non fa più ma che le schede di prima hanno salvato: togliendo il privilegio se ne vanno anche loro.
+# Armatura media 2024 dava anche gli Scudi (CB-3464, PHB 2024 pag. 205).
+# shortcut: toglie anche uno «Scudi» scritto a mano dopo la correzione; registrare cosa si è concesso, come gli strumenti, se serve
+_FORMER_GRANTS = {"feat.2024_moderately_armored": {"armor": ("shields",)}}
+
+
 def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
     """Il cambio di edizione (o di sottoclasse) toglie le competenze date da un privilegio che non c'è più, salvo quelle
     che un altro privilegio attivo o la classe danno comunque. Armature, armi e strumenti; le abilità restano."""
@@ -370,6 +384,8 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
         feat = FEAT_FEATURES.get(key)  # talento rimosso (Armatura leggera): le sue competenze
         for cat in gone if feat and feat.proficiency_grants else ():
             gone[cat].update(feat.proficiency_grants.get(cat, ()))
+        for cat, ids in _FORMER_GRANTS.get(key, {}).items():
+            gone[cat].update(ids)
         for ed in EDITIONS:
             for row in char.classes:
                 for spec in features_for(ed, row_class_key(row)):
@@ -408,6 +424,18 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
     if changed:
         char.general_proficiencies = cats
     return [k for k in done if k not in lost]
+
+
+def without_other_source(char: Any, weapons: list[str]) -> list[str]:
+    """Fra le armi per nome date dalla razza 2014, quelle che né la classe (in una delle edizioni) né un privilegio danno comunque."""
+    from core.rules.catalog import active_features
+    from core.rules.edition import EDITIONS
+
+    kept = {w for sp, _ in active_features(char) for w in (sp.proficiency_grants or {}).get("weapons", ())}
+    for ed in EDITIONS:
+        for i, row in enumerate(char.classes):
+            kept.update(class_proficiencies(ed, row_class_key(row), i > 0).weapons)
+    return [w for w in weapons if _canon(w) not in kept]
 
 
 def apply_feature_grants(char: Any, lang: str = "it") -> None:

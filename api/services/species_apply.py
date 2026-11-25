@@ -24,9 +24,12 @@ from core.rules.catalog import active_features
 from core.rules.catalog.species_2024 import SPECIES_TRAITS, SpeciesSource
 from core.rules.edition import character_edition
 from core.rules.feature_sync import GRANTED_CREATED, GRANTED_SPELL_KEYS
+from core.rules.proficiencies import normalize, without_other_source
+from core.rules.tools import drop_tools
 
 GRANTED_SKILL = "_granted_skill"
 FEAT_ABILITY_ID = "_feat_ability_id"
+RACE_GRANTS = "race_2014_grants"  # settings: ciò che la razza 2014 ha aggiunto alla creazione (skills, weapons, tools, resistances)
 _LINEAGE_CHOICES = ("lineage", "legacy")
 
 
@@ -77,6 +80,7 @@ class SpeciesPlan:
     add_feat: str | None = None
     keep_feat: Ability | None = None
     drop_spells: list[str] = field(default_factory=list)  # srd_index
+    drop_race: dict[str, list[str]] = field(default_factory=dict)  # come RACE_GRANTS
 
 
 def _feat_row(char: Character, old: dict) -> Ability | None:
@@ -85,6 +89,28 @@ def _feat_row(char: Character, old: dict) -> Ability | None:
         return None
     rows = [a for a in char.abilities if a.feature_key == f"feat.{old['origin_feat']}"]
     return next((a for a in rows if a.id == old.get(FEAT_ABILITY_ID)), None) or next(iter(rows), None)
+
+
+def _race_grants(char: Character) -> dict[str, list[str]]:
+    """Ciò che la razza 2014 aveva dato e c'è ancora, salvo le Maestrie e le armi date anche dalla classe."""
+    raw = (char.settings or {}).get(RACE_GRANTS)
+    stored = {k: [x for x in v if isinstance(x, str)] for k, v in raw.items() if isinstance(v, list)} if isinstance(raw, dict) else {}
+    skills, tools = char.skills or {}, char.tool_proficiencies or {}
+    weapons, resistances = normalize(char.general_proficiencies)["weapons"], (char.damage_modifiers or {}).get("resistances") or []
+    return {"skills": [s for s in stored.get("skills", []) if skills.get(s) is True],
+            "weapons": without_other_source(char, [w for w in stored.get("weapons", []) if w in weapons]),
+            "tools": [t for t in stored.get("tools", []) if tools.get(t) is True],
+            "resistances": [d for d in stored.get("resistances", []) if d in resistances]}
+
+
+def _drop_race(char: Character, gone: dict[str, list[str]]) -> None:
+    char.skills = {k: v for k, v in (char.skills or {}).items() if k not in gone["skills"]}
+    drop_tools(char, gone["tools"])
+    cats = normalize(char.general_proficiencies)
+    char.general_proficiencies = {**cats, "weapons": [w for w in cats["weapons"] if w not in gone["weapons"]]}
+    mods = char.damage_modifiers or {}
+    char.damage_modifiers = {**mods, "resistances": [d for d in mods.get("resistances") or [] if d not in gone["resistances"]]}
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k != RACE_GRANTS}
 
 
 def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesPlan:
@@ -102,6 +128,7 @@ def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesP
     plan = SpeciesPlan()
     old = char.species_options or {}
     skills = char.skills or {}
+    race_skills: list[str] = []
     if char.species_key is None:
         plan.first = True
         settings, cleaned = char.settings or {}, _cleaned_settings(char.settings or {})
@@ -118,10 +145,15 @@ def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesP
         if "nan" in race or "dwarf" in race:
             plan.changes.append("hp_check")
         plan.changes.append("scores_check")
+        stored = _race_grants(char)
+        race_skills = stored["skills"]
+        plan.drop_race = {**stored, "skills": [s for s in race_skills if s != options.get("skill")]}
+        plan.changes += [f"{code}_removed:{x}" for code, kind in (("skill", "skills"), ("weapon", "weapons"), ("tool", "tools"),
+                                                                  ("resistance", "resistances")) for x in plan.drop_race[kind]]
 
     old_skill, new_skill = old.get(GRANTED_SKILL), options.get("skill")
-    if old_skill and old_skill == new_skill:
-        plan.keep_skill = old_skill
+    if new_skill and (old_skill == new_skill or new_skill in race_skills):  # quella della razza 2014 resta, scelta di nuovo
+        plan.keep_skill = new_skill
     else:
         if old_skill and skills.get(old_skill) is True:  # ancora quella data dalla specie (non Maestria nel frattempo)
             plan.drop_skill = old_skill
@@ -176,6 +208,7 @@ async def apply_species(session: AsyncSession, char: Character, key: str, option
         char.settings = _cleaned_settings(char.settings or {})
         for row in plan.old_rows:
             char.abilities.remove(row)
+        _drop_race(char, plan.drop_race)
     skills = dict(char.skills or {})
     if plan.drop_skill:
         skills.pop(plan.drop_skill, None)

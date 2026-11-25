@@ -1,7 +1,9 @@
 import { localized, type BaseEntry, type Lang, type LocalizedField } from '@/lib/srd/catalog'
 
 export interface RaceTrait { index: string; name: LocalizedField; desc: LocalizedField }
-export interface SubraceEntry {
+/** Competenze e resistenze fisse della razza (chiavi di abilità, core.rules.weapons, core.data.tools, tipi di danno). */
+interface RaceGrants { skills?: string[]; weapons?: string[]; tools?: string[]; resistances?: string[] }
+export interface SubraceEntry extends RaceGrants {
   index: string
   name: LocalizedField
   ability_bonuses?: Record<string, number>
@@ -11,9 +13,14 @@ export interface SubraceEntry {
   languages?: string[]
   roll_notes?: Record<string, LocalizedField>
 }
-export interface RaceEntry extends BaseEntry {
+export interface RaceEntry extends BaseEntry, RaceGrants {
   speed_ft: number
   ability_bonuses: Record<string, number>
+  /** Quante altre caratteristiche a scelta prendono +1 (Mezzelfo). */
+  ability_choices?: number
+  /** Abilità e lingue a scelta (Mezzelfo: Versatilità nelle Abilità e linguaggio extra, 2014 pag. 39). */
+  skill_choices?: number
+  language_choices?: number
   senses: { type: string; range_ft: number }[]
   languages: string[]
   traits: RaceTrait[]
@@ -29,13 +36,20 @@ export interface SpeciesPayload {
   ability_bonuses: Record<string, number>
   roll_notes: Record<string, string>
   traits: { name: string; description: string }[]
+  weapons: string[]
+  tools: string[]
+  resistances: string[]
+  /** creationExtras le unisce alle abilità d'origine (il server rifiuta i doppioni con la classe); nel campo species restano
+   *  quelle che vengono solo dalla razza: il passaggio a una specie 2024 le toglie. */
+  skills: string[]
 }
 
-// Curated catalogue note id -> roll-note key (what the character sheet reads).
-const NOTE_KEY: Record<string, string> = {
-  poison_save: 'save.constitution',
-  charm_save: 'save.wisdom',
-  frightened_save: 'save.wisdom',
+// Curated catalogue note id -> roll-note keys (what the character sheet reads).
+const NOTE_KEY: Record<string, string[]> = {
+  poison_save: ['save.constitution'],
+  charm_save: ['save.wisdom'],
+  frightened_save: ['save.wisdom'],
+  magic_save: ['save.intelligence', 'save.wisdom', 'save.charisma'],
 }
 
 const LANGS: Record<string, LocalizedField> = {
@@ -43,35 +57,71 @@ const LANGS: Record<string, LocalizedField> = {
   elvish: { en: 'Elvish', it: 'Elfico' }, gnomish: { en: 'Gnomish', it: 'Gnomesco' },
   halfling: { en: 'Halfling', it: 'Halfling' }, orc: { en: 'Orc', it: 'Orchesco' },
   draconic: { en: 'Draconic', it: 'Draconico' }, infernal: { en: 'Infernal', it: 'Infernale' },
+  giant: { en: 'Giant', it: 'Gigante' }, goblin: { en: 'Goblin', it: 'Goblin' },
+  abyssal: { en: 'Abyssal', it: 'Abissale' }, celestial: { en: 'Celestial', it: 'Celestiale' },
+  primordial: { en: 'Primordial', it: 'Primordiale' }, deep_speech: { en: 'Deep Speech', it: 'Profondo' },
+  sylvan: { en: 'Sylvan', it: 'Silvano' }, undercommon: { en: 'Undercommon', it: 'Sottocomune' },
 }
+export const LANGUAGE_KEYS = Object.keys(LANGS)
+export const languageName = (key: string, lang: Lang): string => (LANGS[key] ? localized(LANGS[key], lang).text : key)
+
+/** Razza 2014 scelta nella creazione. `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17:
+ *  dove la razza ne ha, è obbligatoria). Mezzelfo (pag. 39): `picks` le caratteristiche a scelta che prendono +1, `skills` le abilità,
+ *  `languages` le lingue (chiavi). */
+export interface SpeciesChoice {
+  race: RaceEntry | null
+  sub: SubraceEntry | null | undefined
+  picks?: string[]
+  skills?: string[]
+  languages?: string[]
+}
+
+/** Una scelta che la razza richiede manca ancora: Avanti resta bloccato. */
+export const raceChoicesMissing = ({ race, sub, picks, skills, languages }: SpeciesChoice): boolean =>
+  !!race && ((race.subraces.length > 0 && sub === undefined)
+    || (picks?.length ?? 0) !== (race.ability_choices ?? 0)
+    || (skills?.length ?? 0) !== (race.skill_choices ?? 0)
+    || (languages?.length ?? 0) !== (race.language_choices ?? 0))
 
 export const NOTE_MAX = 120
 
-/** Merge race + optional subrace into the payload accepted by POST /characters. */
-export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: Lang): SpeciesPayload {
-  const bonuses = { ...race.ability_bonuses }
+/** Aumenti di razza, sottorazza e caratteristiche scelte (`picks`: +1 ciascuna). */
+export function raceBonuses(race: RaceEntry | null, sub: SubraceEntry | null | undefined, picks: string[] = []): Record<string, number> {
+  const bonuses: Record<string, number> = { ...race?.ability_bonuses }
   for (const [k, v] of Object.entries(sub?.ability_bonuses ?? {})) bonuses[k] = (bonuses[k] ?? 0) + v
+  for (const k of picks) bonuses[k] = (bonuses[k] ?? 0) + 1
+  return bonuses
+}
+
+/** Merge race + optional subrace into the payload accepted by POST /characters. */
+export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: Lang, chosen: Pick<SpeciesChoice, 'picks' | 'skills' | 'languages'> = {}): SpeciesPayload {
   const senses = new Map<string, number>()
   for (const s of [...race.senses, ...(sub?.senses ?? [])]) {
     senses.set(s.type, Math.max(senses.get(s.type) ?? 0, s.range_ft))
   }
   const notes: Record<string, string> = {}
   for (const [id, f] of Object.entries({ ...race.roll_notes, ...(sub?.roll_notes ?? {}) })) {
-    const key = NOTE_KEY[id]
-    if (key) notes[key] = [notes[key], localized(f, lang).text].filter(Boolean).join(' ').slice(0, NOTE_MAX)
+    for (const key of NOTE_KEY[id] ?? []) {
+      notes[key] = [notes[key], localized(f, lang).text].filter(Boolean).join(' ').slice(0, NOTE_MAX)
+    }
   }
-  const langs = [...new Set([...race.languages, ...(sub?.languages ?? [])])]
+  const langs = [...new Set([...race.languages, ...(sub?.languages ?? []), ...(chosen.languages ?? [])])]
+  const grants = (k: keyof RaceGrants) => [...new Set([...(race[k] ?? []), ...(sub?.[k] ?? [])])]
   return {
     name: localized(sub?.name ?? race.name, lang).text,
     speed_ft: sub?.speed_ft ?? race.speed_ft,
     senses: [...senses].map(([type, range_ft]) => ({ type, range_ft })),
-    languages: langs.map((l) => (LANGS[l] ? localized(LANGS[l], lang).text : l)),
-    ability_bonuses: bonuses,
+    languages: langs.map((l) => languageName(l, lang)),
+    ability_bonuses: raceBonuses(race, sub, chosen.picks),
     roll_notes: notes,
     traits: [...race.traits, ...(sub?.traits ?? [])].map((tr) => ({
       name: localized(tr.name, lang).text,
       description: localized(tr.desc, lang).text,
     })),
+    weapons: grants('weapons'),
+    tools: grants('tools'),
+    resistances: grants('resistances'),
+    skills: [...new Set([...grants('skills'), ...(chosen.skills ?? [])])],
   }
 }
 
@@ -89,7 +139,7 @@ export function backgroundSkills(skills: string[] | undefined): string[] {
 
 /** Fixed languages of a catalogue background (none in the SRD: "two of your choice"), localised. */
 export function backgroundLanguages(langs: string[] | undefined, lang: Lang): string[] {
-  return (langs ?? []).map((l) => (LANGS[l] ? localized(LANGS[l], lang).text : l))
+  return (langs ?? []).map((l) => languageName(l, lang))
 }
 
 // --- Cataloghi 2024 (species-2024.json / backgrounds-2024.json, specchio di core/data) ---
@@ -156,9 +206,11 @@ export function creationExtras(o: {
   species: SpeciesPayload | null
   skills: string[]
 }) {
+  const raceSkills = (o.species?.skills ?? []).filter((k) => !o.skills.includes(k))
+  const skills = [...o.skills, ...raceSkills]
   return {
     ...(o.skipped ? {} : { ability_scores: o.scores }),
-    ...(o.species ? { species: o.species } : {}),
-    ...(o.skills.length ? { skills: Object.fromEntries(o.skills.map((k) => [k, true])) } : {}),
+    ...(o.species ? { species: { ...o.species, skills: raceSkills } } : {}),
+    ...(skills.length ? { skills: Object.fromEntries(skills.map((k) => [k, true])) } : {}),
   }
 }

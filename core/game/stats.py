@@ -43,8 +43,8 @@ def hit_points_for_level(hit_die: int, con_mod: int, level: int) -> int:
     Level 1: ``hit_die + con_mod`` (PHB max die value).
     Level 2+: ``(hit_die // 2 + 1) + con_mod`` (fixed method).
 
-    The result is always clamped to a minimum of 1 (PHB rule:
-    a level gives at least 1 HP even with very negative CON).
+    The result is always clamped to a minimum of 1: the 2024 PHB rule,
+    kept for 2014 too (decision D-027), whose cards do not state it.
     """
     if level < 1:
         raise ValueError(f"level must be >= 1, got {level}")
@@ -147,7 +147,7 @@ def effective_ability_score(
       - Final = max(base + sum(rel), max(abs)) if any absolute exists,
                 else base + sum(rel)
 
-    Never below 1, like the base score (D-013); no upper cap (homebrew-friendly).
+    Between 1 (D-013) and 30, like the base score: 30 is the absolute maximum (2024 pag. 10; 2014 pag. 173).
 
     Returns (effective_value, list_of_applied_modifiers_for_breakdown).
     """
@@ -194,7 +194,7 @@ def effective_ability_score(
     else:
         effective = base_plus_rel
 
-    return max(1, effective), applied
+    return min(30, max(1, effective)), applied
 
 
 def effective_ability_mod(char, ability: str) -> int:
@@ -210,14 +210,13 @@ def effective_ability_mod(char, ability: str) -> int:
 
 def roll_ability_mod(char, ability: str) -> int:
     """Modificatore per prove, TS, iniziativa e attacchi: in Forma Selvatica Forza, Destrezza e Costituzione
-    sono quelli della bestia (2014) o il più alto fra druido e bestia (2024). Non serve a PF né CA."""
+    sono quelli della bestia (2014 pag. 66, 2024 pag. 81). Non serve a PF né CA."""
     mod = effective_ability_mod(char, ability)
     form = next((s for s in char.active_states or [] if s.get("key") == "wild_shape"), None)
     score = ((form or {}).get("data") or {}).get("abilities", {}).get(ability)
     if score is None:
         return mod
-    beast = (score - 10) // 2
-    return max(mod, beast) if form["data"].get("mode") == "max" else beast
+    return (score - 10) // 2  # anche negli stati 2024 salvati col vecchio mode «max»
 
 
 def _worn(char, item_type: str):

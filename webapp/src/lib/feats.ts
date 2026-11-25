@@ -18,6 +18,8 @@ export interface Feat2024 {
   max_score: number
   prereq_abilities: { any_of: string[]; min: number } | null
   needs_spellcasting: boolean
+  /** `false`: serve il privilegio Incantesimi, la Magia del Patto non basta (Dono del Richiamo degli incantesimi). */
+  pact_magic_counts?: boolean
   /** Si prende più volte (Abile, Iniziato alla magia): ogni presa è una riga a sé. */
   repeatable: boolean
   /** Scelte del talento da completare dopo averlo preso (`picks`, `tools`, `instruments`, `list`...). */
@@ -47,6 +49,17 @@ function armorTrained(char: CharacterFull, kind: string): boolean {
   if (!armorOrOther.length && !char.settings?.proficiencies_seeded) return true
   const have = armorOrOther.map((x) => x.trim().toLowerCase())
   return (ARMOR_ALIASES[kind] ?? [kind]).some((alias) => have.includes(alias))
+}
+
+/** Sottoclassi che lanciano incantesimi su una classe che non li lancia (specchio di `THIRD_SUBCLASSES` del server). */
+const THIRD_SUBCLASSES = new Set(['eldritch_knight', 'arcane_trickster'])
+
+/** Come il server: lo dice la scheda (2014: anche razza, talenti, privilegi; un server vecchio non lo manda). Con
+ *  `pact_magic_counts === false` contano le classi, `caster_ability`, senza il warlock (solo Magia del Patto). */
+function castsSpells(f: Feat2024, char: CharacterFull): boolean {
+  if (f.pact_magic_counts !== false && char.computed?.casts_spells !== undefined) return char.computed.casts_spells
+  return char.classes.some((c) => (!!c.spellcasting_ability || THIRD_SUBCLASSES.has(c.subclass_key ?? ''))
+    && (f.pact_magic_counts !== false || c.class_name !== 'warlock'))
 }
 
 /** Livello di classe dal quale le classi 2024 hanno Stile di Combattimento (specchio del catalogo). */
@@ -90,7 +103,7 @@ export function meetsPrerequisites(f: Feat2024, char: CharacterFull, opts: { man
   const levelOk = (opts.manual && f.category !== 'epic_boon') || (char.total_level ?? 0) >= f.min_level
   return levelOk
     && (!f.prereq_abilities || f.prereq_abilities.any_of.some((a) => score(a) >= f.prereq_abilities!.min))
-    && (!f.needs_spellcasting || char.classes.some((c) => !!c.spellcasting_ability))
+    && (!f.needs_spellcasting || castsSpells(f, char))
     && (!f.prereq_armor || armorTrained(char, f.prereq_armor))
     && styleOk(f, char)
 }
@@ -115,11 +128,14 @@ export type FeatListMode = 'level' | 'boon' | 'manual' | 'creation'
 export function featsFor(char: CharacterFull | null, edition: '2014' | '2024', mode: FeatListMode, lang: 'it' | 'en'): FeatItem[] {
   const source = edition === '2014' ? (mode === 'boon' ? [] : FEATS_2014) : FEATS_2024
   const level = char?.total_level ?? 0
+  // Dono Epico 2024 (pag. 210 e classi al 19°): un Dono o un altro talento per cui si è qualificati, i Doni per primi
   const wanted = (f: Feat2024) => mode === 'creation' ? f.category === 'origin'
-    : mode === 'boon' ? f.category === 'epic_boon'
+    : mode === 'boon' ? true
       : mode === 'level' ? f.category !== 'epic_boon'
         : f.category !== 'epic_boon' || level >= f.min_level
-  return source.filter(wanted).map((f) => ({
+  const list = source.filter(wanted)
+  if (mode === 'boon') list.sort((a, b) => Number(b.category === 'epic_boon') - Number(a.category === 'epic_boon'))
+  return list.map((f) => ({
     key: f.key, name: f.name[lang], summary: f.summary[lang], abilities: f.abilities ?? undefined, cap: f.max_score,
     unmet: char ? !meetsPrerequisites(f, char, { manual: mode === 'manual' }) : false,
     repeatable: f.repeatable, needs: f.needs, category: f.category,

@@ -5,11 +5,12 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.condition_effects import effect_snapshot, effects_for_character
+from api.services.condition_effects import effect_snapshot, effects_for_character, suspended_value
 from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
 from core.rules.condition_removal import ConditionRemoval, outcome_lines, resolve_picks
+from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.states import RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state, has_state
 from core.rules.types import StateSpec
 
@@ -43,9 +44,13 @@ async def resolve_targets(session: AsyncSession, caster: Character, removal: Con
     return out
 
 
-async def _suspended_effects(session: AsyncSession, target: Character, present: list[str]) -> dict[str, dict]:
-    return {e.slug: {k: v for k, v in effect_snapshot(e).items() if k != "id"}
-            for e in await effects_for_character(session, target.id) if e.slug in present and not e.pending}
+async def _suspended_effects(session: AsyncSession, target: Character, present: list[str]) -> dict[str, dict | list[dict]]:
+    """Ogni istanza delle condizioni sospese, con la sua durata e la sua fonte (``suspended_list`` le rilegge)."""
+    snaps: dict[str, list[dict]] = {}
+    for e in await effects_for_character(session, target.id):
+        if e.slug in present and not e.pending:
+            snaps.setdefault(e.slug, []).append({k: v for k, v in effect_snapshot(e).items() if k != "id"})
+    return {slug: suspended_value(s) for slug, s in snaps.items()}
 
 
 def _mark_suspended(caster: Character, target: Character, present: list[str], effects: dict[str, dict]) -> None:
@@ -78,6 +83,17 @@ async def resuspend(session: AsyncSession, caster: Character) -> None:
     caster.settings = {**{k: v for k, v in (caster.settings or {}).items() if k != SUSPENDED_BACK}, **({SUSPENDED_KEY: held} if held else {})}
 
 
+async def _end_spells(session: AsyncSession, target: Character, keys: list[str]) -> None:
+    """Incantesimi su di sé chiusi da un privilegio (Tocco Purificatore), anche se li ha lanciati un altro: come la chiusura a
+    mano, l'orologio del lanciatore perde il bersaglio e la sua concentrazione finisce se non resta altro."""
+    from api.services.rules_states import remove_state  # import locali: questi moduli richiamano il servizio
+    from api.services.spell_effects import end_by_target
+    closed = [s for s in target.active_states or [] if s.get("key") in keys]
+    for key in keys:
+        remove_state(target, key)
+    await end_by_target(session, target, closed)
+
+
 async def apply_removal(session: AsyncSession, caster: Character, removal: ConditionRemoval, conds: list[str], untracked: list[str],
                         targets: list[Character | None], *, explicit: bool) -> list[dict[str, str]]:
     """Toglie ``conds`` a ogni bersaglio che le ha. Sulla scheda di un altro PG lo storico dice «Condizione X tolta da <nome>»
@@ -94,12 +110,15 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
             target = await load_receiver(session, target.id)
         have = target.conditions or {}
         present = [c for c in conds if have.get(c)]
+        spells = [c for c in conds if c.startswith(SPELL_STATE_PREFIX) and has_state(target, c)]
         changes = {c: (int(have[c]) - 1 if c == "exhaustion" else False) for c in present}
         effects = {}
         if removal.suppress:  # la riga cade con la condizione: si mette da parte per quando torna
             effects = await _suspended_effects(session, target, present)
         if changes:
             await apply_conditions(session, target, changes)
+        if spells:
+            await _end_spells(session, target, spells)
         mine = target.id == caster.id
         if removal.suppress and present:
             held.append({"id": target.id, "conditions": present})
@@ -108,8 +127,8 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
             for c in present:
                 add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",
                              meta={"slug": c, "active": False, "by": caster.name})
-        lines += outcome_lines(removal, target=None if mine else target.name, removed=present,
-                               absent=[c for c in conds if c not in present] if explicit else [], untracked=untracked, wanted=conds)
+        lines += outcome_lines(removal, target=None if mine else target.name, removed=present + spells,
+                               absent=[c for c in conds if c not in present + spells] if explicit else [], untracked=untracked, wanted=conds)
     if held:  # la stessa concentrazione chiude lo stato (end_concentration) e rimette le condizioni
         caster.settings = {**(caster.settings or {}), SUSPENDED_KEY: [*((caster.settings or {}).get(SUSPENDED_KEY) or []), *held]}
         begin_state(caster, StateSpec(SUSPENDED_KEY, ends_on=("concentration_end", "manual")), "removal")

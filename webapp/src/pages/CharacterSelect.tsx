@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/useToast'
 import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
 import OriginFeatStep from '@/pages/creation/OriginFeatStep'
-import SpeciesStep, { type SpeciesChoice, type Species24State } from '@/pages/creation/SpeciesStep'
+import SpeciesStep, { type Species24State } from '@/pages/creation/SpeciesStep'
 import BackgroundStep2024 from '@/pages/creation/BackgroundStep2024'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
@@ -41,11 +41,15 @@ import CatalogPicker from '@/components/catalog/CatalogPicker'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import {
-  creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies,
-  speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
+  creationExtras, backgroundLanguages, languageName, backgroundSkills as mapBackgroundSkills, buildSpecies,
+  raceChoicesMissing, speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice, type SpeciesChoice,
 } from '@/lib/species'
+import { featByKey } from '@/lib/feats'
 import { localized } from '@/lib/srd/catalog'
 import { STANDARD_ARRAY, arrayScores, overMax, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
+
+/** Talento d'Origine già preso e non ripetibile, quindi non sceglibile una seconda volta. */
+const takenFeats = (key: string | null): string[] => (key && !featByKey(key)?.repeatable ? [key] : [])
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -147,7 +151,7 @@ export default function CharacterSelect() {
   const wealth = wealthPick === true
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
-  const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
+  const speciesPayload = species.race ? buildSpecies(species.race, species.sub ?? null, lang, species) : null
   const scoreBonuses: Record<string, number> = (is2024 ? bg24?.increases : speciesPayload?.ability_bonuses) ?? {}
 
   const charactersQuery = useQuery({
@@ -288,10 +292,10 @@ export default function CharacterSelect() {
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
   const hasEquipmentStep = !!selectedClass && !isCustomSelected
-  // Il background (nel 2024 anche la specie) viene prima della classe: le abilità che dà non si possono scegliere due volte.
+  // Background e specie vengono prima della classe: le abilità che danno non si possono scegliere due volte.
   const steps: Step[] = [
     'name',
-    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['background', 'class', 'species'] as Step[])),
+    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['background', 'species', 'class'] as Step[])),
     'abilities',
     ...(hasEquipmentStep ? (['equipment'] as Step[]) : []),
     'identity',
@@ -299,7 +303,7 @@ export default function CharacterSelect() {
   const goNext = () => setStep(steps[steps.indexOf(step) + 1])
   const goBack = () => setStep(steps[steps.indexOf(step) - 1])
   const takenByOrigin = (bg: Background2024Choice | null, sp: Species24State) =>
-    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : backgroundSkills
+    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : [...backgroundSkills, ...(speciesPayload?.skills ?? [])]
   // Tornando indietro a cambiare origine cadono le scelte che ora sarebbero doppie: il loro passo le richiede.
   const dropTakenClassSkills = (taken: string[]) =>
     setSelectedClass((c) => (c?.skills ? { ...c, skills: c.skills.filter((s) => !taken.includes(s)) } : c))
@@ -307,10 +311,21 @@ export default function CharacterSelect() {
     setSpecies24(sp)
     dropTakenClassSkills(takenByOrigin(bg, sp))
   }
+  const changeSpecies = (c: SpeciesChoice) => {
+    setSpecies(c)
+    if (c.race) dropTakenClassSkills(buildSpecies(c.race, c.sub ?? null, lang, c).skills)
+  }
+  /** Opzioni della specie senza il talento di Versatile che il background dà già (D-035). */
+  const withoutTakenFeat = ({ origin_feat, ...rest }: Record<string, string>, feat: string | null) =>
+    origin_feat && !takenFeats(feat).includes(origin_feat) ? { ...rest, origin_feat } : rest
+  const changeOriginFeat = (feat: string | null) => {
+    setOriginFeat(feat)
+    setSpecies24({ ...species24, options: withoutTakenFeat(species24.options, feat) })
+  }
   const changeBackground24 = (bg: Background2024Choice | null) => {
     setBg24(bg)
-    const { skill, ...rest } = species24.options
-    changeSpecies24(skill && bg?.entry.skills.includes(skill) ? { ...species24, options: rest } : species24, bg)
+    const { skill, ...rest } = withoutTakenFeat(species24.options, bg?.entry.origin_feat ?? originFeat)
+    changeSpecies24({ ...species24, options: skill && !bg?.entry.skills.includes(skill) ? { ...rest, skill } : rest }, bg)
   }
   const classProf = useClassProficiencies(edition, selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
   const classSkillsIncomplete =
@@ -765,16 +780,18 @@ export default function CharacterSelect() {
 
           {step === 'species' && (
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
+              <SpeciesStep choice={species} onChoice={changeSpecies} freeText={race} onFreeText={setRace}
                 edition={edition} species24={species24} onSpecies24={changeSpecies24}
-                takenSkills={bg24?.entry.skills} />
+                takenSkills={is2024 ? bg24?.entry.skills : backgroundSkills} takenLanguages={languages} takenFeats={takenFeats(bg24?.entry.origin_feat ?? originFeat)} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
                 onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={goNext}
-                primaryDisabled={is2024 && !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0}
+                primaryDisabled={is2024
+                  ? !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0
+                  : raceChoicesMissing(species)}
                 primaryHaptic="medium"
               />
             </m.div>
@@ -817,7 +834,7 @@ export default function CharacterSelect() {
 
           {step === 'feat' && (
             <m.div key="step-feat" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <OriginFeatStep value={originFeat} onChange={setOriginFeat} />
+              <OriginFeatStep value={originFeat} onChange={changeOriginFeat} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -966,7 +983,10 @@ export default function CharacterSelect() {
             const skills = mapBackgroundSkills(e.skill_proficiencies as string[] | undefined)
             setBackgroundSkills(skills)
             dropTakenClassSkills(skills)
-            setLanguages((prev) => [...new Set([...prev, ...backgroundLanguages(e.languages as string[] | undefined, lang)])])
+            const langs = backgroundLanguages(e.languages as string[] | undefined, lang)
+            setLanguages((prev) => [...new Set([...prev, ...langs])])
+            // le scelte del mezzelfo che il background dà già tornano da fare
+            setSpecies((c) => ({ ...c, skills: c.skills?.filter((s) => !skills.includes(s)), languages: c.languages?.filter((l) => !langs.includes(languageName(l, lang))) }))
             setPickBackground(false)
           }}
         />

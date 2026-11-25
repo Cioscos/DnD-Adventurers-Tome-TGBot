@@ -26,6 +26,8 @@
     "action_failed": "Action failed: check your connection and try again.",
     "action_refused": "Action failed.",
     "server_errors": {
+      "no_ray_left": "This casting has no rays left, or the turn has passed: cast the spell again.",
+      "flame_not_lit": "The flame is not lit: cast the spell again, then attack.",
       "option_unavailable": "That option is not available now: a requirement is not met or the resource is already spent.",
       "turn_slot_used": "You already used that action this turn.",
       "no_uses": "No uses left.",
@@ -46,9 +48,13 @@
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "once_per_turn": "You can use it only once per turn.",
       "replace_after_long_rest": "You have already made the swaps allowed for this long rest: rest and try again.",
+      "replace_after_rest": "You have already made the swap: take a short or long rest before the next one.",
+      "replace_on_level_up": "This choice can only be swapped once when you gain a level: wait for the next level that allows it.",
       "option_prerequisite": "One of the chosen options needs another option you do not have: pick it together with its prerequisite or after taking it.",
       "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it.",
-      "class_already_present": "The character already has that class."
+      "class_already_present": "The character already has that class.",
+      "form_hit_dice": "While transformed your Hit Dice are the beast's: you can spend yours again once you return to your normal form.",
+      "death_save_already_rolled": "You already made your death saving throw this turn: the next one comes at the start of your next turn."
     },
     "error_boundary": {
       "title": "Something went wrong",
@@ -148,6 +154,7 @@
       "damage_type_hint_one": "Pick a damage type",
       "damage_type_hint_other": "Pick {{count}} damage types",
       "weapon": "Weapon whose mastery you use",
+      "weapon_not_proficient": "You are not proficient with this weapon: pick another one.",
       "touched_hint": "Pick the 1st-level spell",
       "rituals_hint": "Pick the 1st-level rituals ({{n}} left)",
       "rituals_more_hint": "Your proficiency bonus went up: you can pick more 1st-level rituals ({{n}} left).",
@@ -246,6 +253,7 @@
       "increase": "Increase {{name}}",
       "decrease": "Decrease {{name}}",
       "pick_ability": "Ability to increase",
+      "ability_at_max": "{{name}} (already {{max}}: no +1)",
       "custom": "Custom feat",
       "custom_name": "Feat name",
       "custom_text": "Description",
@@ -330,6 +338,9 @@
         "glyph_of_warding": "Glyph of Warding",
         "sorcerous_burst": "Sorcerous Burst",
         "dragons_breath": "Dragon's Breath",
+        "produce_flame": "Produce Flame",
+        "flame_blade": "Flame Blade",
+        "spirit_guardians": "Spirit Guardians",
         "magic_weapon": "Magic Weapon",
         "divine_favor": "Divine Favor",
         "crusaders_mantle": "Crusader's Mantle",
@@ -835,6 +846,13 @@
       "sources": "Sources"
     },
     "spells": {
+      "off_rest_confirm": "Change anyway",
+      "off_rest_body": "Prepared spells (and cantrips in 2024) change after a long rest or when you level up. You have already spent slots since your last rest: change anyway?",
+      "off_rest_title": "Away from a long rest",
+      "hurl": "Attack",
+      "ray_of": "Ray {{n}} of {{total}}",
+      "next_ray": "Roll ray {{n}} of {{total}}",
+      "next_ray_missed": "Missed: roll ray {{n}} of {{total}}",
       "twinned_attack": "Second target: to hit",
       "twinned_damage": "Second target: damage",
       "pick_already_known": "It is already on my sheet",
@@ -906,6 +924,8 @@
         "one_slot_per_turn_body": "You already spent a slot this turn and the rule allows only one. If this is a new turn, go ahead.",
         "wild_shape_title": "Spells in Wild Shape",
         "wild_shape_body": "You cannot cast spells in Wild Shape unless a feature allows it. Cast it anyway?",
+        "quickened_after_title": "After Quickened Spell",
+        "quickened_after_body": "You used Quickened Spell this turn: normally only cantrips remain. If this is a new turn, go ahead.",
         "bonus_spell_title": "Bonus action spell",
         "bonus_spell_body": "With a bonus action spell, the other spell in the same turn can only be an action cantrip. If this is a new turn, go ahead.",
         "ritual_unprepared_title": "Ritual not prepared",
@@ -981,6 +1001,10 @@
       "cast_free": "Cast without a slot",
       "free_cast_hint": "An active effect lets you cast it without a slot.",
       "roll_healing": {
+        "amount_self": "HP for you",
+        "pool_over": "{{n}} HP over the {{pool}} to divide",
+        "pool_left": "{{n}} of {{pool}} HP left to divide",
+        "amount": "HP for {{name}}",
         "title": "Healing: {{name}}",
         "casting_level": "Casting level",
         "on_self": "I heal myself with this spell",
@@ -1019,6 +1043,7 @@
           "surge_no_magic": "The extra action from Action Surge cannot be the Magic action.",
           "invalid_target": "The target is not valid.",
           "self_only_spell": "This spell only affects its caster: it cannot be given to others.",
+          "already_affected": "A target already received this spell: it works on them again only after their Long Rest.",
           "target_dead": "The target is dead.",
           "invalid_choice": "The choice is not valid.",
           "option_unavailable": "That option is not available for this cast."
@@ -1040,7 +1065,8 @@
       "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
       "reload_confirm": "Reload",
       "damage_type_choice": "of your choice",
-      "upcast_auto": "Higher levels: +{{dice}} per level (already included)",
+      "upcast_auto": "Higher levels: +{{dice}} (already included)",
+      "upcast_manual": "Higher levels: +{{dice}} {{type}}, not in the roll: apply them by hand",
       "schools": {
         "abjuration": "Abjuration",
         "conjuration": "Conjuration",
@@ -1445,6 +1471,9 @@
         "scores_check": "Ability scores do not change: remove any 2014 racial bonuses by hand.",
         "skill_added": "{{skill}} proficiency added.",
         "skill_removed": "{{skill}} proficiency removed.",
+        "weapon_removed": "Old race proficiency with {{name}} removed.",
+        "tool_removed": "Old race proficiency with {{name}} removed.",
+        "resistance_removed": "Old race damage resistance removed: {{name}}.",
         "feat_added": "{{feat}} feat added.",
         "feat_removed": "{{feat}} feat removed.",
         "spell_removed": "{{name}} spell removed."
@@ -1574,6 +1603,8 @@
           "beast_attacked": "The beast already attacked this turn: the bonus action order does not apply.",
           "beast_not_attacking": "You already gave a bonus action order: the beast does not attack this turn.",
           "companion_down": "The beast is at 0 HP.",
+          "beast_reaction_used": "The beast already used its reaction this round.",
+          "beast_acted": "The beast already used its action this turn.",
           "incapacitated": "Incapacitated: you cannot give orders, the beast acts on its own.",
           "feature_unavailable": "That order is not available."
         },
@@ -1588,11 +1619,14 @@
           "companion_down": "The beast is at 0 HP."
         },
         "form_label": "Ranger's Companion (Beast Master)",
-        "form_hint": "HP, AC, attack and damage follow your level and proficiency.",
+        "form_hint": "A Medium or smaller beast of CR 1/4 or lower. HP, AC, attack and damage follow your level and proficiency.",
         "form_errors": {
           "companion_exists": "You already have a living beast: a new one only when it dies.",
           "feature_unavailable": "You need the Beast Master archetype."
-        }
+        },
+        "not_allowed_title": "Beast not allowed",
+        "not_allowed_body": "The ranger's beast must be a Medium or smaller beast of CR 1/4 or lower.",
+        "not_allowed_confirm": "Add anyway"
       },
       "title": "Extras",
       "add": "Add",
@@ -1757,6 +1791,7 @@
       "preserve_living": "None is a construct or an undead",
       "preserve_go": "Heal",
       "preserve_errors": {
+        "surge_no_magic": "The extra action cannot be the Magic action.",
         "over_half": "Someone would go above half their maximum HP: lower the numbers.",
         "over_pool": "You split more HP than the pool.",
         "no_uses": "No Channel Divinity uses left.",
@@ -1801,6 +1836,7 @@
           "once_per_turn": "The surge d20 is rolled once per turn.",
           "no_repeat": "There is no repeat in progress.",
           "tides_not_spent": "Tides of Chaos has not been spent.",
+          "no_slot_cast": "Tamed Surge is used right after a sorcerer spell cast with a spell slot.",
           "no_pending_surge": "There is no surge to choose.",
           "feature_not_usable": "This feature cannot be used now.",
           "invalid_choice": "That choice is not valid.",
@@ -1865,6 +1901,7 @@
       "weapon_range": "Range {{range}}",
       "use_attack": "Attack roll: {{total}} (d20 {{die}} {{bonus}})",
       "use_errors": {
+        "surge_no_magic": "The extra action cannot be the Magic action.",
         "target_not_down": "The target already has at least that many HP: no use was spent.",
         "nothing_to_remove": "None of the chosen conditions is present: no points were spent.",
         "invalid_target": "A creature is not seated at your session.",
@@ -2571,6 +2608,9 @@
       }
     },
     "create": {
+      "ability_choices": "Other abilities +1: {{n}}/{{max}}",
+      "skill_choices": "Skills of your choice: {{n}}/{{max}}",
+      "language_choices": "Language of your choice: {{n}}/{{max}}",
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
       "step_class_subtitle": "For {{name}} · Step 2/3",
@@ -2591,7 +2631,7 @@
       "species_hint": "Pick a species from the catalogue (optional) or type your own.",
       "species_pick": "Pick from catalogue",
       "subrace": "Subrace",
-      "subrace_none": "None",
+      "subrace_other": "Other (by hand)",
       "species_speed": "Speed",
       "species_clear": "Remove species",
       "species_free": "Species (free text)",
@@ -2636,7 +2676,7 @@
         "background_unknown": "Unknown background.",
         "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
         "background_tool_invalid": "Invalid background tool.",
-        "class_skill_taken": "A skill chosen for the class is already granted by your background: pick another.",
+        "class_skill_taken": "A skill chosen for the class is already granted by your background or race: pick another.",
         "species_skill_taken": "The skill chosen for the species is already granted by your class or background: pick another."
       },
       "create_cta": "Create"
@@ -5760,6 +5800,7 @@
     "banner_failed": "Failed: {{condition}} — tap to view",
     "your_turn": "Your turn",
     "title": "Saving throw: {{ability}}",
+    "choose_ability": "Choose the saving throw ability",
     "line": "{{condition}} · DC {{dc}}",
     "source": "from {{name}}",
     "progress": "{{n}} of {{total}}",

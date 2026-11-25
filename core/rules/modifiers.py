@@ -4,11 +4,12 @@ I modificatori homebrew restano sommati dai router accanto a questi: qui non si 
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, replace
 from typing import Any
 
 from core.data.damage_types import damage_multiplier
-from core.game.containers import encumbrance_level
+from core.game.containers import encumbrance_level, encumbrance_variant
 from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -72,6 +73,7 @@ class Applied:
     jump_bonus_ft: int | None = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); 0 se il privilegio c'è
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
+    reroll_of: dict | None = None  # il tiro che l'Ispirazione rilancia: {"dice", "mode"}
 
 
 def _medium_armor_master(char) -> bool:
@@ -194,6 +196,16 @@ def _strength_required(item: Any) -> int:
         return 0
 
 
+_DWARF = re.compile(r"\b(dwarf|nan[oa])\b")
+
+
+def _ignores_armor_strength(ctx: RuleContext) -> bool:
+    """La colonna Forza delle armature non vale con la variante dell'ingombro (2014 pag. 176: conta solo il peso) né per il
+    nano 2014, non rallentato dall'armatura pesante (pag. 28; il nano 2024 sì)."""
+    return encumbrance_variant(ctx.char) or (
+        ctx.edition == "2014" and bool(_DWARF.search((getattr(ctx.char, "race", None) or "").lower())))
+
+
 def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
     """Armatura o scudo (R21): senza addestramento, Forza insufficiente (velocità -10 ft) e Furtività. Il blocco degli
     incantesimi è del Task 15."""
@@ -205,7 +217,7 @@ def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
             continue
         if item.item_type == "armor":
             required = _strength_required(item)
-            if required and ability_score(ctx.char, "strength") < required:
+            if required and ability_score(ctx.char, "strength") < required and not _ignores_armor_strength(ctx):
                 out.append(Modifier("speed", -10, source="armor:strength"))
             if (item_meta(item).get("stealth_disadvantage") and ctx.roll == "skill" and ctx.skill == "stealth"
                     and not _medium_armor_master(ctx.char)):
@@ -237,6 +249,19 @@ def _heavy_weapon(ctx: RuleContext) -> list[Modifier]:
     return [Modifier("disadvantage", 1, source="weapon:heavy")] if weak else []
 
 
+DWARVEN_TOUGHNESS = {"robustezza nanica", "dwarven toughness"}  # nome del tratto in races.json (it/en)
+
+
+def _race_2014(ctx: RuleContext) -> list[Modifier]:
+    """Le razze 2014 del wizard sono righe di testo: Robustezza Nanica dà +1 PF massimo per livello (pag. 28)."""
+    if ctx.edition != "2014" or ctx.roll != "hp_max":
+        return []
+    from core.rules.catalog.feats import _abilities  # righe solo se caricate: niente lazy load asincrono
+    if not any(not a.feature_key and (a.name or "").strip().lower() in DWARVEN_TOUGHNESS for a in _abilities(ctx.char)):
+        return []
+    return [Modifier("hp_max", sum(c.level or 0 for c in ctx.char.classes or []), source="race:dwarven_toughness")]
+
+
 def _half_prof(ctx: RuleContext) -> int:
     """Mezza competenza per difetto su prove e TS, solo dove il personaggio non è già competente.
     La passiva parte dal bonus di abilità, che la comprende già."""
@@ -254,7 +279,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     pairs: list[tuple[Modifier, RuleContext, str]] = [
         (m, ctx, m.source) for m in compute_condition_effects(ctx.char, ctx.edition, ctx)
     ]
-    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_encumbrance_modifiers(ctx), *_heavy_weapon(ctx)]]
+    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_encumbrance_modifiers(ctx), *_heavy_weapon(ctx), *_race_2014(ctx)]]
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]
@@ -262,6 +287,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
 
     out = Applied()
     half_prof = False
+    sense_plus: dict[str, int] = {}
     flat_target = _FLAT_TARGET.get(ctx.roll)
     for m, mctx, source in pairs:
         if m.when is not None and not m.when(mctx):
@@ -299,6 +325,9 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             kind = m.target.split(":", 1)[1]
             out.senses[kind] = max(out.senses.get(kind, 0), m.value(mctx) if callable(m.value) else m.value)
             counted = False  # un senso non sta dietro nessun tiro: non è una fonte del risultato (Vista del Diavolo)
+        elif m.target.startswith("sense_plus:"):  # «portata N, o +N se ce l'hai già» (Gufo, Vista Ombrale 2024): si somma
+            kind = m.target.split(":", 1)[1]
+            sense_plus[kind] = sense_plus.get(kind, 0) + (m.value(mctx) if callable(m.value) else m.value)
         elif m.target == "jump_bonus":
             out.jump_bonus_ft = (out.jump_bonus_ft or 0) + (m.value(mctx) if callable(m.value) else m.value)
             counted = True
@@ -326,6 +355,10 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             out.notes.append(source)
     if half_prof:
         out.flat += _half_prof(ctx)
+    for kind, ft in sense_plus.items():  # la portata già posseduta: specie, altri privilegi o scritta a mano nella scheda
+        manual = max((int(s.get("range_ft") or 0) for s in (getattr(ctx.char, "settings", None) or {}).get("senses") or []
+                      if isinstance(s, dict) and s.get("type") == kind), default=0)
+        out.senses[kind] = max(out.senses.get(kind, 0), manual) + ft
     return out
 
 

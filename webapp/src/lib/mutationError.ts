@@ -7,13 +7,20 @@ import { ApiError } from '@/api/client'
 const SERVER_ERRORS = [
   'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'nothing_to_remove', 'target_dead', 'invalid_target', 'self_only_spell',
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
-  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest',
-  'death_save_not_needed', 'character_dead', 'option_prerequisite', 'option_is_prerequisite', 'class_already_present',
+  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest', 'replace_after_rest', 'replace_on_level_up',
+  'death_save_not_needed', 'character_dead', 'option_prerequisite', 'option_is_prerequisite', 'class_already_present', 'form_hit_dice',
+  'death_save_already_rolled', 'flame_not_lit', 'no_ray_left',
 ]
 
 /** Il codice che il server ha messo nel dettaglio dell'errore (`{code}`), se l'errore viene dal server. */
 export function apiErrorCode(err: unknown): string | undefined {
   return err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+}
+
+/** Chiave del motivo del rifiuto, se il server ne ha dato uno con un testo proprio. */
+export function serverErrorKey(err: unknown): string | undefined {
+  const code = apiErrorCode(err)
+  return code && SERVER_ERRORS.includes(code) ? `common.server_errors.${code}` : undefined
 }
 
 /** Testo generico di un'azione fallita: «controlla la connessione» solo se il server non ha risposto. */
@@ -26,12 +33,10 @@ export const actionFailedKey = (err: unknown): 'common.action_refused' | 'common
  *  «controlla la connessione» resta solo quando il server non ha risposto. */
 export function notifyMutationError(err?: unknown): void {
   haptic.error()
-  const code = apiErrorCode(err)
-  if (code && SERVER_ERRORS.includes(code)) toast.error(i18n.t(`common.server_errors.${code}`))
-  else toast.error(i18n.t(actionFailedKey(err)))
+  toast.error(i18n.t(serverErrorKey(err) ?? actionFailedKey(err)))
 }
 
-const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'self_only_spell', 'invalid_choice', 'option_unavailable']
+const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'self_only_spell', 'invalid_choice', 'option_unavailable', 'already_affected']
 
 /** Un lancio rifiutato dal server per una regola (azione già spesa, usi finiti) lo dice con il suo testo; il resto è un errore generico. */
 export function notifyCastError(err: unknown): void {

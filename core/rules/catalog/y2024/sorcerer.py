@@ -37,6 +37,7 @@ _TYPE_LABELS = {"acid": ("acido", "acid"), "cold": ("freddo", "cold"), "fire": (
 TWINNED_SPELLS = frozenset({
     "animal-friendship", "banishment", "bane", "bless", "blindness-deafness", "charm-monster", "charm-person", "command", "enhance-ability", "fly",
     "freedom-of-movement", "gaseous-form", "heroism", "hold-monster", "hold-person", "invisibility", "jump", "longstrider",
+    "spider-climb", "hideous-laughter",
 })
 _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/routers/classes.py create_class_for_character e add_class"
 
@@ -155,9 +156,9 @@ def _cast_options_used(ctx: RuleContext) -> int:
 
 
 def _quicken(session: Any, ctx: RuleContext, inputs: dict) -> None:
-    """Il lancio vale come azione bonus: non più come incantesimo dell'azione."""
+    """Il lancio vale come azione bonus, non più come incantesimo dell'azione, e in questo turno non se ne lancia un altro di livello 1+."""
     turn = dict(ctx.char.turn_state or {})
-    turn["bonus_spell_cast"] = True
+    turn["bonus_spell_cast"] = turn["quickened_cast"] = True
     turn.pop("action_spell_level", None)
     turn["action_spell_class"] = None
     ctx.char.turn_state = turn
@@ -320,7 +321,7 @@ BASE_ROWS = (
     feature("metamagic", CK, ED, 2, "Metamagia / Metamagic (Stregone 2, pag. 141)", ("Metamagia", "Metamagic"),
             ("Due opzioni al 2° livello, due in più al 10° e al 17°, sostituibili a ogni livello. Una sola opzione per incantesimo.",
              "Two options at 2nd level, two more at 10th and 17th, replaceable every level. One option per spell."),
-            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={2: 2, 10: 4, 17: 6}, replaceable=True,
+            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={2: 2, 10: 4, 17: 6}, replaceable=True, replace_per_level="each",
                                              options=lambda _c: [k for k, *_ in METAMAGIC_2024]),),
             covered_by="ChoiceSpec metamagic di questa riga e le righe delle dieci opzioni; test_metamagic_options_known_follow_the_level"),
     feature("sorcerer_subclass", CK, ED, 3, "Sottoclasse da Stregone / Sorcerer Subclass (Stregone 3, pag. 141)",

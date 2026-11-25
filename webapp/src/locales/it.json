@@ -26,6 +26,8 @@
     "action_failed": "Operazione non riuscita: controlla la connessione e riprova.",
     "action_refused": "Operazione non riuscita.",
     "server_errors": {
+      "no_ray_left": "I raggi di questo lancio sono finiti o il turno è passato: lancia di nuovo l'incantesimo.",
+      "flame_not_lit": "La fiamma non è accesa: lancia di nuovo l'incantesimo, poi attacca.",
       "option_unavailable": "Quell'opzione non è disponibile ora: un requisito non è soddisfatto o la risorsa è già stata spesa.",
       "turn_slot_used": "Hai già usato quell'azione in questo turno.",
       "no_uses": "Usi esauriti.",
@@ -46,9 +48,13 @@
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "once_per_turn": "Puoi usarlo una sola volta per turno.",
       "replace_after_long_rest": "Hai già fatto i cambi concessi per questo riposo lungo: riposa e riprova.",
+      "replace_after_rest": "Hai già fatto il cambio: serve un riposo breve o lungo prima del prossimo.",
+      "replace_on_level_up": "Questa scelta si cambia solo salendo di livello, una volta: aspetta il prossimo livello che la permette.",
       "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla.",
-      "class_already_present": "Il personaggio ha già quella classe."
+      "class_already_present": "Il personaggio ha già quella classe.",
+      "form_hit_dice": "In forma i Dadi Vita sono quelli della bestia: i tuoi si spendono di nuovo quando torni alla forma normale.",
+      "death_save_already_rolled": "Hai già fatto il tiro salvezza contro la morte in questo turno: il prossimo all'inizio del tuo turno."
     },
     "error_boundary": {
       "title": "Qualcosa è andato storto",
@@ -148,6 +154,7 @@
       "damage_type_hint_one": "Scegli un tipo di danno",
       "damage_type_hint_other": "Scegli {{count}} tipi di danno",
       "weapon": "Arma di cui usi la padronanza",
+      "weapon_not_proficient": "Non sei competente in quest'arma: scegline un'altra.",
       "touched_hint": "Scegli l'incantesimo di 1º livello",
       "rituals_hint": "Scegli i rituali di 1º livello (ne mancano {{n}})",
       "rituals_more_hint": "La competenza è salita: puoi scegliere altri rituali di 1º livello (ne mancano {{n}}).",
@@ -246,6 +253,7 @@
       "increase": "Aumenta {{name}}",
       "decrease": "Riduci {{name}}",
       "pick_ability": "Caratteristica da aumentare",
+      "ability_at_max": "{{name}} (già a {{max}}: niente +1)",
       "custom": "Talento personalizzato",
       "custom_name": "Nome del talento",
       "custom_text": "Descrizione",
@@ -330,6 +338,9 @@
         "glyph_of_warding": "Glifo di Interdizione",
         "sorcerous_burst": "Esplosione Stregonesca",
         "dragons_breath": "Soffio del Drago",
+        "produce_flame": "Produrre Fiamma",
+        "flame_blade": "Lama Infuocata",
+        "spirit_guardians": "Guardiani Spirituali",
         "magic_weapon": "Arma Magica",
         "divine_favor": "Favore Divino",
         "crusaders_mantle": "Manto del Crociato",
@@ -835,6 +846,13 @@
       "sources": "Sorgenti"
     },
     "spells": {
+      "off_rest_confirm": "Cambia lo stesso",
+      "off_rest_body": "Gli incantesimi preparati (e nel 2024 i trucchetti) si cambiano dopo un riposo lungo o salendo di livello. Dopo l'ultimo riposo hai già speso slot: cambiare lo stesso?",
+      "off_rest_title": "Lontano dal riposo lungo",
+      "hurl": "Attacca",
+      "ray_of": "Raggio {{n}} di {{total}}",
+      "next_ray": "Tira il raggio {{n}} di {{total}}",
+      "next_ray_missed": "Mancato: tira il raggio {{n}} di {{total}}",
       "twinned_attack": "Secondo bersaglio: per colpire",
       "twinned_damage": "Secondo bersaglio: danno",
       "pick_already_known": "È già sulla mia scheda",
@@ -906,6 +924,8 @@
         "one_slot_per_turn_body": "Hai già speso uno slot in questo turno: la regola ne ammette uno solo. Se è un nuovo turno, lancia pure.",
         "wild_shape_title": "Incantesimi in Forma Selvatica",
         "wild_shape_body": "In Forma Selvatica non si lanciano incantesimi, a meno di un privilegio che lo consenta. Lanciarlo comunque?",
+        "quickened_after_title": "Dopo Incantesimo Rapido",
+        "quickened_after_body": "In questo turno hai usato Incantesimo Rapido: di norma restano solo i trucchetti. Se è un nuovo turno, lancia pure.",
         "bonus_spell_title": "Incantesimo con azione bonus",
         "bonus_spell_body": "Con un incantesimo ad azione bonus, nello stesso turno l'altro può essere solo un trucchetto ad azione. Se è un nuovo turno, lancia pure.",
         "ritual_unprepared_title": "Rituale non preparato",
@@ -981,6 +1001,10 @@
       "cast_free": "Lancia senza slot",
       "free_cast_hint": "Un effetto attivo ti permette di lanciarlo senza slot.",
       "roll_healing": {
+        "amount_self": "PF per te",
+        "pool_over": "{{n}} PF oltre i {{pool}} da dividere",
+        "pool_left": "Restano {{n}} dei {{pool}} PF da dividere",
+        "amount": "PF per {{name}}",
         "title": "Cura: {{name}}",
         "casting_level": "Livello di casting",
         "on_self": "Curo me stesso con questo incantesimo",
@@ -1019,6 +1043,7 @@
           "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia.",
           "invalid_target": "Il bersaglio non è valido.",
           "self_only_spell": "Questo incantesimo vale solo per chi lo lancia: non si può dare ad altri.",
+          "already_affected": "Un bersaglio ha già ricevuto questo incantesimo: vale di nuovo solo dopo il suo Riposo Lungo.",
           "target_dead": "Il bersaglio è morto.",
           "invalid_choice": "La scelta non è valida.",
           "option_unavailable": "Quell'opzione non è disponibile per questo lancio."
@@ -1040,7 +1065,8 @@
       "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
       "reload_confirm": "Ricarica",
       "damage_type_choice": "a scelta",
-      "upcast_auto": "Livelli superiori: +{{dice}} per livello (già incluso)",
+      "upcast_auto": "Livelli superiori: +{{dice}} (già incluso)",
+      "upcast_manual": "Livelli superiori: +{{dice}} {{type}}, non nel tiro: applicali a mano",
       "schools": {
         "abjuration": "Abiurazione",
         "conjuration": "Convocazione",
@@ -1444,6 +1470,9 @@
         "scores_check": "I punteggi di caratteristica non cambiano: togli a mano gli eventuali bonus razziali 2014.",
         "skill_added": "Competenza in {{skill}} aggiunta.",
         "skill_removed": "Competenza in {{skill}} tolta.",
+        "weapon_removed": "Competenza con {{name}} della vecchia razza tolta.",
+        "tool_removed": "Competenza con {{name}} della vecchia razza tolta.",
+        "resistance_removed": "Resistenza ai danni della vecchia razza tolta: {{name}}.",
         "feat_added": "Talento {{feat}} aggiunto.",
         "feat_removed": "Talento {{feat}} tolto.",
         "spell_removed": "Incantesimo {{name}} tolto."
@@ -1573,6 +1602,8 @@
           "beast_attacked": "La bestia ha già attaccato in questo turno: l'ordine in azione bonus non vale.",
           "beast_not_attacking": "Hai già ordinato qualcosa in azione bonus: in questo turno la bestia non attacca.",
           "companion_down": "La bestia è a 0 PF.",
+          "beast_reaction_used": "La bestia ha già usato la sua reazione in questo round.",
+          "beast_acted": "La bestia ha già usato la sua azione in questo turno.",
           "incapacitated": "Incapacitato: non puoi dare ordini, la bestia agisce da sola.",
           "feature_unavailable": "Questo ordine non è disponibile."
         },
@@ -1587,11 +1618,14 @@
           "companion_down": "La bestia è a 0 PF."
         },
         "form_label": "Compagno del Ranger (Signore delle Bestie)",
-        "form_hint": "PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
+        "form_hint": "Una bestia Media o più piccola, GS 1/4 o meno. PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
         "form_errors": {
           "companion_exists": "Hai già una bestia viva: una nuova solo quando muore.",
           "feature_unavailable": "Serve l'archetipo Signore delle Bestie."
-        }
+        },
+        "not_allowed_title": "Bestia non ammessa",
+        "not_allowed_body": "La bestia del ranger dev'essere una bestia Media o più piccola, GS 1/4 o meno.",
+        "not_allowed_confirm": "Aggiungi comunque"
       },
       "title": "Extra",
       "add": "Aggiungi",
@@ -1756,6 +1790,7 @@
       "preserve_living": "Nessuno è un costrutto né un non morto",
       "preserve_go": "Cura",
       "preserve_errors": {
+        "surge_no_magic": "L'azione in più non può essere l'azione Magia.",
         "over_half": "Qualcuno supera la metà dei PF massimi: abbassa le cifre.",
         "over_pool": "Hai distribuito più PF della riserva.",
         "no_uses": "Usi di Incanalare Divinità esauriti.",
@@ -1800,6 +1835,7 @@
           "once_per_turn": "Il d20 dell'impulso si tira una volta per turno.",
           "no_repeat": "Non c'è nessuna ripetizione in corso.",
           "tides_not_spent": "Onde di Caos non è stata spesa.",
+          "no_slot_cast": "Impulso Domato si usa subito dopo un incantesimo da stregone lanciato con uno slot.",
           "no_pending_surge": "Non c'è nessun impulso da scegliere.",
           "feature_not_usable": "Questo privilegio non si può usare ora.",
           "invalid_choice": "La scelta non è valida.",
@@ -1864,6 +1900,7 @@
         "bend_luck_minus": "Piegare la Fortuna: sottrai il d4 tirato dal tiro dell'altra creatura (colpire, prova o TS)."
       },
       "use_errors": {
+        "surge_no_magic": "L'azione in più non può essere l'azione Magia.",
         "target_not_down": "Il bersaglio ha già almeno quei PF: nessun uso è stato speso.",
         "nothing_to_remove": "Nessuna delle condizioni scelte è presente: nessun punto è stato speso.",
         "invalid_target": "Una creatura non siede alla tua serata.",
@@ -2570,6 +2607,9 @@
       }
     },
     "create": {
+      "ability_choices": "Altre caratteristiche +1: {{n}}/{{max}}",
+      "skill_choices": "Abilità a scelta: {{n}}/{{max}}",
+      "language_choices": "Lingua a scelta: {{n}}/{{max}}",
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
       "step_class_subtitle": "Per {{name}} · Passo 2/3",
@@ -2590,7 +2630,7 @@
       "species_hint": "Scegli una specie dal catalogo (facoltativo) o scrivila a mano.",
       "species_pick": "Scegli dal catalogo",
       "subrace": "Sottospecie",
-      "subrace_none": "Nessuna",
+      "subrace_other": "Altra (a mano)",
       "species_speed": "Velocità",
       "species_clear": "Rimuovi specie",
       "species_free": "Specie (testo libero)",
@@ -2635,7 +2675,7 @@
         "background_unknown": "Background non riconosciuto.",
         "background_increases_invalid": "Aumenti del background non validi: nessuna caratteristica può superare 20.",
         "background_tool_invalid": "Strumento del background non valido.",
-        "class_skill_taken": "Un'abilità scelta per la classe è già data dal background: scegline un'altra.",
+        "class_skill_taken": "Un'abilità scelta per la classe è già data dal background o dalla razza: scegline un'altra.",
         "species_skill_taken": "L'abilità scelta per la specie è già data da classe o background: scegline un'altra."
       },
       "create_cta": "Crea"
@@ -5759,6 +5799,7 @@
     "banner_failed": "Fallito: {{condition}} — tocca per vedere",
     "your_turn": "Tocca a te",
     "title": "Tiro salvezza: {{ability}}",
+    "choose_ability": "Scegli la caratteristica del tiro salvezza",
     "line": "{{condition}} · CD {{dc}}",
     "source": "da {{name}}",
     "progress": "{{n}} di {{total}}",

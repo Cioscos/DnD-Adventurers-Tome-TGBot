@@ -339,10 +339,11 @@ async def test_entrare_in_forma_mantiene_la_concentrazione(client, edizione):
     assert (await _full(client, cid))["concentrating_spell_id"] == incantesimo
 
 
-@pytest.mark.caccia(id="CB-366", fonte="2014 · Forma Selvatica · pag. 66 (si assumono FOR, DES, COS della bestia); 2024 · Regole della Forma Selvatica · pag. 81 (vale il modificatore più alto fra druido e bestia)",
+@pytest.mark.caccia(id="CB-366", fonte="2014 · Forma Selvatica · pag. 66 (si assumono FOR, DES, COS della bestia); 2024 · Regole della Forma Selvatica · pag. 81 (anche For, Des e Cos sono della Bestia: restano del druido solo PF, Dadi Vita, Int, Sag e Car)",
                     zona="flusso:compagni-forme", voce="interazione", copre=["POST /characters/{char_id}/skills/{skill_name}/roll", "POST /characters/{char_id}/saving_throws/{ability}/roll",
                                                                             "POST /characters/{char_id}/companions/{comp_id}/activate"])
-@pytest.mark.parametrize("edizione, prova_forza, ts_costituzione", [("2014", 0, 3), ("2024", 4, 3)])
+# 2024 pag. 81: la Forza 18 del druido non conta in forma (prima il parametro 2024 attendeva 4, il massimo fra i due)
+@pytest.mark.parametrize("edizione, prova_forza, ts_costituzione", [("2014", 0, 3), ("2024", 0, 3)])
 async def test_i_punteggi_fisici_della_forma_sulle_prove_e_i_ts(client, edizione, prova_forza, ts_costituzione):
     cid = await (_druid(client, 4, strength=18, constitution=8) if edizione == "2014" else _druid24(client, 4, strength=18, constitution=8))
     bestia = {**_beast(0.25), "abilities": {"str": 10, "dex": 10, "con": 16, "int": 3, "wis": 12, "cha": 6}}

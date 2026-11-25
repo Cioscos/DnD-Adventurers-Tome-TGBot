@@ -2,8 +2,9 @@ import { uiLang } from '@/lib/lang'
 import type { QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { create } from 'zustand'
-import { api } from '@/api/client'
+import { api, type ApiError } from '@/api/client'
 import i18n from '@/i18n'
+import { apiErrorCode } from '@/lib/mutationError'
 import type { TFunction } from 'i18next'
 import type { LastRollResult, OptionResult, RollChoice, RollMode, RollOption, RollOptionPhase, RollOptionsQuery, SpellUseBody } from '@/api/client'
 import type { CharacterFull } from '@/types'
@@ -26,6 +27,8 @@ export type PromptContext = {
   preset?: string[]
   /** Il prompt si chiude (Chiudi, Esc, clic fuori) e il tiro non parte: `askRollOptions` rifiuta con `CastCancelled`. */
   cancellable?: boolean
+  /** Solo le opzioni con uno slot di turno proprio: Afferrare/Spingere non ha un tiro per colpire da ritoccare. */
+  ownSlotOnly?: boolean
 }
 
 export type PromptRequest = {
@@ -62,7 +65,7 @@ export const useCastConfirmStore = create<{ request: { code: string; answer: (go
 /** Il giocatore ha rifiutato una conferma o chiuso un prompt `cancellable`: nessun tiro e nessun errore da mostrare. */
 export class CastCancelled extends Error {}
 
-function askCastConfirm(code: string): Promise<boolean> {
+export function askCastConfirm(code: string): Promise<boolean> {
   return new Promise((resolve) => {
     useCastConfirmStore.setState({
       request: { code, answer: (go) => { useCastConfirmStore.setState({ request: null }); resolve(go) } },
@@ -70,16 +73,28 @@ function askCastConfirm(code: string): Promise<boolean> {
   })
 }
 
-async function castWarnings(charId: number, spellId: number, ritual: boolean): Promise<string[]> {
+/** Lancio da un oggetto o una pergamena: armatura senza addestramento o Ira si confermano, il server non vede le eccezioni. */
+export async function castWithConfirm<T>(cast: (confirm?: string[]) => Promise<T>): Promise<T> {
   try {
-    return (await api.spells.castCheck(charId, spellId, ritual)) ?? []
+    return await cast()
+  } catch (err) {
+    if (apiErrorCode(err) !== 'cast_confirm') throw err
+    const confirm = ((err as ApiError).detail as { warnings: string[] }).warnings
+    for (const code of confirm) if (!(await askCastConfirm(code))) throw new CastCancelled()
+    return cast(confirm)
+  }
+}
+
+async function castWarnings(charId: number, spellId: number, ritual: boolean, slotless?: boolean, quickened?: boolean): Promise<string[]> {
+  try {
+    return (await api.spells.castCheck(charId, spellId, ritual, slotless, quickened)) ?? []
   } catch {
     return []  // il lancio ricontrolla sul server
   }
 }
 
 /** Regole del turno (secondo slot, incantesimo ad azione bonus) già confermate all'inizio del lancio (T3). */
-const TURN_RULES = ['one_slot_per_turn', 'bonus_spell']
+const TURN_RULES = ['one_slot_per_turn', 'bonus_spell', 'quickened_after']
 let turnRulesConfirmed: { spellId: number; codes: string[] } | null = null
 
 /** T3: le regole del turno si chiedono all'apertura del lancio, non dopo slot, bersagli e tiro. `false` se il giocatore rinuncia. */
@@ -94,8 +109,8 @@ export async function confirmTurnRules(charId: number, spellId: number): Promise
 }
 
 /** Prima dei dadi: conferme delle regole violate, poi opzioni del lancio. `CastCancelled` se il giocatore rinuncia. */
-export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false) {
-  const confirm = await castWarnings(charId, spellId, ritual)
+export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false, ki = false) {
+  const confirm = [...await castWarnings(charId, spellId, ritual, freeCast || ki)]
   const asked = turnRulesConfirmed?.spellId === spellId ? turnRulesConfirmed.codes : []
   turnRulesConfirmed = null  // vale per un lancio solo
   for (const code of confirm) {
@@ -107,6 +122,13 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   const choice = await askRollOptions(
     charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true, cancellable: true },
   )
+  if (choice.options.includes('sorcerer.metamagic_quickened')) {  // Rapido: il lancio diventa di azione bonus, le regole del turno si ricontrollano
+    for (const code of await castWarnings(charId, spellId, ritual, freeCast || ki, true)) {
+      if (confirm.includes(code)) continue
+      if (!(await askCastConfirm(code))) throw new CastCancelled()
+      confirm.push(code)
+    }
+  }
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
 
@@ -121,7 +143,7 @@ export const useEffectPickStore = create<{ picked: Record<number, Pick<SpellUseB
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
   const removal = useRemovalStore.getState().chosen[spellId]
   const pick = useEffectPickStore.getState().picked[spellId]
-  const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
+  const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast, !!body.ki)
   useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
   const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}), ...(pick && body.targets === undefined ? pick : {}) })
   const lang = uiLang(i18n.language)
@@ -205,9 +227,10 @@ export async function askRollOptions(
   const defersBy = (chosen: string[]) => attackQuery && listed.some((o) => o.defers_damage && chosen.includes(o.key))
   const inPhase = context?.fumble ? [] : listed.filter((o) => o.phase === phase)
   // `needs` di un'altra fase: il server lo azzera se è già confermata, altrimenti l'opzione non si può scegliere.
-  const options = inPhase.filter((o) => !o.needs || inPhase.some((p) => p.key === o.needs))
-  // Su un 1 naturale una somma non basta: resta mancato.
-  const afterRoll = phase === 'after_hit'
+  const options = inPhase.filter((o) => (!o.needs || inPhase.some((p) => p.key === o.needs))
+    && (!context?.ownSlotOnly || !!o.slot || !!o.outside_action))
+  // Su un 1 naturale una somma non basta: resta mancato. Per un incantesimo le offre già il modale dell'esito.
+  const afterRoll = phase === 'after_hit' && query.spell_id === undefined
     ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
         && !(context?.fumble && o.after === 'add'))
     : []

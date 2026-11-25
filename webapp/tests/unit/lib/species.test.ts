@@ -35,6 +35,15 @@ describe('creation extras', () => {
   it('sends skills as booleans', () => {
     expect(creationExtras({ scores, skipped: true, species: null, skills: ['insight'] }).skills).toEqual({ insight: true })
   })
+  it('race skills join the origin skills; the species field keeps the ones only the race gives', () => {
+    const elf = buildSpecies((races.items as unknown as RaceEntry[]).find((r) => r.index === 'elf')!, null, 'it')
+    const x = creationExtras({ scores, skipped: true, species: elf, skills: ['perception', 'insight'] })
+    expect(x.skills).toEqual({ perception: true, insight: true })
+    expect(x.species?.skills).toEqual([])
+    const alone = creationExtras({ scores, skipped: true, species: elf, skills: ['insight'] })
+    expect(alone.skills).toEqual({ insight: true, perception: true })
+    expect(alone.species?.skills).toEqual(['perception'])
+  })
 })
 
 describe('background mapping', () => {

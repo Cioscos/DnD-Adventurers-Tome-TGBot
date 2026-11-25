@@ -12,6 +12,7 @@ import SpeciesChoices from '@/components/character/SpeciesChoices'
 import { featByKey } from '@/lib/feats'
 import { uiLang } from '@/lib/lang'
 import { loadCatalog, localized, type Lang } from '@/lib/srd/catalog'
+import { toolLabel } from '@/lib/tools'
 import { speciesChoicesMissing, type Species2024Entry } from '@/lib/species'
 import type { CharacterFull } from '@/types'
 
@@ -33,6 +34,8 @@ function changeLine(code: string, t: T, lang: Lang): string {
   const key = `character.species.changes.${name}`
   if (name === 'traits_archived') return t(key, { count: Number(arg) })
   if (name.startsWith('skill_')) return t(key, { skill: t(`character.skills.${arg}`) })
+  if (name === 'resistance_removed') return t(key, { name: t(`character.inventory.damage_types.dmg_${arg}`) })
+  if (name === 'tool_removed') return t(key, { name: toolLabel(arg, lang) })
   if (name.startsWith('feat_')) return t(key, { feat: featByKey(arg)?.name[lang] ?? arg })
   return t(key, { name: arg, defaultValue: code })
 }
@@ -100,9 +103,10 @@ export default function SpeciesSheet2024({ char, open, onClose }: Props) {
     apply.reset()
   }
 
-  // Le abilità già competenti, tranne quella data dalla specie attuale (si può tenere o cambiare).
+  // Le abilità già competenti, tranne quella data dalla specie attuale (si può tenere o cambiare) o dalla razza 2014 (se ne va).
+  const raceSkills = (char.settings?.race_2014_grants as { skills?: string[] } | undefined)?.skills ?? []
   const takenSkills = Object.entries(char.skills ?? {})
-    .filter(([k, v]) => v && k !== char.species_options?._granted_skill).map(([k]) => k)
+    .filter(([k, v]) => v && k !== char.species_options?._granted_skill && !(v === true && raceSkills.includes(k))).map(([k]) => k)
   const missing = entry ? speciesChoicesMissing(entry, options).length > 0 : true
   const error = preview.error ?? apply.error
 

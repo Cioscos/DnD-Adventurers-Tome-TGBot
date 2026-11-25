@@ -19,16 +19,17 @@ from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
-from core.rules.catalog.spells import spell_effect
+from core.rules.catalog.spells import hurled_lit, spell_effect
+from core.rules.catalog.y2014.warlock_invocations import attack_rays
 from core.rules.edition import character_edition, class_key
-from core.rules.level_choices import FREE_KNOWN_KEY
+from core.rules.level_choices import CLASS_CANTRIPS, FREE_KNOWN_KEY, active_choice_specs
 from core.rules.modifiers import modifiers_for
 from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.states import SPELL_CAST_TYPE
 from core.rules.spellcasting import (
-    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    FIXED_SAVE_DC, at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
 
@@ -43,9 +44,13 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
             "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
             # il tipo dei dadi in più scelto all'ultimo lancio: il client lo usa per contare i dadi 3D (decisione 42)
             "cast_upcast_type": ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(fx.key + UPCAST_SUFFIX),
-            # il danno di una punizione arriva dall'opzione al colpo: il lancio non tira i dadi dell'incantesimo
-            "hit_damage": any(o.phase == "after_hit" for o in (*variant.options, *variant.on_hit)),
+            # il danno arriva dall'opzione all'attacco (punizione al colpo, dadi in più prima del tiro: Manto del Crociato, Favore Divino):
+            # il lancio non tira i dadi dell'incantesimo
+            "hit_damage": any(o.phase == "after_hit" or (o.phase == "before" and "attack" in o.rolls and o.extra_dice)
+                              for o in (*variant.options, *variant.on_hit)),
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
+            **({"lit": lit} if (lit := hurled_lit(char, srd_index, name)) is not None else {}),  # attacca solo da acceso (Produrre Fiamma 2024, Lama Infuocata)
+            "not_self": variant.not_self,  # chi lancia non è fra i bersagli (Vincolo di Interdizione)
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
 
@@ -87,13 +92,18 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
         spell.effect = effect_view(char, spell.srd_index, spell.name, spell.level)
+        if spell.effect and spell.effect.get("lit"):  # acceso: l'uso è scagliarlo, con l'azione
+            spell.effective_casting_time = "1 action" if "action" in (spell.casting_time or "").lower() else "1 azione"
         spell.healing_preview = healing_preview(char, spell, stats)
+        spell.rays = rays if (rays := attack_rays(char, spell)) > 1 else None
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,
                              **({"self_only": True} if ki.self_only else {})}
             if not stats:  # chi lancia solo col ki ha la CD del ki, non quella di un incantatore
                 spell.save_dc, spell.attack_bonus = ki.dc, char.proficiency_bonus + effective_ability_mod(char, "wisdom")
+        if spell.srd_index in FIXED_SAVE_DC:
+            spell.save_dc = FIXED_SAVE_DC[spell.srd_index]
 
 
 def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
@@ -108,6 +118,10 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
         mine = [s for s in char.spells if not s.always_prepared and s.id not in free
                 and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
         leveled = [s for s in mine if s.level >= 1]
+        # Segreti Magici 2014: un trucchetto scelto conta fra gli incantesimi conosciuti, non fra i trucchetti
+        picked = {k for ch in active_choice_specs(char, cls) if ch.spell_pick == "known" and ch.group != CLASS_CANTRIPS
+                  for k in (cls.options or {}).get(ch.group, [])}
+        known = [s for s in mine if s.level >= 1 or (s.srd_index or s.name) in picked]
         cap = prepared_limit(edition, key, cls.level, char)
         school = school_limit(edition, cls)
         # senza scuola salvata non si sa: non conta come fuori scuola
@@ -116,8 +130,8 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
             school_names=list(school.names) if school else None, school_free_limit=school.free if school else None,
             school_outside_count=outside,
             class_id=cls.id, class_name=cls.class_name,
-            cantrips_count=len(mine) - len(leveled), cantrips_limit=limits.cantrips or None,
-            known_count=len(leveled), known_limit=limits.spells,
+            cantrips_count=len(mine) - len(known), cantrips_limit=limits.cantrips or None,
+            known_count=len(known), known_limit=limits.spells,
             prepared_count=sum(1 for s in leveled if s.is_prepared),
             prepared_limit=cap if cap and not manual_cap else None,
         ))
@@ -157,7 +171,7 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         prepared_count=count,
         cap_mode=cap_mode if preparing else "auto",
         has_ritual_caster=can_ritual(char),
-        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual_only(char, sp)],
+        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual(char, sp)],
         has_wizard=has_wizard(classes),
         casters=[SpellCasterStats(**asdict(c)) for c in caster_stats(char)],
         limits=_class_limits(char, cap_mode == "manual"),

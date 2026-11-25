@@ -65,13 +65,18 @@ FORCE_STRIKE = RollOptionSpec(
     label=_both("Colpi Potenziati: il colpo senz'armi infligge danni da Forza", "Empowered Strikes: the unarmed strike deals Force damage"))
 
 
+# Elusione 2024 (pag. 103): non vale con la condizione Incapacitato; la carta 2014 (pag. 92) non ha questa clausola
+EVASION_2024 = tuple(replace(o, available=lambda c, f=o.available: f(c) and _can_act(c))
+                     for o in (EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED))
+
+
 # ---------------------------------------------------------------------------
 # Raffica di Colpi, Difesa Paziente, Passo del Vento
 # ---------------------------------------------------------------------------
 
 def _flurry_state(ctx: RuleContext, _params: dict) -> StateSpec:
     """Due colpi senz'armi, tre dal 10° (Concentrazione Accresciuta)."""
-    return StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"charges": 3 if ctx.class_level >= 10 else 2})
+    return StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"charges": 3 if ctx.class_level >= 10 else 2})
 
 
 def _patient_state(focus: bool):
@@ -79,6 +84,14 @@ def _patient_state(focus: bool):
         data = {"mode": "disengage_dodge", "others": [PD_FOCUS]} if focus else {"mode": "disengage"}
         return StateSpec("patient_defense", rounds=1, ends_on=("new_turn", "incapacitated", "manual"), data=data)
     return state
+
+
+def _dodging_dex_save(ctx: RuleContext) -> bool:
+    """Schivata della Difesa Paziente a punto (Schivata, pag. 366): vantaggio ai TS su Destrezza; si perde con Velocità 0 (afferrato,
+    trattenuto). L'Incapacitato chiude già lo stato."""
+    on = {k for k, v in (ctx.char.conditions or {}).items() if v}
+    dodging = any(s.get("key") == "patient_defense" and (s.get("data") or {}).get("mode") == "disengage_dodge" for s in ctx.char.active_states or [])
+    return ctx.roll == "save" and ctx.ability == "dexterity" and dodging and not on & {"grappled", "restrained"}
 
 
 def _patient_dice(ctx: RuleContext) -> str:
@@ -91,7 +104,7 @@ def _step_state(focus: bool):
         data: dict[str, Any] = {"mode": "disengage_dash", "jump_doubled": True} if focus else {"mode": "dash"}
         if focus and ctx.class_level >= 10:
             data["others"] = [STEP_FOCUS]  # la creatura portata con sé (D1): il testo lo dice al GM
-        return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "manual"), data=data)
+        return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "turn_end", "manual"), data=data)
     return state
 
 
@@ -263,8 +276,8 @@ BASE_ROWS = (
             ("Difesa Paziente (1 punto)", "Patient Defense (1 point)"),
             ("Azione bonus e 1 punto: Disimpegno e Schivata insieme; chi ti attacca ha svantaggio. Dal 10° ottieni PF temporanei pari a due dadi Arti Marziali.",
              "Bonus action and 1 point: Disengage and Dodge together; attackers have disadvantage. From 10th you gain temporary hit points equal to two Martial Arts dice."),
-            "bonus_action", on_use=OnUse(slot="bonus", spends=KI, state=_patient_state(True), rolls=_patient_dice,
-                                         temp_hp=lambda _c, rolled: rolled)),
+            "bonus_action", modifiers=(Modifier("advantage", 1, when=_dodging_dex_save, source=f"feature:{PD_FOCUS}"),),
+            on_use=OnUse(slot="bonus", spends=KI, state=_patient_state(True), rolls=_patient_dice, temp_hp=lambda _c, rolled: rolled)),
     feature("step_of_the_wind", CK, ED, 2, "Passo del Vento / Step of the Wind (Monaco 2, pag. 102)", ("Passo del Vento", "Step of the Wind"),
             ("Azione bonus, gratis: Scatto.", "Bonus action, free: Dash."),
             "bonus_action", on_use=OnUse(slot="bonus", state=_step_state(False))),
@@ -330,7 +343,7 @@ BASE_ROWS = (
     feature("evasion", CK, ED, 7, "Elusione / Evasion (Monaco 7, pag. 103)", ("Elusione", "Evasion"),
             ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà. Non vale se sei incapacitato.",
              "On a Dexterity save for half damage: no damage on a success, half on a failure. Not while incapacitated."),
-            roll_options=(EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED)),
+            roll_options=EVASION_2024),
     feature("acrobatic_movement", CK, ED, 9, "Movimento Acrobatico / Acrobatic Movement (Monaco 9, pag. 103)",
             ("Movimento Acrobatico", "Acrobatic Movement"),
             ("Senza armatura né scudo, nel tuo turno ti muovi su pareti e liquidi senza cadere; il DM decide i dettagli.",
@@ -364,7 +377,9 @@ BASE_ROWS = (
             ("Difesa Superiore", "Superior Defense"),
             ("A inizio turno, 3 punti: per 1 minuto resistenza a ogni danno tranne la forza. Finisce se sei incapacitato.",
              "At the start of your turn, 3 points: for 1 minute resistance to all damage except Force. It ends if you are incapacitated."),
-            "special", on_use=OnUse(cost=3, spends=KI, state=StateSpec(SUPERIOR_STATE, rounds=10, ends_on=("incapacitated", "manual"))),
+            # a inizio turno: una volta per turno, e a un turno successivo si rinnova il minuto
+            "special", on_use=OnUse(cost=3, spends=KI, once_per_turn=True,
+                                    state=StateSpec(SUPERIOR_STATE, rounds=10, ends_on=("incapacitated", "manual"))),
             modifiers=tuple(Modifier(f"resistance:{t}", 1, when=lambda c: state_on(c, SUPERIOR_STATE), source=f"feature:{CK}.superior_defense")
                             for t in DAMAGE_TYPES if t != "force")),
     feature("epic_boon", CK, ED, 19, "Dono Epico / Epic Boon (Monaco 19, pag. 103)", ("Dono Epico", "Epic Boon"),
@@ -525,15 +540,8 @@ MERCY_ROWS = (
 # Guerriero dell'Ombra
 # ---------------------------------------------------------------------------
 
-def _darkvision_range(ctx: RuleContext) -> int:
-    """Scurovisione 18 m (60 piedi); se già posseduta, la portata cresce di altri 18 m."""
-    have = max((int(s.get("range_ft") or 0) for s in (ctx.char.settings or {}).get("senses") or []
-                if isinstance(s, dict) and s.get("type") == "darkvision"), default=0)
-    return 60 + have
-
-
 def _begin_shadow_strike(ctx: RuleContext, _params: dict) -> None:
-    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), SHADOW_STRIKE.key,
+    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual")), SHADOW_STRIKE.key,
                 "Colpo dopo il Passo dell'Ombra")  # feature_key senza riga: il nome non si fonde con quello dello stato del Passo
 
 
@@ -554,18 +562,18 @@ SHADOW_ROWS = (
              ("Oscurità con 1 punto, senza componenti; Scurovisione 18 m (altri 18 m se già ce l'hai); conosci Illusione Minore con Saggezza.",
               "Darkness for 1 point, no components; Darkvision 18 m (another 18 m if you already have it); you know Minor Illusion with Wisdom."),
              "action", passive=True, granted_spells=("darkness", "minor-illusion"), ki_spells=(KiSpell("darkness", 1),),
-             modifiers=(Modifier("sense:darkvision", _darkvision_range, source=f"feature:{CK}.shadow_arts"),)),
+             modifiers=(Modifier("sense_plus:darkvision", 60, source=f"feature:{CK}.shadow_arts"),)),
     _sub_row("shadow", "shadow_step", 6, "Passo dell'Ombra", "Shadow Step", 105,
              ("Azione bonus, da luce fioca o oscurità: ti teletrasporti fino a 18 m in uno spazio libero anch'esso in luce fioca; vantaggio al prossimo attacco in mischia.",
               "Bonus action, from dim light or darkness: teleport up to 60 ft to a free space also in dim light; advantage on your next melee attack."),
              "bonus_action", roll_options=(STEP_ADVANTAGE,),
-             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,), state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,), state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     _sub_row("shadow", "improved_shadow_step", 11, "Passo dell'Ombra Migliorato", "Improved Shadow Step", 105,
              ("Con 1 punto il Passo dell'Ombra ignora la luce di partenza e arrivo, e subito dopo il teletrasporto fai un colpo senz'armi.",
               "With 1 point Shadow Step ignores the light at start and arrival, and right after the teleport you make an unarmed strike."),
              "bonus_action", roll_options=(SHADOW_STRIKE,),
              on_use=OnUse(slot="bonus", spends=KI, effect=_begin_shadow_strike,
-                          state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+                          state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     _sub_row("shadow", "cloak_of_shadows", 17, "Manto di Ombre", "Cloak of Shadows", 105,
              ("Azione Magia e 3 punti, da luce fioca o oscurità: per 1 minuto invisibile e in parte incorporeo. Finisce se incapacitato.",
               "Magic action and 3 points, from dim light or darkness: for 1 minute invisible and partly incorporeal. Ends if incapacitated."),

@@ -11,7 +11,7 @@ async def test_concentration_remembers_the_cast_level_and_rerolling_damage_spend
     assert r.status_code == 201, r.text
     spell = r.json()["id"]
     assert (await client.post(f"/characters/{cid}/spell_slots", json={"level": 4, "total": 1})).status_code == 201
-    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 4})
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 4, "choices": {"damage_type": "radiant"}})
     assert r.status_code == 200, r.text
     sheet = r.json()
     assert sheet["concentrating_spell_id"] == spell and sheet["settings"]["concentration_level"] == 4

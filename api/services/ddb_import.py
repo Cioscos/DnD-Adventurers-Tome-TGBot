@@ -33,8 +33,10 @@ from core.db.models import EquipmentSlot
 from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
 from core.game.stats import ability_modifier
 from core.rules.catalog import features_for
+from core.rules.catalog.feats import FEAT_FEATURES
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import active_choice_specs, apply_grants
+from core.rules.modifiers import DWARVEN_TOUGHNESS
 from core.rules.proficiencies import LABELS, SEEDED_FLAG
 from core.rules.subclasses import match_subclass
 from core.rules.types import Edition, RuleContext
@@ -290,32 +292,47 @@ def _scores(c: _Ctx) -> None:
     c.ok("ability_scores")
 
 
-def _catalog_computes_hp(c: _Ctx) -> bool:
-    """R45: il catalogo dell'edizione calcola già un bonus ai PF massimi per una classe del PG (Resilienza Draconica):
-    importarlo anche nella base lo sommerebbe due volte."""
+def _catalog_computes_hp(c: _Ctx) -> set[str]:
+    """R45: fonti il cui bonus ai PF massimi per livello lo calcola già l'app (Resilienza Draconica, Robusto, Robustezza
+    Nanica 2014): importarlo anche nella base lo sommerebbe due volte."""
+    def adds_hp(specs) -> bool:
+        return any(m.target == "hp_max" for spec in specs for m in spec.modifiers)
+
+    out: set[str] = set()
     for cl in _l(c.out.get("_raw_classes")):
         key = normalize_class_name(_str(_d(_d(cl).get("definition")).get("name"), 100))
-        if any(m.target == "hp_max" for spec in features_for(c.edition, key) for m in spec.modifiers):
-            return True
-    return False
+        if adds_hp(features_for(c.edition, key)):
+            out.add("class")
+    for name in _names(c.data.get("feats")):
+        feat = _catalog_feat(name, c.edition)
+        if feat is not None and adds_hp(filter(None, [FEAT_FEATURES.get(f"feat.{feat.key}")])):
+            out.add("feat")
+    if c.edition == "2014" and any(n.lower() in DWARVEN_TOUGHNESS for n in _names(_d(c.data.get("race")).get("racialTraits"))):
+        out.add("race")  # il tratto entra come riga e il suo +1 per livello lo conta il motore
+    return out
+
+
+def _names(entries: Any) -> list[str]:
+    return [_str(_d(_d(e).get("definition")).get("name")) for e in _l(entries)]
 
 
 def _hp(c: _Ctx) -> dict:
     d = c.data
     kept = 0  # ciò che la scheda conta e il catalogo ricalcola: serve ai PF correnti, non al massimo
-    if d.get("overrideHitPoints") is not None:
-        mx = _int(d.get("overrideHitPoints"))
+    forced = d.get("overrideHitPoints") is not None
+    per_level = 0
+    own_bonus = _catalog_computes_hp(c)
+    for m in _modifiers(d):
+        if m.get("type") == "bonus" and m.get("subType") == "hit-points-per-level":
+            if m["_src"] in own_bonus:
+                kept += _int(m.get("value")) * c.total_level  # R45: lo calcola il catalogo
+                continue
+            per_level += _int(m.get("value"))
+            if m["_src"] not in ("race", "feat") and not forced:
+                c.approx("hp", "", "ddb.reason.hp_recomputed")
+    if forced:  # il massimo scritto a mano è quello della scheda, con tutto: la base è ciò che resta
+        mx = _int(d.get("overrideHitPoints")) - kept
     else:
-        per_level = 0
-        own_bonus = _catalog_computes_hp(c)
-        for m in _modifiers(d):
-            if m.get("type") == "bonus" and m.get("subType") == "hit-points-per-level":
-                if own_bonus and m["_src"] == "class":
-                    kept += _int(m.get("value")) * c.total_level  # R45: lo calcola il catalogo
-                    continue
-                per_level += _int(m.get("value"))
-                if m["_src"] not in ("race", "feat"):
-                    c.approx("hp", "", "ddb.reason.hp_recomputed")
         mx = (_int(d.get("baseHitPoints")) + _int(d.get("bonusHitPoints"))
               + (c.mod("constitution") + per_level) * c.total_level)
     mx = _clamp(mx, 1, 1_000_000)

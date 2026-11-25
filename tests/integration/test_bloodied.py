@@ -22,7 +22,7 @@ async def _set_hp(client, cid: int, value: int) -> dict:
 @pytest.mark.parametrize("edition,hp,expected", [
     ("2024", 5, True),    # metà esatta di 10
     ("2024", 6, False),
-    ("2024", 0, False),   # a 0 PF valgono i TS contro la morte, non l'etichetta
+    ("2024", 0, True),    # 2024 Glossario p.362: «a metà PF o meno», lo 0 compreso
     ("2014", 5, False),   # il 2014 non ha la condizione
 ])
 async def test_bloodied_flag(client, edition, hp, expected):

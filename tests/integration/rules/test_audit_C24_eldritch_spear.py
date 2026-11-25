@@ -19,10 +19,10 @@ async def test_a_new_2024_warlock_is_not_offered_eldritch_spear_for_chill_touch(
 def test_a_warlock_who_already_chose_it_keeps_the_row_and_the_option():
     assert "eldritch_spear__chill_touch" in inv.LEVELS
     assert "eldritch_spear__chill_touch" in {s.option_key for s in inv.INVOCATION_ROWS}
-    chill = SimpleNamespace(srd_index="chill-touch", name="Tocco Gelido", level=0)
+    chill = SimpleNamespace(id=1, class_id=None, srd_index="chill-touch", name="Tocco Gelido", level=0, always_prepared=False)
 
     def ctx(owned):
-        row = SimpleNamespace(options={"invocations": owned})
-        return SimpleNamespace(class_level=5, class_row=row, char=SimpleNamespace(spells=[chill]))
+        row = SimpleNamespace(id=1, options={"invocations": owned})
+        return SimpleNamespace(class_level=5, class_row=row, char=SimpleNamespace(spells=[chill], settings={}))
     assert "eldritch_spear__chill_touch" not in inv.available_invocations(ctx([]))
     assert "eldritch_spear__chill_touch" in inv.available_invocations(ctx(["eldritch_spear__chill_touch"]))

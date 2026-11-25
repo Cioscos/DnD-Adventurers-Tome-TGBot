@@ -19,20 +19,22 @@ from api.routers.hp import death_state, retouch_death_save
 from api.routers.items import close_grazed_attack, retouch_pending_attack
 from api.routers.sessions import active_encounter_row
 from api.services.game_sessions import touch
-from api.services.rules_targets import apply_target_effect, pending_target_effect
+from api.services.rules_targets import apply_target_effect, pending_target_effect, target_immune
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
-from api.services.d20 import d20_records, resolve_applied
+from api.services.d20 import d20_records, resolve_applied, resolve_d20
 from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
-from api.services.rules_states import end_unextended, remove_state, use_feature
+from api.services.rules_states import end_states, end_unextended, get_states, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import is_target_immune, item_spell_held
+from core.rules.states import item_spell_held
 from api.services.turn_start import apply_turn_start
-from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
+from api.services.rules_turn import (
+    clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, set_damaged, spend,
+)
 from api.services.durations import end_concentration, is_concentrating
 from api.services.condition_effects import release_concentration_effects
 from core.db.models import Character, Combatant, Encounter, GameSession
@@ -131,8 +133,12 @@ async def turn_new(
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
-    if not in_encounter:
-        end_unextended(char)  # fuori da un incontro «Nuovo turno» chiude il turno che finisce (Ira 2024)
+    if not in_encounter:  # fuori da un incontro «Nuovo turno» chiude il turno che finisce, come la fine turno in scontro
+        if any("turn_end_inactive" in s["ends_on"] for s in get_states(char)):  # Ira 2014: né attacchi né danni dal turno precedente
+            if not (ended := get_turn(char))["attacks_made"] and not ended["damaged"]:
+                end_states(char, "turn_end_inactive")
+            set_damaged(char, False)  # il danno conta una sola valutazione (senza Ira resta: l'annullo dei PF lo confronta)
+        end_unextended(char)  # Ira 2024
     turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
         await apply_turn_start(db, char, in_encounter=False)
@@ -169,6 +175,7 @@ async def roll_options(
     casting_level: int | None = None,
     slotless: bool = False,
     damage: int | None = None,
+    proficient: bool = False,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
     char = await get_owned_full_with_resources(char_id, user_id, db)
@@ -200,7 +207,7 @@ async def roll_options(
     return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level,
                         slotless=slotless and roll == "cast", **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type),
-                        damage=damage if roll == "damage_taken" else None)
+                        damage=damage if roll == "damage_taken" else None, proficient=proficient and roll == "ability")
 
 
 def _refuse(code: str, **extra: str) -> HTTPException:
@@ -223,7 +230,7 @@ async def last_roll_options(
     last, pending = turn.get("last_roll"), turn.get("pending_attack")
     is_attack = bool(last) and last["roll"] == "attack"
     weapon_attack = is_attack and last["spell_id"] is None
-    if not last or (weapon_attack and not pending):  # il danno è già stato tirato
+    if not last or (weapon_attack and (not pending or "spell_id" in pending)):  # il danno è già stato tirato
         raise _refuse("no_last_roll")
     if last["auto_fail"]:
         raise _refuse("option_unavailable", key=(body.options or [""])[0])
@@ -238,7 +245,7 @@ async def last_roll_options(
     if last.get("combatant_id") and (encounter is None or encounter.status == "ended"):
         raise _refuse("no_last_roll")
 
-    where = {"skill": last["skill"], "ability": last["ability"],
+    where = {"skill": last["skill"], "ability": last["ability"], "proficient": last.get("proficient", False),  # strumento
              "item": next((i for i in char.items if i.id == last["item_id"]), None),
              "spell": next((s for s in char.spells if s.id == last["spell_id"]), None)}
     grip = ({"attack_mode": pending["attack_mode"], "grip": pending["grip"], "offhand": pending.get("offhand", False)}
@@ -250,11 +257,28 @@ async def last_roll_options(
                             **({"attack_mode": pending["attack_mode"]} if weapon_attack else {}))
     merge_options(applied, opts)
     die, dice, mode, bonus, total = last["die"], last["dice"], last["mode"], last["bonus"], last["total"]
-    if opts.reroll:
-        outcome = resolve_applied(body.mode, body.dice, None, applied)
+    if opts.extra_d20:  # Fortunato 2014: un d20 in più, non un ritiro; il giocatore usa il migliore di quelli tirati
+        added = resolve_d20("normal", (body.dice or [])[:1] or None, None)
+        record_dice(char, d20_records(added))
+        best = max(die, *(dice or []), added.kept)  # anche l'altro d20 di uno svantaggio
+        total += best - die
+        # dopo uno svantaggio si sceglie fra tre d20: l'etichetta non dice «vantaggio» (svantaggio + Fortunato = scelta libera)
+        die, dice, mode = best, [*(dice or [die]), added.kept], "normal" if mode == "disadvantage" else "advantage"
+    elif opts.reroll:
+        if opts.mode is None:  # lo stesso tiro, nello stesso modo: con vantaggio o svantaggio si ritira un d20 solo
+            # (2014 pag. 173, 2024 pag. 12-13), il più basso: è la scelta che conviene sempre (ed è l'1 di Fortuna)
+            new = body.dice[0] if body.dice else random.randint(1, 20)
+            # dopo Fortunato i d20 sono anche tre (e la scelta è libera, «normal»): dei due che restano vale il migliore
+            held = sorted(dice)[1:][-1:]
+            outcome = resolve_applied("advantage" if held and mode == "normal" else mode, [new, *held], None, applied, reroll=True)
+            outcome.mode = mode
+            rolled = [("d20", new)]
+        else:  # un ritiro con un modo suo è un tiro nuovo (Controfascino 2024: con vantaggio)
+            outcome = resolve_applied(body.mode, body.dice, None, applied)
+            rolled = d20_records(outcome)
         total += outcome.kept - die
         die, dice, mode = outcome.kept, outcome.dice, outcome.mode
-        record_dice(char, d20_records(outcome))
+        record_dice(char, rolled)
     rolls, extra = roll_option_dice(char, opts)
     bonus += opts.bonus
     total += opts.bonus + extra
@@ -316,6 +340,9 @@ async def last_roll_options(
             refundable = {}
 
     turn = get_turn(char)  # pagamenti e attacco in sospeso hanno riscritto il turno
+    if is_attack and not weapon_attack and (pending or {}).get("spell_id") == last["spell_id"]:  # l'attacco con incantesimo in sospeso
+        turn["pending_attack"] = {**pending, "options": [*pending["options"], *opts.keys],
+                                  "result": {"to_hit_die": die, "mode": mode, "is_critical": is_critical, "is_fumble": is_fumble}}
     turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": raw_total, "notes": notes,
                          "forced_hit": forced_hit, "refundable": refundable, "concentration": conc, "death": death,
                          "after_used": [*last.get("after_used", []), *opts.keys],
@@ -613,7 +640,7 @@ async def target_effect_preview(
     return TargetEffectPreview(
         result=TargetEffectRead(**effect),
         combatants=[TargetCandidate(id=c.id, name=c.name, kind=c.kind,
-                                    immune=bool(effect.get("immune_on_success")) and is_target_immune(char, effect_key, c))
+                                    immune=await target_immune(db, char, effect, effect_key, c))
                     for c in sorted(found[0].combatants, key=lambda c: c.sort_order or 0) if not c.is_dead] if found else [],
     )
 

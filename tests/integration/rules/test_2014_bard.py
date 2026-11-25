@@ -339,8 +339,10 @@ async def test_countercharm_is_an_action_that_lasts_until_the_end_of_the_next_tu
     r = await _use(client, cid, "bard.countercharm")
     assert r.status_code == 200, r.text
     state = r.json()["state"]
-    assert (state["key"], state["rounds_left"]) == ("countercharm", 2)
-    assert set(state["ends_on"]) == {"incapacitated", "rest_short", "rest_long", "manual"}  # M3: un riposo lo chiude
+    # 2014, Controfascino (Bardo 6), pag. 54: «fino alla fine del tuo turno successivo», non due round (CB-1614)
+    assert (state["key"], state["rounds_left"], state["data"]["skip_new_turns"]) == ("countercharm", None, 1)
+    assert set(state["ends_on"]) == {"new_turn", "turn_end_counted", "incapacitated", "rest_short", "rest_long",
+                                     "manual"}  # M3: un riposo lo chiude
     assert state["data"]["others"] == ["bard.countercharm"]
     again = await _use(client, cid, "bard.countercharm")
     assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"
@@ -434,7 +436,8 @@ async def test_magical_secrets_pick_any_spell_up_to_the_castable_level(client):
     full = await _full(client, cid)
     assert _choice(full, "magical_secrets") is None
     limits = full["spellcasting"]["limits"][0]
-    assert (limits["known_count"], limits["cantrips_count"]) == (1, 1)  # contano nei conosciuti
+    # 2014 Segreti Magici pag. 54: anche il trucchetto scelto rientra negli Incantesimi Conosciuti, non nella colonna Trucchetti (CB-1611)
+    assert (limits["known_count"], limits["cantrips_count"]) == (2, 0)
 
 
 async def test_magical_secrets_pick_refuses_a_wrong_choice_and_a_second_use(client):
@@ -462,16 +465,18 @@ async def test_magical_secrets_is_absent_below_level_10(client):
 # Superiore Ispirazione
 # ---------------------------------------------------------------------------
 
-async def test_superior_inspiration_is_offered_at_initiative_only_with_no_uses_left(client):
+async def test_superior_inspiration_regains_one_use_at_initiative_only_with_no_uses_left(client):
+    # 2014, Ispirazione Superiore (Bardo 20), pag. 54: «passivo (al tiro di iniziativa)», non un'opzione da spuntare
     cid = await _bard(client, 20, charisma=16)
-    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
     bi = await _ability(client, cid, BI)
+    await client.patch(f"/characters/{cid}/abilities/{bi['id']}", json={"uses": 1})
+    await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
+    assert (await _ability(client, cid, BI))["uses"] == 1  # scatta solo a zero usi
     await client.patch(f"/characters/{cid}/abilities/{bi['id']}", json={"uses": 0})
-    assert "bard.superior_inspiration" in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8, "options": ["bard.superior_inspiration"]})
+    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, BI))["uses"] == 1
-    assert "bard.superior_inspiration" not in await _roll_keys(client, cid, "initiative")
 
 
 async def test_superior_inspiration_in_the_encounter_initiative(client, test_session_factory):

@@ -88,7 +88,7 @@ async def test_epic_boon_checks_prerequisites_and_is_text_only(client):  # D3
     r = await client.post(f"/characters/{body['id']}/choices/{body['pending_choices'][0]['id']}/resolve",
                           json={"kind": "feat", "feat_key": "2024_boon_fate", "ability": "strength"})
     assert r.status_code == 422
-    # un talento generale non si prende come Dono Epico
+    # Attore vuole Carisma 13: il Dono Epico ammette un altro talento solo se se ne hanno i requisiti (2024, Guerriero pag. 92)
     r = await _resolve(client, body, "epic_boon", {"feat_key": "2024_actor", "ability": "charisma"})
     assert r.status_code == 422
     # Dono di un'altra edizione

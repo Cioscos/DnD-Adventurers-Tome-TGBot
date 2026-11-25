@@ -6,6 +6,7 @@ del Maestro di Battaglia sono opzioni di una scelta (``maneuvers``) e conferme a
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from core.data.damage_types import LABELS_IT, canonical_damage_type
@@ -145,7 +146,7 @@ def _arcane_charge_notes(ctx: RuleContext, params: dict) -> list[str]:
 
 
 INDOMITABLE_REROLL = RollOptionSpec(
-    key=IND, phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=IND),
+    key=IND, phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=IND),
     label={"it": "Indomito: ripeti il tiro salvezza fallito (vale il nuovo risultato)",
            "en": "Indomitable: reroll the failed saving throw (the new result stands)"})
 
@@ -171,7 +172,10 @@ def _athlete_applies(ctx: RuleContext) -> bool:
         return False
     if ctx.roll == "initiative":
         return True
-    return ctx.roll in ("skill", "ability") and not ctx.proficient and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
+    # Conoscenze Secolari dà la competenza intera nell'abilità scelta (pag. 60)
+    ages = ctx.skill and any(s.get("key") == "knowledge_of_the_ages" and (s.get("data") or {}).get("skill") == ctx.skill
+                             for s in ctx.char.active_states or [])
+    return ctx.roll in ("skill", "ability") and not ctx.proficient and not ages and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
 
 
 def _survivor_heal(ctx: RuleContext) -> int:
@@ -232,7 +236,7 @@ def _other_maneuver_used(ctx: RuleContext) -> bool:
 
 
 def _after(ctx: RuleContext) -> bool:
-    return _weapon_in_hand(ctx) and not _other_maneuver_used(ctx)
+    return _weapon_attack(ctx) and not _other_maneuver_used(ctx)
 
 
 def _melee_after(ctx: RuleContext) -> bool:
@@ -278,14 +282,14 @@ GOADING = _rider(
                                                ends_at=_till_my_next_turn()))
 LUNGING = RollOptionSpec(
     key=_key("lunging"), phase="before", rolls=("attack",), group=ONE_MANEUVER, extra_dice=_die_dice,
-    cost=Cost(feature_key=SD), available=lambda c: _weapon_in_hand(c) and c.attack_mode in ("melee", "offhand"),
+    cost=Cost(feature_key=SD), available=lambda c: _weapon_attack(c) and c.attack_mode in ("melee", "offhand"),
     label={"it": "Attacco con Affondo: portata +1,5 m per questo attacco, se colpisce +dado al danno",
            "en": "Lunging Attack: +5 ft reach for this attack, +die to damage if it hits"},
     effect=_say("Portata aumentata di 1,5 m per questo attacco.", "Reach increased by 5 ft for this attack."))
 FEINT_STRIKE = RollOptionSpec(
     key=FEINT_STRIKE_KEY, phase="before", rolls=("attack",), group=ONE_MANEUVER, mode="advantage",
     extra_dice=_die_dice, cost=Cost(state_key="feinting_attack"),
-    available=lambda c: _weapon_in_hand(c) and state_on(c, "feinting_attack"),
+    available=lambda c: _weapon_attack(c) and state_on(c, "feinting_attack"),
     label={"it": "Finta: l'attacco è contro la creatura che hai fintato (vantaggio, +dado al danno se colpisce)?",
            "en": "Feint: is the attack against the creature you feinted (advantage, +die to damage on a hit)?"})
 MANEUVERING = _rider(
@@ -330,12 +334,12 @@ DISTRACTING = _rider(
     on_confirm=_start_note("distracting", "Colpo Distraente"))
 PRECISION = RollOptionSpec(
     key=_key("precision"), phase="after_roll", after="add", rolls=("attack",), group=ONE_MANEUVER, extra_dice=_die_dice,
-    cost=Cost(feature_key=SD), available=lambda c: _weapon_in_hand(c) and not _other_maneuver_used(c),
+    cost=Cost(feature_key=SD), available=lambda c: _weapon_attack(c) and not _other_maneuver_used(c),
     label={"it": "Attacco Preciso: somma il dado di superiorità al tiro per colpire",
            "en": "Precision Attack: add the superiority die to the attack roll"})
 RIPOSTE = RollOptionSpec(
     key=_key("riposte"), phase="before", rolls=("attack",), group=ONE_MANEUVER, slot="reaction", extra_dice=_die_dice,
-    cost=Cost(feature_key=SD), available=lambda c: _weapon_in_hand(c) and c.attack_mode in ("melee", "offhand"),
+    cost=Cost(feature_key=SD), available=lambda c: _weapon_attack(c) and c.attack_mode in ("melee", "offhand"),
     label={"it": "Replica: una creatura ti ha mancato con un attacco in mischia? Reazione, +dado al danno se colpisci",
            "en": "Riposte: did a creature miss you with a melee attack? Reaction, +die to damage if you hit"})
 PARRY = RollOptionSpec(
@@ -392,7 +396,7 @@ def _maneuver_rows() -> list:
                                    "Bonus action and a die: advantage on your next attack against a creature within 5 ft, +die to damage on a hit."),
                   "bonus_action", roll_options=(FEINT_STRIKE,),
                   on_use=OnUse(slot="bonus", spends=SD, state=StateSpec(
-                      "feinting_attack", rounds=1, ends_on=("new_turn", "manual")))),
+                      "feinting_attack", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
         _maneuver("maneuvering", ("Dopo un colpo con arma, +dado al danno; un alleato usa la reazione per muoversi di metà velocità senza provocare.",
                                       "After a weapon hit, +die to damage; an ally uses their reaction to move half speed without provoking."),
                   roll_options=(MANEUVERING,)),
@@ -452,7 +456,7 @@ def _relentless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> Non
 
 
 RELENTLESS = RollOptionSpec(
-    key=f"{CK}.relentless", phase="before", rolls=("initiative",), available=_relentless_available,
+    key=f"{CK}.relentless", phase="before", rolls=("initiative",), automatic=True, available=_relentless_available,  # passivo: nessuna scelta
     on_confirm=_relentless_confirmed,
     label={"it": "Implacabile: recupera un dado di superiorità (non ne hai)", "en": "Relentless: regain a superiority die (you have none)"})
 
@@ -462,9 +466,10 @@ RELENTLESS = RollOptionSpec(
 # ---------------------------------------------------------------------------
 
 def _after_action_spell(ctx: RuleContext, *, cantrip_only: bool) -> bool:
-    """Un incantesimo da guerriero lanciato con l'azione in questo turno (segnato dal lancio) e l'attacco non è un incantesimo."""
+    """Un incantesimo di qualsiasi classe lanciato con l'azione in questo turno (segnato dal lancio; 2014 p.75 non
+    vincola la classe) e l'attacco non è un incantesimo."""
     turn = ctx.turn or {}
-    if ctx.spell is not None or turn.get("action_spell_class") != ctx.class_row.id:
+    if ctx.spell is not None:
         return False
     return turn.get("action_spell_level") == 0 if cantrip_only else turn.get("action_spell_level") is not None
 
@@ -486,6 +491,7 @@ def _strike_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
                                     data={"skip_new_turns": 1}), f"{CK}.eldritch_strike", "Colpo Mistico")
 
 
+# Con un'arma vera, come lo usa il 2024 (p.98); la riga 2014 conta anche il colpo senz'armi (p.195, D-030)
 ELDRITCH_STRIKE = RollOptionSpec(
     key=f"{CK}.eldritch_strike", phase="after_hit", rolls=("attack",), available=_weapon_in_hand, on_confirm=_strike_confirmed,
     label={"it": "Colpo Mistico: il bersaglio ha svantaggio al suo prossimo TS contro un tuo incantesimo",
@@ -604,7 +610,7 @@ FEATURES = (
             ("Dadi per le manovre: 4 (5 al 7°, 6 al 15°), d8 (d10 al 10°, d12 al 18°). Tre manovre, più due ai livelli 7, 10 e 15. CD 8 + competenza + Forza o Destrezza.",
              "Dice for maneuvers: 4 (5 at 7th, 6 at 15th), d8 (d10 at 10th, d12 at 18th). Three maneuvers, plus two at 7th, 10th and 15th. DC 8 + proficiency + Strength or Dexterity."),
             subclass="battle_master", uses=Uses(table={3: 4, 7: 5, 15: 6}), restoration="short_rest",
-            choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True,
+            choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True, replace_per_level="new_picks",
                                 options=lambda _ctx: [k for k, _it, _en in MANEUVERS]),)),
     feature("student_of_war", CK, ED, 3, "Studioso di Guerra / Student of War (Maestro di Battaglia 3, pag. 73)",
             ("Studioso di Guerra", "Student of War"),
@@ -652,7 +658,7 @@ FEATURES = (
             ("Colpo Mistico", "Eldritch Strike"),
             ("La creatura che colpisci con un'arma ha svantaggio al prossimo TS contro un tuo incantesimo, fino alla fine del tuo turno seguente.",
              "A creature you hit with a weapon has disadvantage on its next saving throw against a spell of yours, until the end of your next turn."),
-            subclass="eldritch_knight", roll_options=(ELDRITCH_STRIKE, ELDRITCH_STRIKE_CAST)),
+            subclass="eldritch_knight", roll_options=(replace(ELDRITCH_STRIKE, available=_weapon_attack), ELDRITCH_STRIKE_CAST)),
     feature("arcane_charge", CK, ED, 15, "Carica Arcana / Arcane Charge (Cavaliere Mistico 15, pag. 75)",
             ("Carica Arcana", "Arcane Charge"),
             ("Quando usi Azione Impetuosa ti teletrasporti fino a 9 m in uno spazio libero che vedi, prima o dopo l'azione in più.",

@@ -285,12 +285,15 @@ async def test_bears_endurance_temp_hp_vanish_when_the_spell_ends(client, test_s
     assert (await _sheet(client, hero))["temp_hp"] == 0
 
 
-async def test_false_life_temp_hp_have_no_state_to_end_so_they_stay(client, test_session_factory, monkeypatch):
+async def test_false_life_2014_temp_hp_vanish_when_the_hour_ends(client, test_session_factory, monkeypatch):
+    """2014 Vita Falsata p.289: i PF temporanei valgono «per la durata» (1 ora); p.198: durano fino al riposo lungo salvo durata diversa."""
     _max_dice(monkeypatch)
     hero, caster, spell = await _table(client, test_session_factory, "False Life", "false-life", 1)
     await _cast(client, caster, spell, [], level=1)
     sheet = await _sheet(client, caster, GM_ID)
-    assert sheet["temp_hp"] == 8 and not [s for s in sheet["active_states"] or [] if s["key"].startswith("spell")]
+    assert sheet["temp_hp"] == 8 and len(await _states(client, caster, "spell:false_life", GM_ID)) == 1
+    await _end_spell(client, caster, caster, "false_life", "manual")
+    assert (await _sheet(client, caster, GM_ID))["temp_hp"] == 0
 
 
 # --- Aiuto -----------------------------------------------------------------------------------------------------------
@@ -673,6 +676,11 @@ async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_s
     hero, caster, spell = await _table(client, test_session_factory, "Regenerate", "regenerate", 7)
     await _hp(client, hero, 100, user=PLAYER_ID)
     await _cast(client, caster, spell, [hero], level=7)
+    # 2014 Rigenerazione pag. 270: 4d8+15 una volta sola, e li tira la «Cura» dell'incantesimo che il client chiama dopo il lancio (CB-3363)
+    assert (await _sheet(client, hero))["current_hit_points"] == 100
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{caster}/spells/{spell}/roll_healing", json={"casting_level": 7, "target_character_ids": [hero]})
+    assert r.status_code == 200, r.text
     assert (await _sheet(client, hero))["current_hit_points"] == 147  # 32 + 15
     await _new_turn(client, hero)
     assert (await _sheet(client, hero))["current_hit_points"] == 148

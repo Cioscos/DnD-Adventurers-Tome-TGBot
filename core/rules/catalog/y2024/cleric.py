@@ -143,16 +143,26 @@ TURN_UNDEAD_USE = OnUse(slot="action", spends=POOL, rolls=_sear_dice, state=_tur
 # Colpi Benedetti
 # ---------------------------------------------------------------------------
 
-POTENT_TEMP_HP = RollOptionSpec(
-    key=f"{CK}.improved_potent_spellcasting", phase="before", rolls=("spell_damage",),
-    label={"it": "Incantesimi Potenti: dai PF temporanei a te o a una creatura entro 18 m",
-           "en": "Potent Spellcasting: give temporary HP to yourself or a creature within 60 ft"},
-    available=lambda c: _chosen(c, STRIKES, "potent_spellcasting") and _own_cantrip(c) and _wisdom_mod(c) >= 1,
-    temp_hp_gift=lambda c, _i: 2 * _wisdom_mod(c),
-    effect=lambda c, i: ({"it": f"{2 * _wisdom_mod(c)} PF temporanei a una creatura entro 18 m.",
-                          "en": f"{2 * _wisdom_mod(c)} temporary HP to a creature within 60 ft."} if i.get("target_character_id") is not None else
-                         {"it": f"Dai {2 * _wisdom_mod(c)} PF temporanei a te o a una creatura entro 18 m.",
-                          "en": f"Give {2 * _wisdom_mod(c)} temporary HP to yourself or a creature within 60 ft."}))
+def _potent_temp_hp(mine: bool) -> RollOptionSpec:
+    def gain(_session: Any, ctx: RuleContext, _given: dict) -> None:
+        ctx.char.temp_hp = max(ctx.char.temp_hp or 0, 2 * _wisdom_mod(ctx))  # non si sommano
+
+    def effect(ctx: RuleContext, given: dict) -> dict[str, str]:
+        n = 2 * _wisdom_mod(ctx)
+        if mine:
+            return {"it": f"Ottieni {n} PF temporanei.", "en": f"You gain {n} temporary HP."}
+        if given.get("target_character_id") is not None:
+            return {"it": f"{n} PF temporanei a una creatura entro 18 m.", "en": f"{n} temporary HP to a creature within 60 ft."}
+        return {"it": f"Dai {n} PF temporanei a una creatura entro 18 m.", "en": f"Give {n} temporary HP to a creature within 60 ft."}
+    return RollOptionSpec(
+        key=f"{CK}.improved_potent_spellcasting" + ("_self" if mine else ""), phase="before", rolls=("spell_damage",), group="potent_temp_hp",
+        label={"it": "Incantesimi Potenti: PF temporanei " + ("a te" if mine else "a un'altra creatura entro 18 m"),
+               "en": "Potent Spellcasting: temporary HP to " + ("yourself" if mine else "another creature within 60 ft")},
+        available=lambda c: _chosen(c, STRIKES, "potent_spellcasting") and _own_cantrip(c) and _wisdom_mod(c) >= 1,
+        on_confirm=gain if mine else None, temp_hp_gift=None if mine else (lambda c, _i: 2 * _wisdom_mod(c)), effect=effect)
+
+
+POTENT_TEMP_HP = (_potent_temp_hp(False), _potent_temp_hp(True))
 
 
 # ---------------------------------------------------------------------------
@@ -173,14 +183,24 @@ def _di_effect(ctx: RuleContext, params: dict) -> None:
     """L'incantesimo scelto sta sulla scheda finché lo stato che autorizza il lancio gratuito dura; il lancio lo chiude
     (R43). Desiderio blocca il privilegio per 2d4 riposi lunghi (tiro e conteggio nello stato)."""
     from core.db.models import Spell  # import locale: i modelli non servono al resto del catalogo
+    from core.rules.catalog.spells import spell_effect
     wish = bool(params.get("wish"))
     tag = f"{STOLEN_SPELL}{uuid.uuid4().hex[:12]}"
     name = "Desiderio / Wish" if wish else str(params["spell"]).strip()
+    level = 9 if wish else int(params["spell_level"])
+    # Intervento Divino toglie slot e componenti materiali, non la Concentrazione (2024 pag. 71): un incantesimo del catalogo la chiede
+    known = spell_effect("2024", None, name)
+    concentration = bool(known and known[1].concentration)
+    rounds = known[1].duration(level) if concentration else None
     ctx.char.spells.append(Spell(
-        character_id=ctx.char.id, name=name, level=9 if wish else int(params["spell_level"]), srd_index=tag,
-        class_id=ctx.class_row.id, is_prepared=True, always_prepared=True))
-    begin_state(ctx.char, StateSpec("divine_intervention_free", ends_on=("manual", "rest_long"),
-                                    data={"stolen_spell": tag, "free_cast": tag}), DIVINE_INTERVENTION, "Intervento Divino")
+        character_id=ctx.char.id, name=name, level=level, srd_index=tag, class_id=ctx.class_row.id, is_prepared=True,
+        always_prepared=True, is_concentration=concentration, duration=f"{rounds} round" if rounds else None))
+    data: dict = {"stolen_spell": tag, "free_cast": tag, **({} if wish else {"refund": DIVINE_INTERVENTION})}  # chiusa senza lancio rende l'uso
+    if concentration:  # lanciato, resta sulla scheda per la sua durata (la concentrazione lo indica) ma non si rilancia gratis
+        data |= {"free_cast_keep": True, "then": {"key": "divine_intervention_free", "rounds": rounds, "ends_on": ["manual", "rest_long"],
+                                                  "data": {"stolen_spell": tag}}}
+    begin_state(ctx.char, StateSpec("divine_intervention_free", ends_on=("manual", "rest_long"), data=data), DIVINE_INTERVENTION,
+                "Intervento Divino")
     if wish:
         dice = [random.randint(1, 4), random.randint(1, 4)]
         begin_state(ctx.char, StateSpec(WISH_LOCK, ends_on=("manual",), data={"roll": dice, "rests_left": sum(dice), "locked": True}),
@@ -289,11 +309,13 @@ def _flare_temp_hp(ctx: RuleContext, rolled: int) -> int:
     return max(0, rolled + _wisdom_mod(ctx)) if ctx.class_level >= 6 else 0
 
 
-def _flare_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
+def _flare_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     base = {"it": "Il tiro per colpire della creatura che vedi entro 9 m ha svantaggio, prima dell'esito.",
             "en": "The attack roll of the creature you can see within 30 ft has disadvantage, before the result."}
     if ctx.class_level < 6:
         return base
+    if params.get("self"):
+        return {"it": base["it"] + " Sei il bersaglio: ottieni i PF temporanei.", "en": base["en"] + " You are the target: you gain the temporary HP."}
     return {"it": base["it"] + " Puoi dare al bersaglio dell'attacco i PF temporanei mostrati.",
             "en": base["en"] + " You can give the attack's target the temporary HP shown."}
 
@@ -312,7 +334,7 @@ def _trickster_state(_ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("trickster_blessing_note", ends_on=ends, data={"others": [f"{CK}.blessing_of_the_trickster"]})
 
 
-def _trickster_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
+def _self_or_ally(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
     return (422, "invalid_choice") if params.get("self") and params.get("target_character_id") is not None else None
 
 
@@ -357,7 +379,9 @@ _WGB_SPELLS = {"shield-of-faith": {"it": "Scudo della fede", "en": "Shield of Fa
 
 
 def _wgb_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
-    """L'incantesimo scelto deve stare sulla scheda (lo dà il dominio al 3° livello)."""
+    """L'incantesimo scelto deve stare sulla scheda (lo dà il dominio al 3° livello); con un lancio già autorizzato si lancia quello."""
+    if state_on(ctx, "war_gods_blessing_free"):
+        return 409, "feature_unavailable"
     return None if any(sp.srd_index == params.get("spell") for sp in ctx.char.spells) else (422, "invalid_choice")
 
 
@@ -366,7 +390,7 @@ def _wgb_effect(ctx: RuleContext, params: dict) -> None:
     l'autorizzazione e avvia lo stato di 1 minuto, che finisce se Incapacitato o se si rilancia."""
     spell = str(params["spell"])
     begin_state(ctx.char, StateSpec("war_gods_blessing_free", ends_on=("manual", "rest_short", "rest_long"), data={
-        "free_cast": spell, "free_cast_slot": "bonus", "no_concentration": True, "spell": spell,
+        "free_cast": spell, "free_cast_slot": "bonus", "no_concentration": True, "spell": spell, "refund": POOL,
         "then": {"key": "war_gods_blessing", "rounds": 10, "ends_on": ["incapacitated", "manual"], "data": {"spell": spell}}}),
         f"{CK}.war_gods_blessing", "Benedizione del Dio della Guerra")
 
@@ -428,8 +452,13 @@ DOMAIN_FEATURES = (
             ("Reazione: svantaggio al tiro per colpire di una creatura visibile entro 9 m. Usi pari a Saggezza (minimo 1).",
              "Reaction: disadvantage on the attack roll of a creature you can see within 30 ft. Uses equal Wisdom (minimum 1)."),
             "reaction", subclass="light", uses=Uses(ability="wisdom", minimum=1), restoration={3: "long_rest", 6: "short_rest"},
-            on_use=OnUse(slot="reaction", state=_flare_state, rolls=_flare_dice, gives=_flare_temp_hp, message=_flare_message,
-                         temp_hp_ally=True, ally_count=lambda c: 1 if c.class_level >= 6 else 0)),
+            on_use=OnUse(slot="reaction", state=_flare_state, rolls=_flare_dice, message=_flare_message,
+                         gives_by=lambda c, rolled, p: 0 if p.get("self") else _flare_temp_hp(c, rolled),
+                         temp_hp_by=lambda c, rolled, p: _flare_temp_hp(c, rolled) if p.get("self") else 0,
+                         temp_hp_ally=True, ally_count=lambda c: 1 if c.class_level >= 6 else 0, check=_self_or_ally,
+                         toggles=(UseToggle("self", {"it": "PF temporanei a te (sei il bersaglio dell'attacco)",
+                                                     "en": "Temporary HP to you (you are the attack's target)"},
+                                            available=lambda c: c.class_level >= 6),))),
     feature("improved_warding_flare", CK, ED, 6, "Lampo di Interdizione Migliorato / Improved Warding Flare (Luce 6, pag. 75)",
             ("Lampo di Interdizione Migliorato", "Improved Warding Flare"),
             ("Gli usi tornano anche con un riposo breve; a ogni uso 2d6 + Saggezza PF temporanei al bersaglio dell'attacco.",
@@ -448,7 +477,7 @@ DOMAIN_FEATURES = (
             ("Azione Magia: tu o una creatura consenziente entro 9 m avete vantaggio a Furtività fino al riposo lungo o al prossimo uso.",
              "Magic action: you or a willing creature within 30 ft has advantage on Stealth until a long rest or the next use."),
             "action", subclass="trickery",
-            on_use=OnUse(slot="action", ally_state=True, ally_exclusive=True, state=_trickster_state, check=_trickster_check,
+            on_use=OnUse(slot="action", ally_state=True, ally_exclusive=True, state=_trickster_state, check=_self_or_ally,
                          toggles=(UseToggle("self", {"it": "Su te stesso", "en": "On yourself"}),))),
     feature("invoke_duplicity", CK, ED, 3, "Invocare Duplicato / Invoke Duplicity (Inganno 3, pag. 75)", ("Invocare Duplicato", "Invoke Duplicity"),
             ("Azione bonus, un uso: illusione di te per 1 minuto, congedabile; vantaggio agli attacchi se siete entrambi entro 1,5 m dal bersaglio.",
@@ -579,7 +608,7 @@ CLASS_FEATURES = (
             ("Colpi Benedetti Migliorati", "Improved Blessed Strikes"),
             ("Colpo Divino arriva a 2d8; con Incantesimi Potenti un trucchetto che danneggia dà PF temporanei pari al doppio di Saggezza.",
              "Divine Strike reaches 2d8; with Potent Spellcasting a damaging cantrip gives temporary HP equal to twice Wisdom."),
-            roll_options=(POTENT_TEMP_HP,), passive=True),
+            roll_options=POTENT_TEMP_HP, passive=True),
     feature("epic_boon", CK, ED, 19, "Dono Epico / Epic Boon (Chierico 19, pag. 71)", ("Dono Epico", "Epic Boon"),
             ("Al 19° livello un talento Dono Epico o un altro talento di cui hai i requisiti.",
              "At level 19 an Epic Boon feat or another feat you qualify for."),

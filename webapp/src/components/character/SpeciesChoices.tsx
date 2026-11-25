@@ -9,10 +9,12 @@ interface Props {
   onChange: (options: Record<string, string>) => void
   /** Abilità già date da altro (classe, background, scheda): non si possono scegliere per la specie. */
   takenSkills?: string[]
+  /** Talenti d'Origine già dati dal background e non ripetibili: non sceglibili per Versatile (D-035). */
+  takenFeats?: string[]
 }
 
 /** Scelte di una specie 2024 (lignaggio, taglia, abilità...): una riga di chip per scelta. */
-export default function SpeciesChoices({ species, value, onChange, takenSkills = [] }: Props) {
+export default function SpeciesChoices({ species, value, onChange, takenSkills = [], takenFeats = [] }: Props) {
   const { i18n } = useTranslation()
   const lang = uiLang(i18n.language)
   return (
@@ -25,7 +27,7 @@ export default function SpeciesChoices({ species, value, onChange, takenSkills =
               <Pressable
                 key={o.key}
                 aria-pressed={value[c.key] === o.key}
-                disabled={c.key === 'skill' && takenSkills.includes(o.key)}
+                disabled={(c.key === 'skill' && takenSkills.includes(o.key)) || (c.key === 'origin_feat' && takenFeats.includes(o.key))}
                 onClick={() => onChange({ ...value, [c.key]: o.key })}
                 className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
                   ${value[c.key] === o.key

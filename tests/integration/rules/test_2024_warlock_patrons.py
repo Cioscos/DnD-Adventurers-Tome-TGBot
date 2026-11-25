@@ -33,7 +33,7 @@ TIERS = {
                   7: {"guardian-of-faith", "wall-of-fire"}, 9: {"greater-restoration", "summon-celestial"}},
     "fiend": {3: {"burning-hands", "command", "scorching-ray", "suggestion"}, 5: {"fireball", "stinking-cloud"},
               7: {"fire-shield", "wall-of-fire"}, 9: {"geas", "insect-plague"}},
-    "great_old_one": {3: {"detect-thoughts", "dissonant-whispers", "phantasmal-force", "tashas-hideous-laughter"},
+    "great_old_one": {3: {"detect-thoughts", "dissonant-whispers", "phantasmal-force", "hideous-laughter"},
                       5: {"clairvoyance", "hunger-of-hadar"}, 7: {"confusion", "summon-aberration"}, 9: {"modify-memory", "telekinesis"}},
 }
 

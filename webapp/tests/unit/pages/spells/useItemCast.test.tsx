@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import { useItemCast } from '@/pages/spells/useItemCast'
+import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { ApiError } from '@/api/client'
 import i18n from '@/i18n'
 import type { CharacterFull } from '@/types'
@@ -31,6 +32,7 @@ const item = {
   granted_effects: [{ target_kind: 'allies', max_targets_by_slot: { '1': 1 }, choices: [] }],
 }
 const char = { id: 7, items: [item], spells: [] } as unknown as CharacterFull
+const wand = { ...item, granted_effects: undefined }
 
 function Harness() {
   const flow = useItemCast(7)
@@ -62,5 +64,17 @@ describe('useItemCast', () => {
     await userEvent.click(screen.getByText('go'))
     await userEvent.click(await screen.findByText('Eroe'))
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(i18n.t('character.spells.roll_damage.cast_errors.target_dead')))
+  })
+
+  it('asks the same confirmations as a spell cast (rage, untrained armor) and retries with them', async () => {
+    cast.mockRejectedValueOnce(new ApiError(409, { code: 'cast_confirm', warnings: ['state_blocks_casting'] }))
+      .mockResolvedValueOnce({ ...char, items: [wand] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    client.setQueryData(['character', 7], { ...char, items: [wand] })
+    renderWithProviders(<><Harness /><RollOptionsHost /></>, { client })
+    await userEvent.click(screen.getByText('go'))
+    await userEvent.click(await screen.findByText('character.spells.cast_anyway'))
+    await waitFor(() => expect(cast).toHaveBeenLastCalledWith(7, 5, 0, { confirm: ['state_blocks_casting'] }))
+    expect(toastError).not.toHaveBeenCalled()
   })
 })

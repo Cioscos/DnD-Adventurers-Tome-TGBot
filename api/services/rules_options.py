@@ -10,7 +10,7 @@ from fastapi import HTTPException, status
 from api.schemas.common import OptionResult
 from api.schemas.rules import RollOptionCost, RollOptionRead, RollOptionSlot
 from api.services.dice_stats import record_dice
-from api.services.rules_states import MISS_REFUND
+from api.services.rules_states import MISS_REFUND, end_states
 from api.services.rules_turn import get_turn
 from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, is_incapacitated
@@ -50,16 +50,21 @@ def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "bef
     Ogni altro tiro nuovo cancella ``last_roll``: chi lo rende ritoccabile lo riscrive con ``remember_roll``."""
     if getattr(body, "with_inspiration", False):
         stored = get_turn(char).get("last_roll") or {}
-        if stored.get("roll") == roll:
-            return AppliedOptions(**stored["applied"])
+        # lo stesso tiro: anche la stessa abilità e caratteristica (un TS di concentrazione nel frattempo è un altro tiro);
+        # l'attacco lo controlla spend_inspiration_attack
+        if stored.get("roll") == roll and (roll == "attack" or (stored.get("skill"), stored.get("ability")) == (kw.get("skill"), kw.get("ability"))):
+            return AppliedOptions(**{**stored["applied"], "reroll_of": {"dice": stored.get("dice"), "mode": stored.get("mode")}})
         _forget_roll(char)
         return AppliedOptions()
     keys = getattr(body, "options", None) or []
     try:
-        opts = apply_options(session, roll_context(char, roll, **kw), keys,
+        opts = apply_options(session, roll_context(char, roll, mode=getattr(body, "mode", None), **kw), keys,
                              getattr(body, "option_inputs", None), phase)
     except OptionUnavailable as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": exc.key}) from exc
+    for slot in ("action", "reaction"):  # un'opzione che spende l'azione o la reazione chiude gli stati come spend()
+        if f"turn:{slot}" in opts.spent:
+            end_states(char, slot)
     if phase == "before":
         _forget_roll(char)
     return opts
@@ -85,7 +90,7 @@ def remember_roll(char: Any, roll: str, opts: AppliedOptions, fields: dict, **wh
     turn["last_roll"] = {
         "roll_id": uuid.uuid4().hex, "roll": roll, "skill": None, "ability": None, "item_id": None, "spell_id": None,
         "pending_save_id": None, **where, **fields, "forced_hit": False, "refundable": miss,
-        # né il modo né il dado dichiarato tornano: l'ispirazione ritira un solo dado
+        # né il modo né il dado dichiarato tornano qui: l'ispirazione ritira un solo dado e il modo lo legge da ``reroll_of``
         "applied": {**asdict(opts), "modes": [], "spent": [], "replace_die": None, "gifts": []},
     }
     char.turn_state = turn
@@ -104,6 +109,7 @@ def merge_options(applied: Applied, opts: AppliedOptions) -> None:
     applied.disadvantage = applied.disadvantage or opts.mode in ("disadvantage", "normal")
     applied.auto_fail = applied.auto_fail or opts.auto_fail
     applied.replace_die = opts.replace_die
+    applied.reroll_of = opts.reroll_of
     applied.notes += [n for n in opts.notes if n not in applied.notes]
 
 

@@ -77,7 +77,7 @@ async def test_rows_follow_the_subclass_and_the_level(client, sub):
 
 
 @pytest.mark.parametrize("sub,level,expect", [
-    ("aberrant", 3, {"arms-of-hadar", "mind-sliver"}), ("aberrant", 9, {"telekinesis", "rarys-telepathic-bond"}),
+    ("aberrant", 3, {"arms-of-hadar", "mind-sliver"}), ("aberrant", 9, {"telekinesis", "telepathic-bond"}),
     ("clockwork", 5, {"aid", "dispel-magic"}), ("clockwork", 9, {"wall-of-force", "greater-restoration"}),
     ("draconic", 3, {"chromatic-orb", "dragons-breath"}), ("draconic", 9, {"summon-dragon", "legend-lore"})])
 async def test_subclass_spells_are_always_prepared_from_their_level(client, sub, level, expect):
@@ -95,6 +95,14 @@ async def test_psionic_sorcery_casts_with_points_equal_to_the_spell_level_and_no
     r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True, "choices": {"upcast_type": "cold"}})
     assert r.status_code == 200, r.text
     assert await _points(client, cid) == 7 - 3 and sum(s["available"] for s in (await _full(client, cid))["spell_slots"]) == total
+
+
+async def test_psionic_sorcery_casts_a_ninth_level_psionic_spell_from_level_9(client):
+    # 2024 pag. 145-146: Telecinesi è un Incantesimo Psionico dal 9° (al 6° il 409 è in CB-2616)
+    cid = await _make(client, "aberrant", 9)
+    spell = (await _spells(client, cid))["telekinesis"]["id"]
+    assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True})).status_code == 200
+    assert await _points(client, cid) == 9 - 5
 
 
 async def test_psionic_sorcery_needs_level_6_and_a_psionic_spell(client):
@@ -222,6 +230,19 @@ async def test_elemental_affinity_is_a_chosen_type_with_resistance_and_a_charism
     assert r.json()["current_hit_points"] == start - 5
 
 
+async def test_elemental_affinity_once_per_cast_reopens_with_a_new_cast(client):
+    # 2024 pag. 148: il Carisma su un solo tiro dei danni per incantesimo; il lancio successivo lo riapre
+    cid = await _make(client, "draconic", 6, charisma=18)
+    await _affinity(client, cid, "fire")
+    fire = await _spell(client, cid, "Dardo", 0, attack_save="ATK", damage_dice="1d10", damage_type="fire")
+    for _ in range(2):
+        assert (await _cast(client, cid, fire)).status_code == 200
+        assert P + "elemental_affinity" in await _roll_keys(client, cid, "spell_damage", spell_id=fire)
+        r = await client.post(f"/characters/{cid}/spells/{fire}/roll_damage", json={"main_rolls": [5, 5], "options": [P + "elemental_affinity"]})
+        assert r.status_code == 200 and r.json()["total"] == 10 + 4, r.text  # trucchetto al 6°: 2d10
+        assert P + "elemental_affinity" not in await _roll_keys(client, cid, "spell_damage", spell_id=fire)
+
+
 async def test_dragon_wings_fly_for_an_hour_and_restore_for_three_points(client):
     cid = await _make(client, "draconic", 14)
     assert (await _use(client, cid, P + "dragon_wings")).status_code == 200
@@ -270,6 +291,16 @@ async def test_restore_balance_on_your_own_roll_removes_advantage_and_costs_a_us
     assert (await _ability(client, cid, feature))["uses"] == 3 and (await _turn(client, cid))["reaction_used"] is True
     r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "advantage", "dice": [3, 17], "options": [key]})
     assert r.status_code == 409, r.text
+
+
+async def test_restore_balance_on_a_normal_roll_needs_an_automatic_disadvantage(client):
+    # 2024 pag. 146: scatta su un d20 con Vantaggio o Svantaggio, anche automatico (Avvelenato)
+    cid = await _make(client, "clockwork", 5, charisma=18)
+    key = P + "restore_balance_own_roll"
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "normal", "dice": [3, 17], "options": [key]})
+    assert r.status_code == 200 and r.json()["mode_applied"] == "normal", r.text
+    assert (await _ability(client, cid, P + "restore_balance"))["uses"] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +398,8 @@ async def test_tamed_surge_picks_the_result_once_and_never_the_last_row(client):
     cid = await _make(client, "wild_magic", 18)
     await _surge(client, cid, tamed=True, percentile=[98], expect=422)
     assert (await _ability(client, cid, P + "tamed_surge"))["uses"] == 1
+    # 2024 pag. 150: «subito dopo aver lanciato un incantesimo da stregone con uno slot»
+    assert (await _cast(client, cid, await _spell(client, cid, "Ragnatela", 2), slot_level=2)).status_code == 200
     body = await _surge(client, cid, tamed=True, percentile=[53])
     assert body["applied"]["label"] == "53-56" and body["applied"]["extra_action"] is True
     assert (await _ability(client, cid, P + "tamed_surge"))["uses"] == 0

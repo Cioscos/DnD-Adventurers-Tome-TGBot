@@ -128,13 +128,18 @@ async def test_alter_memories_works_once_per_spell(client):
     assert again.status_code == 409 and again.json()["detail"]["code"] == "feature_unavailable"
 
 
-async def test_another_spell_closes_the_alter_memories_window(client):
+async def test_the_alter_memories_window_lasts_as_long_as_the_enchantment(client):
+    """2014 pag. 85: l'oblio si usa «prima che l'incantesimo termini»: un altro lancio non chiude la finestra, la fine sì."""
     cid = await _wizard(client, 14, "enchantment")
-    await _cast(client, cid, await _enchantment(client, cid), slot_level=1)
+    await _cast(client, cid, await _enchantment(client, cid, duration="1 minuto"), slot_level=1)
     other = await _spell(client, cid, "Dardo incantato", 1, school="evocation", casting_time="1 azione")
     await client.post(f"/characters/{cid}/turn/new")
-    await _cast(client, cid, other, slot_level=1)
-    assert (await _use(client, cid, MEMORIES)).status_code == 409
+    assert (await _cast(client, cid, other, slot_level=1)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/new")
+    for _ in range(10):  # 1 minuto: l'ammaliamento finisce
+        await client.post(f"/characters/{cid}/rounds/tick")
+    r = await _use(client, cid, MEMORIES)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "feature_unavailable"
 
 
 async def test_a_cantrip_does_not_open_the_alter_memories_window(client):

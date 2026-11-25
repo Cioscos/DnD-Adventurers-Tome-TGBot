@@ -19,6 +19,7 @@ from core.rules.types import ChoiceSpec, RuleContext
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
 TOOL_SEED_FLAG = "tool_choices_seeded"  # settings: strumenti sulla scheda già contati nelle scelte di classe (una volta)
 FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
+PREPARED_SWAP = "prepared"  # in settings[REPLACED_AT_REST]: slot già spesi all'ultima salita di livello (D-020)
 CLASS_CANTRIPS = "class_cantrips"  # trucchetti della tabella della classe, scelti dalla pagina degli incantesimi (B2)
 
 
@@ -96,6 +97,26 @@ def seed_class_cantrips(char: Any) -> None:
             taken.update(mine)
 
 
+def _release_orphan_extras(char: Any, cls: Any) -> None:
+    """Incantesimi fuori dal limite dei conosciuti dati da un privilegio che la classe non ha più (sottoclasse o opzione
+    cambiata: il Trucchetto Bonus della Terra passando alla Luna, 2014 pag. 68): restano, ma tornano a contare."""
+    kept, gone = set(), set()
+    for spec in features_for(character_edition(char), class_key(cls)):
+        on = ((spec.subclass is None or spec.subclass == cls.subclass_key)
+              and (spec.option_group is None or spec.option_key in (cls.options or {}).get(spec.option_group, [])))
+        for ch in spec.choices:
+            if ch.spell_pick == "extra":
+                (kept if on else gone).add(ch.group)
+    orphans = (gone - kept) & set(cls.options or {})
+    if not orphans:
+        return
+    keys = {k for g in orphans for k in cls.options[g]}
+    ids = {s.id for s in char.spells if (s.srd_index or s.name) in keys and s.class_id in (None, cls.id)}
+    free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
+    char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: [i for i in free if i not in ids]}
+    cls.options = {g: v for g, v in cls.options.items() if g not in orphans}
+
+
 def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
     """Le opzioni scelte di una ``ChoiceSpec`` con ``grants`` sono abilità: competenza o maestria, mai una maestria che
     scende. Unico punto per la risoluzione di una scelta e per l'import."""
@@ -146,6 +167,11 @@ def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> N
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
     done = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
     if new_level > old_level:
+        if old_level or len(char.classes) > 1:  # alla creazione nessuno slot è speso (e non è ancora caricato)
+            from core.rules.feature_sync import REPLACED_AT_REST  # import locale: feature_sync importa questo modulo
+            swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+            char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, PREPARED_SWAP: {
+                "at": char.last_long_rest_at or "", "n": sum(s.used for s in char.spell_slots)}}}
         for lvl in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT):
             entry = {"id": uuid.uuid4().hex, "kind": "asi", "class_key": key, "level": lvl, "created_at": _now()}
             if (old_level < lvl <= new_level and (edition == "2014" or lvl != 19) and _token(entry) not in done
@@ -243,6 +269,8 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
     loaded = _spells_loaded(char)
     if loaded:
+        for cls in char.classes:
+            _release_orphan_extras(char, cls)
         seed_class_cantrips(char)
     # Il 19° livello è un Dono Epico nel 2024 e un ASI nel 2014: un cambio di edizione scambia la scelta in sospeso
     out = [c for c in pending if c.get("kind") not in ("class_option", "epic_boon")

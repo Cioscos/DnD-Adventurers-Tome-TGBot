@@ -131,7 +131,7 @@ async def test_state_ends_when_turn_ends_without_attacking(client, test_session_
 
 
 def test_state_ends_on_concentration_end():
-    char = SimpleNamespace(concentrating_spell_id=3, settings={}, active_states=[
+    char = SimpleNamespace(concentrating_spell_id=3, settings={}, turn_state={}, active_states=[
         {"key": "a", "feature_key": "x", "rounds_left": None, "ends_on": ["concentration_end"], "data": {}},
         {"key": "b", "feature_key": "x", "rounds_left": None, "ends_on": ["manual"], "data": {}},
     ])

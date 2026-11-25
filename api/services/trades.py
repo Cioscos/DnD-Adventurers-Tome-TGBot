@@ -10,6 +10,7 @@ from api.services.equipment import apply_equip_ac
 from core.db.models import Currency, EquipmentSlot, Item
 from core.game.containers import COINS, allocate, descendant_ids, is_container, trade_snapshot
 from core.game.item_bonuses import item_meta
+from core.rules.catalog.y2024.warlock_invocations import unbind
 
 
 def _pick(owner, item_id: int, quantity: int | None):
@@ -104,6 +105,7 @@ async def give_item(db, sender, recipient, item_id: int, quantity: int | None, *
         if row.is_equipped:
             removed.append((row, row.equipment_slot))
         row.is_equipped, row.equipment_slot = False, None
+        unbind(row)  # il Patto della Lama 2024 è di chi l'ha legata, non di chi la riceve
         md = item_meta(row)
         if md.get("attuned"):
             row.item_metadata = json.dumps({**md, "attuned": False})

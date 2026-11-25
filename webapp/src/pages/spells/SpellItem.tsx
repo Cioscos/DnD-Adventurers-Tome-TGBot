@@ -187,7 +187,7 @@ function SpellItemInner({
                   {spell.damage_dice && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Swords size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.level === 0 ? scaleCantripDice(spell.damage_dice, totalLevel) : spell.damage_dice}{spell.effect?.choices.some((c) => c.key === 'damage_type') ? ` ${t('character.spells.damage_type_choice')}` : spell.damage_type ? ` ${damageTypeLabel(t, spell.damage_type)}` : ''}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.rays ? `${spell.damage_dice} × ${spell.rays}` : spell.level === 0 ? scaleCantripDice(spell.damage_dice, totalLevel) : spell.damage_dice}{spell.effect?.choices.some((c) => c.key === 'damage_type') ? ` ${t('character.spells.damage_type_choice')}` : spell.damage_type ? ` ${damageTypeLabel(t, spell.damage_type)}` : ''}</span>
                     </div>
                   )}
                   {attackSaveLabel(spell.attack_save) && (
@@ -248,7 +248,7 @@ function SpellItemInner({
                                active:opacity-60"
                   >
                     <Sparkles size={12} />
-                    {t('character.spells.use')}
+                    {t(spell.effect?.lit ? 'character.spells.hurl' : 'character.spells.use')}
                   </RollButton>
                 ) : (
                   <Pressable

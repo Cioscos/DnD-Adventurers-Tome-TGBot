@@ -12,7 +12,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.effects import apply_heal, get_passive_modifiers
-from api.services.rules_turn import refuse_if_incapacitated, spend
+from api.services.rules_turn import refuse_if_incapacitated, refuse_surge_magic, spend
 from api.services.session_allies import load_receiver as _load, seated_allies
 from core.db.models import Ability, Character
 from core.rules.catalog import active_features
@@ -100,6 +100,8 @@ async def preserve_life(session: AsyncSession, char: Character, allocations: lis
     if sum(a for _, a in allocations) > pool:
         raise _refuse(status.HTTP_422_UNPROCESSABLE_ENTITY, "over_pool")
     refuse_if_incapacitated(char)
+    if character_edition(char) == "2024":  # azione Magia
+        refuse_surge_magic(char)
     row = _pool_row(char)
     if row is None:
         raise _refuse(status.HTTP_409_CONFLICT, "no_uses")

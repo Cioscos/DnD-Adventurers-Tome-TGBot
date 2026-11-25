@@ -25,6 +25,12 @@ def _on(condition: str):
     return lambda ctx: bool((ctx.char.conditions or {}).get(condition)) and condition not in immune_conditions(ctx.char)
 
 
+def _has_blindsight(char: Any) -> bool:
+    """Vista Cieca data da un privilegio (Combattere alla Cieca, Sensi Ferini 2024, Furtivo)."""
+    from core.rules.modifiers import modifiers_for  # import locale: modifiers usa il catalogo
+    return bool(modifiers_for(char, None).senses.get("blindsight"))
+
+
 def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     ctx.char.heroic_inspiration = False
     settings = ctx.char.settings or {}
@@ -40,6 +46,12 @@ def _bardic_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"1d{((_bardic_state(ctx) or {}).get('data') or {}).get('die') or 6}"
 
 
+def _combat_die(ctx: RuleContext) -> str | None:
+    """Edizione del dado del Collegio del Valore ricevuto; ``None`` se non c'è."""
+    data = (_bardic_state(ctx) or {}).get("data") or {}
+    return data.get("edition", "2014") if data.get("combat") else None
+
+
 def _ally_aura(kind: str, edition: str | None = None):
     """Un compagno della serata proietta questa aura (nell'edizione data: l'Interdizione cambia fra 2014 e 2024) e chi tira non
     ne ha una uguale per conto suo."""
@@ -49,8 +61,11 @@ def _ally_aura(kind: str, edition: str | None = None):
 
 
 def _ally_aura_bonus(ctx: RuleContext, _inputs: dict) -> int:
-    from core.rules.auras import party_auras  # import locale
-    return max((a["bonus"] for a in party_auras(ctx.char, "protection")), default=0)
+    """Una sola Aura di Protezione alla volta, la più forte (2024 pag. 111; 2014 pag. 98): il compagno aggiunge solo ciò che
+    supera la propria aura attiva, già nei TS."""
+    from core.rules.auras import party_auras, projected_auras  # import locale
+    own = max((a["bonus"] for a in projected_auras(ctx.char) if a["kind"] == "protection"), default=0)
+    return max(0, max((a["bonus"] for a in party_auras(ctx.char, "protection")), default=0) - own)
 
 
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
@@ -86,27 +101,42 @@ _CONDITION_OPTIONS = (
         label={"it": "Dado di Ispirazione Bardica: somma il dado al tiro", "en": "Bardic Inspiration die: add the die to the roll"},
         available=lambda ctx: _bardic_state(ctx) is not None,
     ),
-    RollOptionSpec(
-        key="bardic_die:damage", phase="after_hit", rolls=("attack",), crit_doubles=False,
+    # Sul danno di un'arma il dado del Valore raddoppia sul critico solo nel 2024 (D-022).
+    *(RollOptionSpec(
+        key="bardic_die:damage", phase="after_hit", rolls=("attack",), crit_doubles=edition == "2024",
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
-        available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
+        available=lambda ctx, edition=edition: ctx.spell is None and _combat_die(ctx) == edition,
+    ) for edition in ("2014", "2024")),
+    # Il dado del Valore 2024 vale dopo qualsiasi tiro per colpire a segno, anche di un incantesimo (pag. 67; il 2014, pag. 55,
+    # solo sui danni dell'arma): il danno dell'incantesimo si conferma prima di tirarlo, a colpo già messo a segno. Nel 2024
+    # raddoppia sul critico (D-022).
+    RollOptionSpec(
+        key="bardic_die:damage", phase="before", rolls=("spell_damage",),
+        extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
+        label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
+        available=lambda ctx: (_combat_die(ctx) == "2024" and ctx.spell is not None
+                               and (ctx.spell.attack_save or "").strip().upper() == "ATK"),
     ),
     # Aure dei compagni di serata (Paladino 2014): il giocatore conferma di essere nella gittata (D1)
     RollOptionSpec(
         key="aura:protection", phase="before", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
-        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma",
-               "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma"},
-        available=_ally_aura("protection"),
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma "
+                     "(con una tua Aura di Protezione, solo ciò che la supera)",
+               "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma "
+                     "(with your own Aura of Protection, only what exceeds it)"},
+        available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0,
     ),
     # Lo stesso bonus dopo aver visto il d20: serve al TS di concentrazione, anche quello automatico dopo il danno, per cui
     # il giocatore non può confermare prima (D1).
     RollOptionSpec(
         key="aura:protection_after", phase="after_roll", after="add", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
-        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro",
-               "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll"},
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro "
+                     "(con una tua Aura di Protezione, solo ciò che la supera)",
+               "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll "
+                     "(with your own Aura of Protection, only what exceeds it)"},
         # Il Carisma si somma una volta: se è già stata confermata prima del tiro non si ripropone.
-        available=lambda ctx: _ally_aura("protection")(ctx) and "aura:protection" not in ctx.confirmed,
+        available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0 and "aura:protection" not in ctx.confirmed,
     ),
     RollOptionSpec(
         key="aura:warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
@@ -125,7 +155,9 @@ _CONDITION_OPTIONS = (
         key="war_blessing:add", phase="after_roll", after="add", rolls=("attack",), bonus=lambda _c, _i: 10,
         cost=Cost(state_key=WAR_GODS_BLESSING),
         label={"it": "Benedizione del Dio della Guerra: somma 10 al tiro per colpire", "en": "War God's Blessing: add 10 to the attack roll"},
-        available=lambda ctx: has_state(ctx.char, WAR_GODS_BLESSING),
+        # il minuto della Benedizione 2024 (pag. 77) ha la stessa chiave e nessun bonus
+        available=lambda ctx: any(s.get("key") == WAR_GODS_BLESSING and (s.get("data") or {}).get("attack_bonus")
+                                  for s in ctx.char.active_states or []),
     ),
     RollOptionSpec(
         key="trickster:advantage", phase="before", rolls=("skill",), mode="advantage",
@@ -152,6 +184,13 @@ _CONDITION_OPTIONS = (
         key="condition:invisible", phase="before", rolls=("attack",), cancels=("condition:invisible",),
         label={"it": "Invisibile: un nemico ti vede?", "en": "Invisible: can an enemy see you?"},
         available=lambda ctx: ctx.edition == "2024" and _on("invisible")(ctx),
+    ),
+    RollOptionSpec(  # D-029: lo svantaggio di Accecato è quello del bersaglio che non vedi, la Vista Cieca lo vede (2024 pag. 361)
+        key="condition:blinded_blindsight", phase="before", rolls=("attack",), cancels=("condition:blinded",),
+        label={"it": "Accecato: il bersaglio è entro la tua Vista Cieca e non dietro Copertura Totale?",
+               "en": "Blinded: is the target within your Blindsight and not behind Total Cover?"},
+        available=lambda ctx: (ctx.edition == "2024" and ctx.attack_mode not in ("beast", "companion") and _on("blinded")(ctx)
+                               and _has_blindsight(ctx.char)),
     ),
     RollOptionSpec(
         key="condition:blinded", phase="before", rolls=("skill",), auto_fail=True,
@@ -237,6 +276,7 @@ class AppliedOptions:
     targets: list[str] = field(default_factory=list)  # chiavi con un ``target_effect`` da applicare
     reroll_limit: int = 0  # ``after_damage``: dadi di danno ritirabili
     keep_rolled: bool = False
+    extra_d20: bool = False  # il d20 del ritiro si aggiunge a quelli tirati, si tiene il migliore (Fortunato 2014)
     cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo
     maximize_types: frozenset[str] | None = None  # solo questi tipi di danno; None = tutti
@@ -256,6 +296,7 @@ class AppliedOptions:
     damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
     gifts: list[dict] = field(default_factory=list)  # PF temporanei per un'altra creatura: {"target": id, "value": n}, consegnati dal router
     concentrates: list[dict] = field(default_factory=list)  # {"spell_id", "rounds"}: incantesimi a concentrazione lanciati da un'opzione dopo il colpo
+    reroll_of: dict | None = None  # il tiro salvato che l'Ispirazione rilancia: {"dice", "mode"}
 
     @property
     def mode(self) -> str | None:
@@ -327,10 +368,14 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
         return False
     if spec.once_per_turn and _once_key(spec) in _turn(char).get("once_per_turn", []):
         return False
-    if spec.slot and not _slot_free(char, spec.slot):
-        return False
+    if spec.slot:
+        from core.rules.modifiers import is_incapacitated  # import locale: modifiers usa il catalogo
+        # Incapacitato: niente azioni, azioni bonus né reazioni (2014 pag. 291, 2024 pag. 369)
+        if is_incapacitated(char) or not _slot_free(char, spec.slot):
+            return False
     cost = spec.cost
-    if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None:
+    if (cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None
+            and not (cost.refilled and ctx is not None and cost.refilled(ctx))):
         return False
     if cost and cost.state_key and not any(s.get("key") == cost.state_key for s in char.active_states or []):
         return False
@@ -339,7 +384,11 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
 
 def _candidates(ctx: RuleContext) -> list[RollOption]:
     """Le opzioni dei privilegi attivi (e quelle generali) valide per ``ctx.roll`` e disponibili adesso, non ancora pagate."""
-    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS}
+    # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
+    kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
+    # solo quelle di questo tiro: una chiave può avere più varianti (``bardic_die:damage`` su arma, per edizione, e incantesimo)
+    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS
+                                    if any(k in s.rolls for k in kinds) and s.available(ctx)}
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         for option in spec.roll_options:
@@ -356,10 +405,9 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         key = f"ally:{donor.id}:{spec.key}"
         label = {lang: text.format(donor=donor.name) for lang, text in spec.label.items()}
         found[key] = RollOption(replace(spec, key=key, for_ally=False, label=label), ctx, f"feature:{spec.key}", donor)
-    # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
-    kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
+    own = ctx.attack_mode not in ("beast", "companion")
     return [o for o in found.values()
-            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
+            if (own or o.donor or o.spec.companion) and any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
 
 
 def roll_options_for(ctx: RuleContext) -> list[RollOption]:
@@ -509,6 +557,8 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     if cost and cost.feature_key:
         amount = cost_amount(cost, option.ctx)
         row = _ability_row(char, cost.feature_key, amount)
+        if row is None:  # ``refilled``: la ricarica attesa non c'è stata
+            raise OptionUnavailable(spec.key)
         if row.max_uses is not None:
             row.uses = (row.uses or 0) - amount
         spent.append(f"feature:{row.feature_key}:{amount}")
@@ -558,6 +608,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     automatic = [o for o in automatic_options_for(ctx) if o.spec.phase == phase]
     keys = list(dict.fromkeys([*(o.spec.key for o in automatic), *keys]))  # le automatiche per prime, una volta sola
     usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
+    other_mode = next((usable[k].spec.mode for k in keys if k in usable and usable[k].spec.mode), None)
+    if ctx.mode == "normal" and other_mode:  # vantaggio o svantaggio di un'altra opzione (Spaventato): Ripristinare l'Equilibrio lo vede
+        ctx = replace(ctx, mode=other_mode)
+        usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
     turned = next((usable[k].spec.damage_type_to for k in keys if k in usable and usable[k].spec.damage_type_to), None)
     if turned and phase == "before":  # Incantesimo Trasmutato: le altre opzioni leggono il tipo nuovo (Affinità Elementale)
         fixed = {k: o for k, o in usable.items() if o.spec.damage_type_to or o.spec.automatic}
@@ -601,6 +655,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.replace_die:
             out.replace_die = given["die"]
         out.reroll = out.reroll or spec.after == "reroll"
+        out.extra_d20 = out.extra_d20 or spec.extra_d20
         out.succeed = out.succeed or spec.after == "succeed"
         out.twenty = out.twenty or spec.after == "twenty"
         out.second_attack = out.second_attack or spec.second_attack

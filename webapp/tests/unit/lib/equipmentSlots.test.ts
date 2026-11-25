@@ -127,6 +127,13 @@ describe('handsConflict — two-handed ⇄ off-hand displacement', () => {
     expect(handsConflict([equippedShield], twoHander, 'main_hand')).toBe(equippedShield)
   })
 
+  it('a two-handed weapon equipped in off_hand conflicts with the main_hand occupant (CB-3164)', () => {
+    const longsword = mkItem({ id: 13, is_equipped: true, equipment_slot: 'main_hand', item_metadata: { properties: [] } })
+    const twoHander = mkItem({ id: 14, item_metadata: { properties: ['prop_two_handed'] } })
+    expect(handsConflict([longsword], twoHander, 'off_hand')).toBe(longsword)
+    expect(handsConflict([{ ...greataxe, equipment_slot: 'off_hand' } as Item], longsword, 'main_hand')).toEqual({ ...greataxe, equipment_slot: 'off_hand' })
+  })
+
   it('no conflict for unrelated slots', () => {
     expect(handsConflict([greataxe], shield, 'head')).toBeNull()
   })

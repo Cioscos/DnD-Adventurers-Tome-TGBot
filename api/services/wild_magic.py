@@ -23,6 +23,7 @@ from core.rules.catalog.y2014.sorcerer import CK, SP, SURGE, TIDES
 from core.rules.catalog.y2014.sorcerer_wild_magic import SURGES, Surge
 from core.rules.catalog.y2024.sorcerer_wild_magic import SURGES as SURGES_2024
 from core.rules.edition import character_edition
+from core.rules.spellcasting import caster_stats
 from core.rules.states import begin_state, has_state
 from core.rules.types import StateSpec, parse_dice
 
@@ -32,6 +33,7 @@ CONTROLLED_CHAOS = f"{CK}.controlled_chaos"
 TAMED = f"{CK}.tamed_surge"  # 2024: l'effetto si sceglie invece di tirare, una volta per riposo lungo
 LAST_ROW = 97  # 2024: la riga 97-00 non si può scegliere con Impulso Domato
 TIDES_DUE = "tides_surge_due"  # 2024: Maree spese e lancio con slot fatto: la tabella si tira senza d20
+TAMED_DUE = "tamed_surge_due"  # 2024, sul turno: lancio con slot di un incantesimo da stregone, Impulso Domato si può usare
 
 
 def _err(code: int, name: str) -> HTTPException:
@@ -55,17 +57,28 @@ def _owner(char):
     return found[1]
 
 
-def mark_tides_due(char, spell) -> None:
-    """Maree del Caos 2024: se sono spese e si lancia con uno slot un incantesimo da stregone, la tabella si tira da sola
-    (e le Maree tornano): lo stato resta finché non la si tira o non finisce un riposo lungo."""
-    tides = next((a for a in char.abilities if a.feature_key == TIDES), None)
-    owner = next((r for s, r in active_features(char) if s.key == TIDES), None)
-    if (character_edition(char) != "2024" or spell.level < 1 or tides is None or tides.max_uses is None or (tides.uses or 0) >= tides.max_uses
-            or owner is None or has_state(char, TIDES_DUE)):
-        return
+def _sorcerer_slot_cast(char, spell, key: str) -> bool:
+    """2024: lancio con slot di un incantesimo della classe che ha il privilegio ``key`` (o dell'unica classe incantatrice)."""
+    owner = next((r for s, r in active_features(char) if s.key == key), None)
+    if character_edition(char) != "2024" or spell.level < 1 or owner is None:
+        return False
     from core.rules.spellcasting import caster_stats  # import locale: spellcasting importa il catalogo
-    if spell.class_id == owner.id or (spell.class_id is None and len(caster_stats(char)) == 1):
-        begin_state(char, StateSpec(TIDES_DUE, ends_on=("manual", "rest_long")), TIDES, "Maree del Caos: tira la tabella")
+    return spell.class_id == owner.id or (spell.class_id is None and len(caster_stats(char)) == 1)
+
+
+def mark_tides_due(char, spell) -> None:
+    """Lancio con slot di un incantesimo da stregone (2024). Maree del Caos spese: la tabella si tira da sola (e le Maree
+    tornano), lo stato resta finché non la si tira o non finisce un riposo lungo. Impulso Domato: si può usare in questo
+    turno (pag. 150, «subito dopo aver lanciato»)."""
+    if _sorcerer_slot_cast(char, spell, TAMED):
+        turn = get_turn(char)
+        turn[TAMED_DUE] = True
+        char.turn_state = turn
+    tides = next((a for a in char.abilities if a.feature_key == TIDES), None)
+    if (tides is None or tides.max_uses is None or (tides.uses or 0) >= tides.max_uses or has_state(char, TIDES_DUE)
+            or not _sorcerer_slot_cast(char, spell, TIDES)):
+        return
+    begin_state(char, StateSpec(TIDES_DUE, ends_on=("manual", "rest_long")), TIDES, "Maree del Caos: tira la tabella")
 
 
 def surge_table(char) -> list[dict]:
@@ -105,7 +118,8 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
     if s.heal:
         out["healed"] = (await apply_heal(session, char, sum(_roll_dice(char, s.heal))))["healed"]
     if s.slot:
-        used = sorted((x for x in char.spell_slots if not x.is_pact and x.used > 0), key=lambda x: x.level)
+        # il più basso fra tutti, Patto compreso (2014 pag. 112, 164); a pari livello prima il normale: il Patto torna col riposo breve
+        used = sorted((x for x in char.spell_slots if x.used > 0), key=lambda x: (x.level, bool(x.is_pact)))
         if used:
             used[0].used -= 1
             out["slot_level"] = used[0].level
@@ -124,7 +138,7 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
         rolls = _roll_dice(char, s.roll)
         out["extra_roll"] = {"dice": s.roll, "rolls": rolls, "total": sum(rolls)}
     if s.dc:
-        out["dc"] = 8 + char.proficiency_bonus + effective_ability_mod(char, "charisma")
+        out["dc"] = _spell_dc(char)
     spec = _state_for(s)
     if s.state_key == REPEAT:  # nato in questo turno: il primo tiro della ripetizione spetta al turno dopo
         mark_once(char, REPEAT)
@@ -132,6 +146,13 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
         out["state"] = begin_state(char, spec, f"{SURGE}:{s.lo}", s.name["it"])
     add_history(session, char.id, "wild_magic", f"Impulso di Magia Selvaggia {s.label}: {s.name['it']}")
     return out
+
+
+def _spell_dc(char) -> int:
+    """CD degli incantesimi dello stregone, oggetti compresi."""
+    owner = next((r for s, r in active_features(char) if s.key == SURGE), None)
+    mine = next((s.save_dc for s in caster_stats(char) if owner is not None and s.class_id == owner.id), None)
+    return mine if mine is not None else 8 + char.proficiency_bonus + effective_ability_mod(char, "charisma")
 
 
 def _restore_tides(char) -> bool:
@@ -143,7 +164,8 @@ def _restore_tides(char) -> bool:
 
 
 async def _tamed(session: AsyncSession, char, percentile: list[int] | None) -> dict:
-    """Impulso Domato (2024, 18°): l'effetto si sceglie fra quelli della tabella, tranne 97-00; spende l'unico uso."""
+    """Impulso Domato (2024, 18°): subito dopo un lancio con slot di un incantesimo da stregone, l'effetto si sceglie fra quelli
+    della tabella, tranne 97-00; spende l'unico uso."""
     _owner(char)
     row = next((a for a in char.abilities if a.feature_key == TAMED), None)
     if row is None:
@@ -152,6 +174,10 @@ async def _tamed(session: AsyncSession, char, percentile: list[int] | None) -> d
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     if (row.uses or 0) <= 0:
         raise _err(status.HTTP_409_CONFLICT, "no_uses")
+    turn = get_turn(char)
+    if not turn.pop(TAMED_DUE, False):
+        raise _err(status.HTTP_409_CONFLICT, "no_slot_cast")
+    char.turn_state = turn
     row.uses -= 1
     applied = await _apply(session, char, percentile[0])
     return {"die": None, "triggered": True, "pending": False, "options": [_entry(char, percentile[0])], "applied": applied,

@@ -211,6 +211,10 @@ async def test_combat_inspiration_only_comes_from_a_valor_bard(client, test_sess
     [state] = _states_of(await _full(client, hero))
     assert state["data"]["combat"] is True
     assert "bardic_die:damage" in await _roll_keys(client, hero, "attack")
+    # 2014 pag. 55: solo sui danni dell'arma, mai su quelli di un incantesimo d'attacco (il 2024 sì, CB-2211)
+    r = await client.post(f"/characters/{hero}/spells", json={"name": "Dardo di fuoco", "level": 0, "attack_save": "ATK",
+                                                               "damage_dice": "1d10", "damage_type": "fire"})
+    assert "bardic_die:damage" not in await _roll_keys(client, hero, "spell_damage", spell_id=r.json()["id"])
 
 
 async def test_a_lore_bard_die_has_no_combat_use(client, test_session_factory):

@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import EmptyState from '@/components/ui/EmptyState'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import CompanionCard from '@/pages/extras/CompanionCard'
@@ -13,7 +14,7 @@ import CompanionForm from '@/pages/extras/CompanionForm'
 import { classKey } from '@/lib/classProgression'
 import { KINDS } from '@/lib/companionRules'
 import { useToast } from '@/hooks/useToast'
-import { notifyMutationError } from '@/lib/mutationError'
+import { apiErrorCode, notifyMutationError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
 import type { CompanionPayload } from '@/types'
 
@@ -24,14 +25,18 @@ export default function Extras() {
   const qc = useQueryClient()
   const toast = useToast()
   const [adding, setAdding] = useState(false)
+  // Bestia del ranger 2014 fuori regola: si aggiunge solo confermando
+  const [outOfRule, setOutOfRule] = useState<CompanionPayload | null>(null)
 
   const { data: char } = useQuery({ queryKey: ['character', charId], queryFn: () => api.characters.get(charId) })
   const { data: companions } = useQuery({ queryKey: ['companions', charId], queryFn: () => api.companions.list(charId) })
 
   const create = useMutation({
     mutationFn: (body: CompanionPayload) => api.companions.create(charId, body),
-    onSuccess: () => { haptic.success(); setAdding(false); qc.invalidateQueries({ queryKey: ['companions', charId] }); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
-    onError: (err) => {
+    onSuccess: () => { haptic.success(); setAdding(false); setOutOfRule(null); qc.invalidateQueries({ queryKey: ['companions', charId] }); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
+    onError: (err, body) => {
+      if (apiErrorCode(err) === 'beast_not_allowed') { setOutOfRule(body); return }
+      setOutOfRule(null)
       if (err instanceof ApiError && err.status === 422 && err.detail === 'companion_limit') toast.error(t('character.extras.limit'))
       else if (err instanceof ApiError && err.status === 422 && err.detail === 'known_forms_limit') toast.error(t('character.extras.known_forms_limit'))
       else if (err instanceof ApiError && err.status === 422 && (err.detail === 'companion_exists' || err.detail === 'feature_unavailable')) toast.error(t(`character.extras.beast.form_errors.${err.detail}`))
@@ -85,6 +90,9 @@ export default function Extras() {
         <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} isBeastMaster={isBeastMaster} hasPactOfTheChain={hasPactOfTheChain} summonSchools={summonSchools} pending={create.isPending}
           onSubmit={(b) => create.mutate(b)} onClose={() => setAdding(false)} />
       )}
+      <ConfirmSheet open={outOfRule !== null} onClose={() => setOutOfRule(null)} onConfirm={() => { if (outOfRule) create.mutate({ ...outOfRule, force: true }) }}
+        title={t('character.extras.beast.not_allowed_title')} body={t('character.extras.beast.not_allowed_body')}
+        confirmLabel={t('character.extras.beast.not_allowed_confirm')} confirmVariant="primary" loading={create.isPending} zClassName="z-[60]" />
     </Layout>
   )
 }

@@ -62,6 +62,7 @@ class CompanionCreate(BaseModel):
     # Scuola dell'incantesimo che ha creato l'evocato (``conjuration``, ``necromancy``): non è una colonna, i privilegi del Mago
     # (Evocazioni Perduranti, Servitori Non Morti) la leggono alla creazione
     spell_school: Optional[Literal["conjuration", "necromancy"]] = None
+    force: bool = False  # la bestia del ranger 2014 fuori regola, confermata (D-042)
 
     @field_validator("statblock", mode="before")
     @classmethod
@@ -87,6 +88,7 @@ class CompanionUpdate(BaseModel):
     armor_class: Optional[int] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: Optional[bool] = None
+    force: bool = False  # come alla creazione
 
     @field_validator("statblock", mode="before")
     @classmethod

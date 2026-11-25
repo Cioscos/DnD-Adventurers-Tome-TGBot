@@ -126,8 +126,18 @@ CUNNING_ACTION_USE = OnUse(
 # Schivata Prodigiosa, Elusione
 # ---------------------------------------------------------------------------
 
+def _can_see(ctx: RuleContext) -> bool:
+    """«Un attaccante che vedi»: da Accecato si vede solo con la Vista Cieca, della specie o di un privilegio (2024 pag. 361)."""
+    if not (ctx.char.conditions or {}).get("blinded"):
+        return True
+    from core.rules.modifiers import modifiers_for  # import locale: modifiers usa il catalogo
+    return any(isinstance(s, dict) and s.get("type") == "blindsight" and s.get("range_ft")
+               for s in (ctx.char.settings or {}).get("senses") or []) or bool(modifiers_for(ctx.char, None).senses.get("blindsight"))
+
+
 UNCANNY_DODGE = RollOptionSpec(
     key=f"{CK}.uncanny_dodge", phase="damage_in", rolls=("damage_taken",), slot="reaction", multiplier=0.5, offered_on_damage=False,
+    available=_can_see,
     label={"it": "Schivata Prodigiosa: un attaccante che vedi ti ha colpito? Reazione, dimezza i danni dell'attacco",
            "en": "Uncanny Dodge: did an attacker you can see hit you? Reaction, halves the damage of the attack"})
 

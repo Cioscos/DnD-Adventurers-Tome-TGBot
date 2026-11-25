@@ -12,10 +12,10 @@ from core.data.feats import LIST_ABILITY, MI_ABILITIES, MI_LISTS
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import heavy_armor, state_on
-from core.rules.catalog.feats import D20_TESTS, _f24, _register
+from core.rules.catalog.feats import D20_TESTS, _abilities, _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
 from core.rules.catalog.y2024.fighter import STYLE_ROWS
-from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
+from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, Uses
 from core.rules.weapons import MASTERY_OPTIONS, has_property, weapon_key
 from core.utils.session_view import armor_category
 
@@ -104,8 +104,8 @@ _register(
     _f24("crossbow_expert", modifiers=(Modifier("damage", _off_hand_modifier, when=_crossbow_offhand),)),
     _f24("crusher"),
     _f24("elemental_adept", modifiers=(Modifier("damage_min_die", 2, when=_adept_type),)),
-    # Toccato dalle fate / dall'ombra: due lanci gratuiti per riposo lungo, condivisi fra l'incantesimo fisso e quello
-    # scelto (``options["spell"]``); il manuale ne dà uno per incantesimo (ruling della PR 2)
+    # Toccato dalle fate / dall'ombra: due usi per riposo lungo, uno per l'incantesimo fisso e uno per quello scelto
+    # (``options["spell"]``); chi ha già usato il suo lo segna ``core/rules/pact_casts.py`` (``FREE_CASTS``)
     _f24("fey_touched", passive=False, granted_spells=("misty-step",), free_spell="misty-step", arcanum_group="spell",
          uses=Uses(table={1: 2}), restoration="long_rest"),
     _f24("keen_mind"),  # competenza o Maestria applicate al completamento; Studio rapido: testo
@@ -144,7 +144,7 @@ _register(
         label=_both("Mente protetta: il TS fallito diventa un successo", "Guarded Mind: the failed save becomes a success")),)),
     _f24("martial_weapon_training", proficiency_grants={"weapons": ("martial",)}),
     _f24("medium_armor_master", modifiers=(Modifier("ac", 1, when=_medium_armor_dex),)),
-    _f24("moderately_armored", proficiency_grants={"armor": ("medium", "shields")}),
+    _f24("moderately_armored", proficiency_grants={"armor": ("medium",)}),  # 2024: gli scudi li dà Armatura leggera
     _f24("mounted_combatant"),
     _f24("piercer",
          modifiers=(Modifier("crit_dice", 1, when=lambda c: _weapon_damage(c) and _weapon_type(c) == "piercing"),),
@@ -152,7 +152,7 @@ _register(
              key="feat.2024_piercer", phase="after_damage", rolls=("weapon_damage",), once_per_turn=True,
              reroll_dice=lambda _c, _i: 1, available=lambda c: _weapon_type(c) == "piercing",
              label=_both("Perforatore: ritira un dado di danno perforante", "Piercer: reroll one piercing damage die")),)),
-    _f24("poisoner"),
+    _f24("poisoner", proficiency_grants={"tools": ("poisoners_kit",)}),  # Prepara veleno (pag. 206)
     _f24("polearm_master"),
     _f24("resilient"),  # +1 e competenza nel TS li applica ``take_feat``
     _f24("sentinel"),
@@ -194,6 +194,9 @@ _register(*(_style_feat(s) for s in STYLE_ROWS))
 
 ENERGY_TYPES = ("acid", "cold", "fire", "lightning", "necrotic", "poison", "psychic", "radiant", "thunder")
 ADEPT_TYPES = ("acid", "cold", "fire", "lightning", "thunder")
+# Artigiano (pag. 200): gli strumenti della tabella Creazione rapida
+FAST_CRAFTING_TOOLS = ("carpenters_tools", "leatherworkers_tools", "masons_tools", "potters_tools", "smiths_tools",
+                       "tinkers_tools", "weavers_tools", "woodcarvers_tools")
 _NIGHT = "feat.2024_boon_night_spirit"
 
 
@@ -258,6 +261,45 @@ def last_stand_state() -> StateSpec:
     return StateSpec(LAST_STAND_STATE, ends_on=("manual",))
 
 
+# Forma d'ombra (pag. 211): in luce fioca o oscurità resistenza a tutto tranne psichico e radioso, senza azione e anche
+# da visibile. Un interruttore che il giocatore accende e spegne secondo la luce (D1): la scheda mostra le resistenze e un
+# colpo misto le applica tipo per tipo.
+_SHADOWY_FORM = f"{_NIGHT}_shadowy_form"
+_NIGHT_MODES = {
+    "blend": _both("Fondersi con le ombre: Invisibile (azione Bonus)", "Merge with Shadows: Invisible (Bonus Action)"),
+    "form": _both("Forma d'ombra: sei in luce fioca o oscurità (nessuna azione)",
+                  "Shadowy Form: you are in dim light or darkness (no action)"),
+}
+
+
+def _night_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    if params.get("mode") == "form":
+        return StateSpec(_SHADOWY_FORM)
+    # Fondersi con le ombre: Invisibile fino a subito dopo un'azione, azione Bonus o Reazione; attacco e lancio come il Manto
+    # d'Ombre, il resto si chiude a mano
+    return StateSpec(_NIGHT, ends_on=("attack", "cast", "manual"), condition="invisible")
+
+
+_FATE = "feat.2024_boon_fate"
+
+
+def _fate_row(char: Any) -> Any:
+    return next((a for a in _abilities(char) if a.feature_key == _FATE), None)
+
+
+def _fate_back(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    row = _fate_row(ctx.char)
+    if row is not None and row.max_uses is not None:
+        row.uses = row.max_uses
+
+
+# Dono del Fato: l'uso torna anche quando tiri l'Iniziativa (pag. 210), come Ispirazione Superiore del bardo
+FATE_RECHARGE = RollOptionSpec(
+    key=f"{_FATE}_recharge", phase="before", rolls=("initiative",), automatic=True, on_confirm=_fate_back,
+    available=lambda c: (row := _fate_row(c.char)) is not None and row.max_uses is not None and (row.uses or 0) < row.max_uses,
+    label=_both("Dono del Fato: tirando l'Iniziativa recuperi l'uso", "Boon of Fate: rolling Initiative gives the use back"))
+
+
 _register(
     _f24("boon_combat_prowess", roll_options=(RollOptionSpec(
         key="feat.2024_boon_combat_prowess", phase="after_roll", after="succeed", rolls=("attack",), once_per_turn=True,
@@ -268,8 +310,8 @@ _register(
          roll_options=(REDIRECT,)),
     _f24("boon_fate", passive=False, uses=Uses(table={1: 1}), restoration="short_rest", roll_options=(RollOptionSpec(
         key="feat.2024_boon_fate", phase="after_roll", after="add", rolls=D20_TESTS, extra_dice=lambda _c, _i: "2d4",
-        cost=Cost(feature_key="feat.2024_boon_fate"),
-        label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")),)),
+        cost=Cost(feature_key=_FATE),
+        label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")), FATE_RECHARGE)),
     # Cure extra: nessun gancio su ogni cura, il pulsante «Usa» le dà a mano (una volta fino all'inizio del turno seguente)
     _f24("boon_fortitude", modifiers=(Modifier("hp_max", 40),), passive=False,
          on_use=OnUse(once_per_turn=True, heal=lambda c, _rolled: max(_con_mod(c), 0))),
@@ -283,8 +325,10 @@ _register(
     _f24("boon_speed", modifiers=(Modifier("speed", 30),)),
     _f24("boon_spell_recall"),
     _f24("boon_night_spirit", passive=False, action_type="bonus_action",
-         on_use=OnUse(slot="bonus", state=StateSpec(_NIGHT, ends_on=("manual",))),
-         modifiers=tuple(Modifier(f"resistance:{t}", 0, when=lambda c: state_on(c, _NIGHT))
+         on_use=OnUse(slot_by=lambda _c, p: None if p.get("mode") == "form" else "bonus", state=_night_state,
+                      choices=(UseChoice("mode", _both("Effetto", "Effect"), lambda _c: list(_NIGHT_MODES),
+                                         lambda k: _NIGHT_MODES[k]),)),
+         modifiers=tuple(Modifier(f"resistance:{t}", 0, when=lambda c: state_on(c, _SHADOWY_FORM))
                          for t in DAMAGE_TYPES if t not in ("psychic", "radiant"))),
     _f24("boon_truesight", modifiers=(Modifier("sense:truesight", 60),)),
     needs={"feat.2024_boon_energy_resistance": ("damage_types",), "feat.2024_boon_skill": ("expertise",)},
@@ -316,7 +360,7 @@ def options_ok(options: dict, feature_key: str = "") -> bool:
     talento torna «da completare»). Liste di classe e caratteristica dipendono dal talento (``feature_key``)."""
     from core.data.feats_2024 import ALL_FEATS
     from core.rules.catalog.y2014.fighter import MANEUVERS  # import locale come WEAPONS
-    from core.rules.weapons import WEAPONS  # import locale: weapons legge il registro dei talenti
+    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS  # import locale: weapons legge il registro dei talenti
     count = lambda n: (lambda v: len(v) == n)  # noqa: E731
     checks = {
         "damage_types": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= set(ENERGY_TYPES),
@@ -328,9 +372,9 @@ def options_ok(options: dict, feature_key: str = "") -> bool:
         "list": lambda v: v in (MI_LISTS if feature_key.startswith("feat.2024_") else LIST_ABILITY),
         "maneuvers": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= {k for k, _it, _en in MANEUVERS},
         "languages": count(3),
-        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPONS),
+        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPON_NAMES_2014),
         "rituals": lambda v: len(v) <= 6,
-        "picks": _picks_ok, "tools": lambda v: _tools_ok(v, ("artisan",)), "instruments": lambda v: _tools_ok(v, ("instrument",)),
+        "picks": _picks_ok, "tools": lambda v: _tools_ok(v, None) and all(_tool(x) in FAST_CRAFTING_TOOLS for x in v), "instruments": lambda v: _tools_ok(v, ("instrument",)),
         "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,
     }
     spec = ALL_FEATS.get(feature_key[len("feat."):])

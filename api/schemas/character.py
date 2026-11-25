@@ -62,9 +62,10 @@ class ComputedStats(BaseModel):
     swim_speed: Optional[int] = None  # nuotare concesso da un privilegio, pari alla velocità a terra (Salmone)
     senses: list[dict[str, Any]] = []  # sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi
     attunement_limit: int = 3  # sintonie ammesse: 4 con Usare Dispositivi Magici (Furfante 2024)
+    casts_spells: bool = False  # sa lanciare un incantesimo: prerequisito dei talenti da incantatore
     scroll_casting: bool = False  # può lanciare dalle pergamene (Usare Dispositivi Magici)
     long_jump_bonus_ft: Optional[int] = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio
-    bloodied: bool = False  # Sanguinante (solo 2024): a metà dei PF massimi o meno, ma sopra 0
+    bloodied: bool = False  # Sanguinante (solo 2024): a metà dei PF massimi o meno, anche a 0 (non da morto né con PF massimi a 0)
 
 
 class SpellCasterStats(BaseModel):
@@ -102,7 +103,7 @@ class SpellcastingInfo(BaseModel):
     prepared_count: int = 0
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
-    ritual_only_spell_ids: list[int] = []  # concessi da un privilegio come soli rituali (Cercatore di Spiriti)
+    ritual_only_spell_ids: list[int] = []  # un privilegio li fa lanciare come rituali: solo così (Cercatore di Spiriti) o anche con slot (Patto della Catena 2014)
     has_wizard: bool = False
     casters: list[SpellCasterStats] = []
     limits: list[ClassSpellLimits] = []
@@ -426,6 +427,11 @@ class SpeciesApply(BaseModel):
     ability_bonuses: dict[str, int] = Field(default_factory=dict)
     roll_notes: dict[str, str] = Field(default_factory=dict)
     traits: list[SpeciesTrait] = Field(default_factory=list, max_length=30)
+    # Competenze e resistenze fisse della razza 2014: chiavi di core.rules.weapons, core.data.tools, core.data.damage_types
+    weapons: list[str] = Field(default_factory=list, max_length=10)
+    tools: list[str] = Field(default_factory=list, max_length=5)
+    resistances: list[str] = Field(default_factory=list, max_length=13)
+    skills: list[str] = Field(default_factory=list, max_length=5)  # già in ``CharacterCreate.skills``: quali vengono solo dalla razza
 
 
 class CharacterCreate(BaseModel):
@@ -565,5 +571,7 @@ class SpellAttackResult(BaseModel):
     cast_option_result: OptionResult | None = absent_when_none()
     option_result: OptionResult | None = absent_when_none()  # le opzioni confermate prima del tiro: i dadi extra arrivano al danno
     twinned_attack: dict | None = absent_when_none()  # Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio
+    ray: int | None = absent_when_none()  # il raggio di questo tiro (1…``rays``), per gli incantesimi con un tiro per raggio
+    rays: int | None = absent_when_none()
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

@@ -45,6 +45,7 @@ def _equipment() -> dict:
     items["trident"].update(damage_dice="1d8", versatile_dice="1d10")
     items["war-pick"].update(versatile_dice="1d10")
     _prop(items["war-pick"], "prop_versatile")
+    items["warhammer"].update(weight_lb=5)  # pag. 215: 5 lb (2 lb è il peso del 2014)
     base = {"weight_lb": 0, "damage_type": "piercing", "weapon_category": "martial", "weapon_range": "ranged",
             "versatile_dice": None, "thrown_range_ft": None}
     items["musket"] = {"index": "musket", "name": {"en": "Musket", "it": "Moschetto"}, **base, "weight_lb": 10,

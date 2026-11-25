@@ -51,7 +51,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead', 'target_not_down', 'nothing_to_remove', 'beast_alive']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead', 'target_not_down', 'nothing_to_remove', 'beast_alive', 'surge_no_magic']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['amount_capped', 'arcane_charge','quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'steady_aim', 'steady_aim_keeps_speed', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus', 'healer_other']
@@ -223,9 +223,12 @@ export default function Turn() {
       setRemovalPick(null)
     },
   })
+  /** L'interruttore «a te» acceso è già il bersaglio: nessun altro da scegliere. */
+  const onSelf = (ab: Ability) => !!ab.use_toggles?.some((x) => x.key === 'self') && !!toggles[ab.id]?.self
   /** La modalità scelta è rivolta a un altro: il pulsante dice «Usa su…», il passo dopo è la scelta del bersaglio. */
   const usesOnAlly = (ab: Ability) => {
     const mode = useChoices[ab.id]?.mode
+    if (onSelf(ab)) return false
     return !!ab.gives_to_ally || !!(mode && ab.ally_modes?.includes(mode))
   }
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
@@ -237,12 +240,14 @@ export default function Turn() {
     // Un privilegio che dà un effetto a un alleato, o una cui modalità scelta è rivolta a un altro (Imposizione delle Mani).
     const mode = useChoices[args.ability.id]?.mode
     const rm = args.ability.removal
-    if (rm && (!rm.modes || (mode && rm.modes.includes(mode)))) {
-      const allies = rm.ally && !(rm.bound && mode === 'self') ? await api.characters.sessionAllies(charId).catch(() => []) : []
+    // La cura può anche togliere condizioni (Imposizione delle Mani 2024): su di sé si chiede solo se c'è qualcosa da togliere.
+    const also = !!rm?.also_modes?.includes(mode ?? '') && (mode !== 'self' || rm.conditions.some((c) => char?.conditions?.[c.key]))
+    if (rm && (!rm.modes || also || (mode && rm.modes.includes(mode)))) {
+      const allies = rm.ally && !((rm.bound || also) && mode === 'self') ? await api.characters.sessionAllies(charId).catch(() => []) : []
       setRemovalPick({ ...args, allies })
       return
     }
-    if (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode))) {
+    if (!onSelf(args.ability) && (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode)))) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
         setAllyPick({ ...args, allies, max: args.ability.ally_max ?? 1 })
@@ -251,6 +256,8 @@ export default function Turn() {
     }
     abilityUse.mutate(args)
   }
+
+  const removalAlso = !!removalPick?.ability.removal?.also_modes?.includes(useChoices[removalPick.ability.id]?.mode ?? '')
 
   if (!char) {
     return (
@@ -440,7 +447,7 @@ export default function Turn() {
           <RollButton onRoll={(mode) => castFlow.beginCast(spell, mode)} pending={castFlow.isSpellPending(spell.id)}
             ariaLabel={`${t('character.turn.cast')} ${label}`}
             className={`${BTN} bg-dnd-arcane/10 text-dnd-arcane-bright border-dnd-arcane/30`}>
-            <Sparkles size={14} />{t('character.turn.cast')}
+            <Sparkles size={14} />{t(spell.effect?.lit ? 'character.spells.hurl' : 'character.turn.cast')}
           </RollButton>
         )
       }
@@ -627,8 +634,8 @@ export default function Turn() {
           {activeConditions.map(([key, val]) => <ConditionBadge key={key} conditionKey={key} value={val} showLabel />)}
         </div>
       )}
-      {endOfTurnSaves.map((e) => (
-        <p key={e.slug} data-testid="turn-end-save" className="rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body">
+      {endOfTurnSaves.map((e, i) => (
+        <p key={`${e.slug}-${i}`} data-testid="turn-end-save" className="rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body">
           {t('session.combat.end_turn_save_hint', {
             save: t('character.conditions.effect.save_any', { ability: t(`character.ability.${e.save_ability}_short`), dc: e.save_dc }),
             condition: formatCondition(e.slug, true, t),
@@ -727,9 +734,9 @@ export default function Turn() {
         <AllyTargetSheet
           title={removalPick.ability.name} allies={removalPick.allies} pending={abilityUse.isPending} onPick={() => {}} onClose={() => setRemovalPick(null)}
           removal={{
-            ...removalPick.ability.removal, maxTargets: removalPick.ability.removal.max_targets, optional: removalPick.ability.removal.optional,
+            ...removalPick.ability.removal, maxTargets: removalPick.ability.removal.max_targets, optional: removalPick.ability.removal.optional || removalAlso,
             costEach: removalPick.ability.removal.cost_each, confirmKey: 'removal_confirm_use',
-            scope: !removalPick.ability.removal.ally ? 'self' : removalPick.ability.removal.bound ? (useChoices[removalPick.ability.id]?.mode === 'self' ? 'self' : 'others') : 'any',
+            scope: !removalPick.ability.removal.ally ? 'self' : removalPick.ability.removal.bound || removalAlso ? (useChoices[removalPick.ability.id]?.mode === 'self' ? 'self' : 'others') : 'any',
             onConfirm: (removal) => abilityUse.mutate({ ability: removalPick.ability, uses: removalPick.uses, amount: removalPick.amount, removal }),
           }} />
       )}

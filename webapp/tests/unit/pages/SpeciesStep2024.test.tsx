@@ -43,10 +43,6 @@ async function toSpecies(edition: '2014' | '2024', background?: string) {
   await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
   if (edition === '2024') await user.click(screen.getByRole('button', { name: 'character.settings.rules_edition.2024' }))
   await next()
-  if (edition === '2014') {
-    await next() // background 2014, facoltativo
-    await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
-  }
   if (background) {
     await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
     await user.click(await screen.findByText(background))

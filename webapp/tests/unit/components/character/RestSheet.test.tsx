@@ -163,6 +163,21 @@ describe('RestSheet short rest', () => {
       await userEvent.click(screen.getByText('confirm'))
       await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
     })
+
+    it('2024: sends reopen_tome on the short rest too (Warlock 2024 pag. 157)', async () => {
+      rest.mockResolvedValue(tome)
+      setup(tome)
+      await openShortRest()
+      await userEvent.click(within(screen.getByTestId('tome-reopen')).getByRole('switch'))
+      await userEvent.click(screen.getByText('rest'))
+      await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ reopen_tome: true })))
+    })
+
+    it('2014: not offered on the short rest (the Book is received once, pag. 116)', async () => {
+      setup({ ...tome, rules_edition: '2014' } as CharacterFull)
+      await openShortRest()
+      expect(screen.queryByTestId('tome-reopen')).toBeNull()
+    })
   })
 
   describe('Song of Rest switch (bard)', () => {

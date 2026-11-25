@@ -12,6 +12,7 @@ from core.rules.types import Modifier, OnUse, RollOptionSpec, RuleContext, State
 
 PORTENT = RollOptionSpec(
     key=f"{CK}.portent", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"), once_per_turn=True, replace_die=True,
+    companion=True,  # il d20 di ogni creatura che vede (pag. 86)
     label={"it": "Portento: sostituisci il d20 con uno dei dadi di preveggenza",
            "en": "Portent: replace the d20 with one of your foretelling dice"})
 
@@ -21,9 +22,10 @@ def _casting_level(ctx: RuleContext) -> int:
 
 
 def _recoverable(ctx: RuleContext) -> list[int]:
-    """Divinazione Esperta: gli slot spesi di livello inferiore all'incantesimo e al massimo di 5°."""
+    """Divinazione Esperta: gli slot spesi di livello inferiore all'incantesimo e al massimo di 5°. Solo a un lancio con uno slot
+    (2024 pag. 173; PHB 2014 «using a spell slot»): un rituale o un lancio gratuito non rende nulla."""
     from core.rules.roll_options import spent_levels  # import locale: roll_options usa il catalogo
-    if ctx.spell is None or normalize_school(ctx.spell.school) != "divination" or _casting_level(ctx) < 2:
+    if ctx.slotless or ctx.spell is None or normalize_school(ctx.spell.school) != "divination" or _casting_level(ctx) < 2:
         return []
     return [level for level in spent_levels(ctx.char) if level < _casting_level(ctx) and level <= 5]
 

@@ -99,13 +99,14 @@ async def test_wild_shape_concentration_save_on_damage(client, monkeypatch):
     body = await _hp(client, cid, "damage", 30)
     assert body["current_hit_points"] == 20
     assert body["concentration_save"]["dc"] == 15  # full damage, absorbed by the form
-    # overflow case: a single save, DC from the overflow only
+    # overflow case: a single save on the whole hit, one damage taken by the same druid
+    # (2014 pag. 66 Forma Selvatica, pag. 203 Concentrazione: CD 10 o metà del danno subito)
     cid2 = await _make_char(client, 40)
     await _start_concentration(client, cid2)
     g = await _form(client, cid2, hp=20)
     await _activate(client, cid2, g["id"])
-    body = await _hp(client, cid2, "damage", 50)  # form 20, overflow 30 -> DC 15, not 25
-    assert body["current_hit_points"] == 10 and body["concentration_save"]["dc"] == 15
+    body = await _hp(client, cid2, "damage", 50)  # form 20, overflow 30 -> DC 25 (50/2)
+    assert body["current_hit_points"] == 10 and body["concentration_save"]["dc"] == 25
 
 
 async def test_heal_heals_form(client):

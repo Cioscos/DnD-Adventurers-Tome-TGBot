@@ -45,7 +45,7 @@ SURGES: tuple[Surge, ...] = (
     _s(45, "Invisibilità di gruppo", "Group invisibility",
        "Tu e fino a tre creature entro 9 m siete invisibili per un minuto; per ciascuna finisce dopo un attacco, un danno o un incantesimo.",
        "You and up to three creatures within 30 ft are invisible for a minute; for each it ends after an attack roll, damage or a spell.",
-       rounds=MINUTE),
+       rounds=MINUTE, state_key="wild_invisible", condition="invisible", ends_on_act=True),  # le altre tre creature restano al GM (D1)
     _s(49, "Scudo spettrale", "Spectral shield", "Per un minuto uno scudo spettrale dà +2 alla CA e immunità a dardo incantato.",
        "For one minute a spectral shield gives +2 AC and immunity to magic missile.", rounds=MINUTE, ac=2),
     _s(53, "Azione extra", "Extra action", "Hai subito un'azione aggiuntiva.", "You immediately take an additional action.", action=True),

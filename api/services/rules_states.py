@@ -11,16 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
-    attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
+    attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, refuse_surge_magic, set_damaged, spend,
 )
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.modifiers import INCAPACITATING, is_incapacitated, surprise_exit_features
 from core.rules.roll_options import keep_target_effect, refund_spent
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX
-from core.rules.states import begin_state, has_state, item_spell_held, settle_closed
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
+from core.rules.states import SPELL_SPENT, begin_state, has_state, item_spell_held, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
 
@@ -68,10 +69,11 @@ MINUTE_ROUNDS = 10  # un minuto: a fine scontro gli stati che durano fino a qui 
 
 
 def end_minute_states(char) -> list[str]:
-    """Fine dello scontro: chiude gli stati a round che durano al più un minuto (Arma Consacrata, Benedizione); restano
-    quelli più lunghi, senza togliere loro tempo, e quelli senza durata. Restituisce i nomi degli stati chiusi."""
+    """Fine dello scontro: chiude gli stati a round che durano al più un minuto (Arma Consacrata, Benedizione) e quelli che
+    contano i turni (Controfascino); restano quelli più lunghi, senza togliere loro tempo, e quelli senza durata.
+    Restituisce i nomi degli stati chiusi."""
     states = get_states(char)
-    closed = [s for s in states if s["rounds_left"] is not None and s["rounds_left"] <= MINUTE_ROUNDS]
+    closed = [s for s in states if _turns_to_skip(s) is not None or (s["rounds_left"] is not None and s["rounds_left"] <= MINUTE_ROUNDS)]
     if closed:
         char.active_states = [s for s in states if s not in closed]
         settle_closed(char, closed)
@@ -128,8 +130,10 @@ def end_states_on_rest(char, rest: str) -> list[str]:
     oltre, ai quali il riposo toglie la sua durata (600 round il breve, 4800 il lungo). ``rest`` è il riposo che vale
     davvero: un riposo interrotto che non dà benefici non arriva qui (2014 lungo, 2024 breve), il lungo 2024 interrotto
     vale un breve e arriva come ``short``."""
+    before = get_states(char)
     closed = (end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS) if rest == "long"
               else end_states(char, "rest_short", within=SHORT_REST_ROUNDS))
+    refund_unused_cast(char, [s for s in before if s["key"] in closed])
     # la concentrazione legata a uno stato chiuso finisce con lui (quella degli incantesimi resta, D8)
     held = item_spell_held(char).get("feature_key")
     if held and held not in {s.get("feature_key") for s in get_states(char)}:
@@ -148,6 +152,19 @@ def _spell_effect(spell) -> bool:
     return save != "ATK" and bool(get("damage_dice") or get("extra_damage_dice") or save)
 
 
+def _drop_from_clocks(char, closed: list[dict]) -> None:
+    """Gli incantesimi finiti per ``char`` (Invisibilità): il proprio orologio si aggiorna subito, così il lancio in corso ne
+    può aprire uno nuovo; quello di un altro lo aggiorna il flush della richiesta (``SPELL_SPENT``)."""
+    from api.services.spell_effects import drop_clock_target  # import locale: spell_effects importa questo modulo
+    for s in closed:
+        if s["data"]["caster_id"] == char.id:
+            drop_clock_target(char, s["key"], char.id)
+        else:
+            settings = char.settings or {}
+            char.settings = {**settings, SPELL_SPENT: [*(settings.get(SPELL_SPENT) or []),
+                                                       {"caster_id": s["data"]["caster_id"], "key": s["key"], "target_only": True}]}
+
+
 def end_on_action(char, action: str, spell=None) -> None:
     """Chi attacca (``attack``) o lancia (``cast``) chiude gli stati che finiscono così (Manto di Ombre).
 
@@ -155,7 +172,9 @@ def end_on_action(char, action: str, spell=None) -> None:
     ``data["refund_on_miss"]`` chiusi da un attacco tornano se il giocatore dichiara il mancato (``last_roll.refundable``)."""
     keep = {s["key"] for s in get_states(char) if (s.get("data") or {}).get("needs_effect")}         if action == "cast" and spell is not None and not _spell_effect(spell) else frozenset()
     held = [s for s in get_states(char) if action in s["ends_on"] and s["key"] not in keep and (s.get("data") or {}).get("refund_on_miss")]
-    end_states(char, action, keep=keep)
+    spells = [s for s in get_states(char) if str(s["key"]).startswith(SPELL_STATE_PREFIX) and (s.get("data") or {}).get("caster_id") is not None]
+    closed = end_states(char, action, keep=keep)
+    _drop_from_clocks(char, [s for s in spells if s["key"] in closed])
     if action == "attack":  # ogni attacco riparte da zero: un resto di quello prima non si attacca al tiro nuovo
         char.turn_state = {**{k: v for k, v in get_turn(char).items() if k != MISS_REFUND},
                            **({MISS_REFUND: {s["key"]: [f"state:{s['key']}:{json.dumps(s)}"] for s in held}} if held else {})}
@@ -224,6 +243,16 @@ def extend_state(char, key: str, rounds: int) -> None:
     char.active_states = [{**s, "rounds_left": rounds} if s["key"] == key else s for s in states]
 
 
+def refund_unused_cast(char, closed: list[dict]) -> None:
+    """R43: un'autorizzazione al lancio gratuito che ha speso un uso (``data["refund"]`` = il privilegio) e finisce senza
+    lancio, a mano o col riposo, rende l'uso: la carta conta i lanci. Il lancio la chiude da sé, senza passare di qui."""
+    for s in closed:
+        key = (s.get("data") or {}).get("refund")
+        row = next((a for a in char.abilities if a.feature_key == pool_key(char, key)), None) if key else None
+        if row is not None and row.max_uses is not None:
+            row.uses = min(row.max_uses, (row.uses or 0) + 1)
+
+
 def remove_state(char, key: str, *, by_player: bool = False) -> None:
     """Chiude lo stato. ``by_player``: lo chiude il giocatore, e se lo stato dichiara ``end_slot`` ne spende lo slot;
     con lo slot già speso lo stato finisce lo stesso (un tocco sbagliato si corregge)."""
@@ -237,6 +266,8 @@ def remove_state(char, key: str, *, by_player: bool = False) -> None:
         raise _err(status.HTTP_409_CONFLICT, "state_locked")
     char.active_states = [s for s in states if s["key"] != key]
     settle_closed(char, closed)
+    if by_player:
+        refund_unused_cast(char, closed)
     slot = closed[0].get("end_slot")
     if by_player and slot:
         try:
@@ -269,11 +300,13 @@ async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, 
     char.settings = {**(char.settings or {}), ALLY_EXCLUSIVE: held}
 
 
-async def _spend_atomically(session: AsyncSession, ability, cost: int) -> None:
+async def _spend_atomically(session: AsyncSession, ability, cost: int, exact: bool = False) -> None:
     """Spende ``cost`` usi con un UPDATE condizionato (come Preservare Vita): due richieste insieme non spendono gli stessi
-    punti. È il primo atto di scrittura, prima di rileggere chi riceve la cura."""
+    punti. È il primo atto di scrittura, prima di rileggere chi riceve la cura. ``exact``: gli usi devono essere ancora quelli
+    letti, quando la riga segna anche a cosa sono serviti."""
     spent = await session.execute(
-        update(Ability).where(Ability.id == ability.id, Ability.uses >= cost).values(uses=Ability.uses - cost))
+        update(Ability).where(Ability.id == ability.id, Ability.uses == ability.uses if exact else Ability.uses >= cost)
+        .values(uses=Ability.uses - cost))
     if spent.rowcount != 1:
         raise _err(status.HTTP_409_CONFLICT, "no_uses")
     await session.refresh(ability)
@@ -328,22 +361,24 @@ async def _plan_removal(session: AsyncSession, char, ctx: RuleContext, rm, param
     """``(condizioni, voci non tracciate, bersagli, esplicita)`` che quest'uso toglie, o ``None``. Lo stesso corpo ``removal``
     {targets, conditions} degli incantesimi; 422 se la scelta, i bersagli o la modalità non sono ammessi, tutto prima di spendere."""
     req = params.get("removal")
+    also = params.get("mode") in rm.also_modes  # la cura resta, togliere è in più
     if req is None:
         if rm.auto:  # cadono da sole su chi usa il privilegio (Ira): stesso servizio, senza foglio
             picks = rm.auto(ctx, params)
             return (*plan(rm, picks, rm.allowed_for(ctx)), [char], False) if picks else None
-        if rm.optional or (rm.modes is not None and params.get("mode") not in rm.modes):
+        if rm.optional or also or (rm.modes is not None and params.get("mode") not in rm.modes):
             return None
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     targets, picks = (req.get("targets"), req.get("conditions")) if isinstance(req, dict) else (None, None)
     bad = (not isinstance(targets, list) or (picks is not None and not isinstance(picks, list))
-           or (rm.modes is not None and params.get("mode") not in rm.modes))
-    if not bad and rm.bound:  # il bersaglio segue la modalità: te stesso, oppure un altro
+           or (rm.modes is not None and params.get("mode") not in (*rm.modes, *rm.also_modes)))
+    if not bad and (rm.bound or also):  # il bersaglio segue la modalità: te stesso, oppure un altro
         bad = len(targets) != 1 or (targets[0] == "self") != (params.get("mode") == "self")
     if bad:
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
-    conds, untracked = ([], []) if picks == [] and rm.optional else plan(rm, picks, rm.allowed_for(ctx))
-    if not (conds or untracked) and not rm.optional:
+    optional = rm.optional or also
+    conds, untracked = ([], []) if picks == [] and optional else plan(rm, picks, rm.allowed_for(ctx))
+    if not (conds or untracked) and not optional:
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     return conds, untracked, await resolve_targets(session, char, rm, targets), True
 
@@ -360,18 +395,33 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.panel:
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     params = dict(params or {})
+    # Incapacitato: niente azioni, azioni bonus né reazioni (2014 p.189-190 e 291, 2024 p.369); passano le uscite dichiarate (Istinto Ferino, Vendetta Ardente)
+    turn_slot = on_use.slot_by(RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level),
+                               params) if on_use.slot_by else on_use.slot
+    if turn_slot and is_incapacitated(char) and feature_key not in surprise_exit_features(char):
+        raise _err(status.HTTP_409_CONFLICT, "incapacitated")
+    # L'azione Magia si riconosce dal riassunto della carta («Magic action...»), o da ``magic_action`` se il riassunto non comincia così
+    if turn_slot == "action" and spec.edition == "2024" and (on_use.magic_action or spec.summary["en"].startswith("Magic action")):
+        refuse_surge_magic(char)
+    # uno stato che finisce con l'incapacità non parte da incapacitato (2024 Difesa Superiore p.103, Sintonia Elementale p.106)
+    if (isinstance(on_use.state, StateSpec) and "incapacitated" in on_use.state.ends_on
+            and any((char.conditions or {}).get(c) for c in INCAPACITATING)):
+        raise _err(status.HTTP_409_CONFLICT, "incapacitated")
     removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
+    removal_cost = 0  # punti in più, oltre a quelli della cura (``also_modes``)
     if on_use.removal is not None:
+        also = params.get("mode") in on_use.removal.also_modes
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
                                                                       class_level=row.level), on_use.removal, params)
         if removal_plan is not None and removal_plan[3] and on_use.removal.cost_each:  # il costo lo decide il server
             conds, untracked, targets = removal_plan[0], removal_plan[1], removal_plan[2]
             # si pagano le voci che toglie davvero: una condizione che il bersaglio non ha non costa nulla
             paid = [c for c in conds if any(t is None or (t.conditions or {}).get(c) for t in targets)]
-            if not (paid or untracked):
+            if not (paid or untracked) and not (also and not conds):
                 raise _err(status.HTTP_409_CONFLICT, "nothing_to_remove")
-            amount = on_use.removal.cost_each * (len(paid) + len(untracked))
-        if removal_plan is not None and removal_plan[3] and on_use.removal.bound:  # anche i PF vanno a chi si è scelto
+            price = on_use.removal.cost_each * (len(paid) + len(untracked))
+            amount, removal_cost = (amount, price) if also else (price, 0)
+        if removal_plan is not None and removal_plan[3] and (on_use.removal.bound or also):  # anche i PF vanno a chi si è scelto
             params["target_character_id"] = getattr(removal_plan[2][0], "id", None)
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
@@ -437,7 +487,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         temp_targets = [await ally_target(session, char, tid) for tid in wanted]
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
-    cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
+    cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount + removal_cost
     # «Ripristina» spendendo un uso di un altro privilegio (Presenza Intimidatoria: un uso di Ira)
     spends = on_use.alt_spends if on_use.alt_spends and (params or {}).get(on_use.alt_param) else on_use.spends
     if spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
@@ -455,10 +505,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             from api.services.effects import get_passive_modifiers as _hb  # import locale: effects richiama on_conditions
             from core.rules.modifiers import effective_hp_max as _max
             missing = max(0, _max(healed_one, await _hb(session, healed_one, "character.hit_points_max")) - healed_one.current_hit_points)
-            if missing == 0:
+            if missing == 0 and not removal_cost:
                 raise _err(status.HTTP_409_CONFLICT, "no_benefit")
             capped, amount = amount > missing, min(amount, missing)
-            cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
+            cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount + removal_cost
     slot = on_use.slot_by(ctx_choice, params or {}) if on_use.slot_by else on_use.slot
     # chi rinuncia a un attacco dell'azione Attacco già iniziata (Soffio) non spende di nuovo l'azione
     if slot and not (on_use.forgoes_attack and slot == "action" and get_turn(char)["action_attacks"] > 0):
@@ -466,7 +516,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]), on_use.spends_slot_pact_only)
     if on_use.once_per_turn:
-        mark_once(char, feature_key)
+        mark_once(char, feature_key, own_turn=on_use.own_turn)
     if on_use.forgoes_attack:
         forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
@@ -489,6 +539,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     dice = parse_dice(formula) if formula else None
     if on_use.spell_attack:  # il d20 prima dei dadi: un mancato non fa danno, un critico li raddoppia
         result.attack = _feature_attack(char, on_use.spell_attack)
+        from api.services.effects import end_hide  # import locale: effects richiama on_conditions
+        end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio (2024 p.368)
         end_on_feature_attack(char, result.attack)
         if dice:
             dice = (0 if result.attack["is_fumble"] else dice[0] * (2 if result.attack["is_critical"] else 1), dice[1])
@@ -517,7 +569,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             out = grant_temp_hp(session, receiver, result.given)
             result.temp_received.append({"name": receiver.name, "given": result.given, "temp_hp": out["new"], "applied": out["applied"]})
             if on_use.temp_hp_ends_with and out["applied"]:  # svanisce con lo stato di chi lo dà (l'Ira): il server se ne ricorda
-                from core.rules.states import TEMP_GIVEN  # import locale, come sopra
+                from core.rules.states import TEMP_GIVEN, TEMP_MANUAL  # import locale, come sopra
+                receiver.settings = {k: v for k, v in (receiver.settings or {}).items() if k != TEMP_MANUAL}
                 given = dict((char.settings or {}).get(TEMP_GIVEN) or {})
                 given[on_use.temp_hp_ends_with] = [*(e for e in given.get(on_use.temp_hp_ends_with, []) if e["id"] != tid),
                                                    {"id": tid, "amount": result.given}]

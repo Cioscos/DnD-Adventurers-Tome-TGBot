@@ -422,7 +422,7 @@ describe('Spells page', () => {
     // Nessuna DELETE finché l'utente non conferma (audit #9).
     expect(removeSpy).not.toHaveBeenCalled()
     await userEvent.click(screen.getByRole('button', { name: 'character.spells.forget' }))
-    await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(9, 102))
+    await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(9, 102, undefined))
   })
 
   it('adding a spell POSTs the trimmed SpellCreate contract', async () => {

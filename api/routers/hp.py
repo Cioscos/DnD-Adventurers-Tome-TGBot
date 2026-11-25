@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from api.services.d20 import d20_records, resolve_applied, resolve_body
+from api.services.d20 import d20_records, resolve_applied, resolve_body, set_inspiration, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
@@ -74,6 +74,7 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
+from api.routers.sessions import active_encounter_row
 from api.routers._helpers import (
     apply_con_hp, collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
 )
@@ -81,7 +82,7 @@ from core.game.item_bonuses import item_meta
 from api.schemas.common import ConcentrationSaveResult, OptionResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    SPELL_GIVEN, TEMP_GIVEN, TEMP_MANUAL, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, keep_manual_temp_hp, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext, StateSpec
 from api.services.character_response import build_character_response
@@ -116,7 +117,7 @@ def _now() -> str:
     return _utcnow().isoformat(timespec="seconds")
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", "concentration_level", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", "concentration_level", ZERO_HP_USES, TEMP_GIVEN, TEMP_MANUAL, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:
@@ -243,8 +244,12 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             clocks = await foreign_spell_clocks(session, char)  # prima della spesa: uno stato speso chiude l'orologio di chi l'ha lanciato
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug, damage_in=raw)
             rolls, reduction = roll_option_dice(char, opts)
+            # un solo arrotondamento sul totale dell'attacco (Schivata Prodigiosa: «dimezza i danni di quell'attacco»,
+            # 2014 pag. 78): ciò che l'arrotondamento parte per parte perderebbe resta sulla parte principale
+            extras = [p.amount for p in body.extra_damage]
+            scaled = scale_damage(raw + sum(extras), opts.multiplier) - sum(scale_damage(a, opts.multiplier) for a in extras)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
-            option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus) - ally_cut)  # con le riduzioni degli alleati
+            option_after = max(0, scaled - max(0, reduction + opts.bonus) - ally_cut)  # con le riduzioni degli alleati
             option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after, allies=ally_block)
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after
@@ -302,7 +307,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                 end_form(char, form)
                 add_history(session, char.id, "companion_hp",
                              f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
-                applied = conc_damage = overflow
+                applied = overflow  # la CD di concentrazione resta sul colpo intero: un solo danno subito (2014 pag. 66, 203)
             else:
                 form_absorbed = True
                 applied = 0
@@ -517,6 +522,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
+        keep_manual_temp_hp(char)
 
     if (
         body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT)
@@ -891,7 +897,8 @@ async def rest(
     rest_type = body.rest_type
     receivers = await _rest_temp_receivers(session, char, edition, body.temp_hp_allies)  # prima di ogni scrittura del riposo
     chosen_resistance = _rest_resistance(char, body.fiendish_resilience)
-    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and rest_type != "short":
+    short_like = rest_type == "short" or (body.interrupted and edition == "2024")  # 2024: il lungo interrotto vale un breve (pag. 370-371)
+    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and not short_like:
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
@@ -936,6 +943,8 @@ async def rest(
                      f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
     reset_zero_hp_uses(char)
+    from api.services.choices import forget_rest_swaps  # import locale: choices importa i modelli del riposo
+    forget_rest_swaps(char)
     if rest_type == "long":
         char.last_long_rest_at = _now()
         char.temp_hp = 0
@@ -976,8 +985,8 @@ async def rest(
         add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
         for spec, row in active_features(char):  # alla fine del riposo lungo certi privilegi avviano un loro stato (Tranquillità)
-            if spec.long_rest_inspiration:  # Intraprendente dell'Umano 2024
-                char.heroic_inspiration = True
+            if spec.long_rest_inspiration:  # Intraprendente dell'Umano 2024: con una già in mano, la nuova si può cedere
+                set_inspiration(char, True)
             if spec.long_rest_state:
                 started = spec.long_rest_state(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level))
                 if started is not None:
@@ -1062,6 +1071,9 @@ async def spend_hit_dice(
     # I dadi vita si spendono riposando: nel 2024 a 0 PF non si riposa (come /rest).
     if character_edition(char) == "2024" and char.current_hit_points <= 0 and char.hit_points > 0:
         raise HTTPException(status_code=409, detail="rest_needs_hp")
+    # Forma con PF propri (2014): il druido ha i PF e i Dadi Vita della bestia, i suoi restano com'erano (Forma Selvatica pag. 66)
+    if form_own_hp(char) and await get_active_form(session, char.id) is not None:
+        raise HTTPException(status_code=409, detail={"code": "form_hit_dice"})
 
     # Pool residuo per classe (spec 2026-07-17): level - hit_dice_used.
     remaining = max(0, cls.level - (cls.hit_dice_used or 0))
@@ -1181,6 +1193,8 @@ async def roll_death_save(
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
     char = await get_owned_full_with_resources(char_id, user_id, session)
+    if body is not None and body.with_inspiration:  # prima dei rifiuti: il rilancio può salvare chi il primo tiro uccideva
+        return await _reroll_death_save(session, char, body)
     if char.is_dead:
         return DeathSaveRollResult(
             die=0, outcome="failure",
@@ -1192,6 +1206,9 @@ async def roll_death_save(
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
     if char.current_hit_points > 0 or ds.get("stable"):  # si tira solo a 0 PF e non stabili (2014 p.197 / 2024 p.28)
         raise HTTPException(status_code=409, detail={"code": "death_save_not_needed"})
+    # Uno per turno, a inizio turno (2014 pag. 197 / 2024 pag. 28, 365): in uno scontro il server sa quando il turno ricomincia
+    if get_turn(char).get("death_save_rolled") and await active_encounter_row(session, char.id) is not None:
+        raise HTTPException(status_code=409, detail={"code": "death_save_already_rolled"})
     before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")
@@ -1227,6 +1244,7 @@ async def roll_death_save(
         mode=d20.mode,
         mode_applied=d20.mode,
         notes=applied.notes,
+        bonus=bonus + option_total,
         outcome=outcome,
         successes=ds["successes"],
         failures=ds["failures"],
@@ -1235,6 +1253,30 @@ async def roll_death_save(
         current_hp=char.current_hit_points,
         option_result=block,
     )
+
+
+async def _reroll_death_save(session: AsyncSession, char: Character, body: D20RollSubmission) -> DeathSaveRollResult:
+    """Ispirazione Eroica 2024 (pag. 13, 368): si spende per rilanciare il TS appena tirato e conta solo il nuovo esito."""
+    last = get_turn(char).get("last_roll") or {}
+    death = last.get("death") if last.get("roll") == "death_save" else None
+    if death is None or death_state(char) != death["after"]:  # nessun TS da rilanciare, o lo stato è andato avanti
+        raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
+    spend_inspiration_reroll(char)  # 409 senza Ispirazione; nel 2014 si spende prima del tiro
+    applied = modifiers_for(char, "death_save")
+    await attach_party_auras(session, char)
+    opts = use_options(session, char, "death_save", body)  # le opzioni confermate per il primo tiro, senza ripagarle
+    merge_options(applied, opts)
+    d20 = resolve_body(body, applied)
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus = applied.flat + opts.bonus
+    total = d20.kept + bonus + option_total
+    record_dice(char, d20_records(d20), total)
+    block = option_result(opts, option_rolls, option_total)
+    fields = {"die": d20.kept, "dice": d20.dice, "mode": d20.mode, "bonus": bonus, "total": total, "notes": applied.notes,
+              "auto_fail": False, "description": "", "option_result": block.model_dump(mode="json") if block else None}
+    result, death = await retouch_death_save(session, char, death, fields)
+    remember_roll(char, "death_save", opts, fields, death=death)
+    return result
 
 
 def death_state(char: Character) -> dict:
@@ -1263,7 +1305,7 @@ async def retouch_death_save(
         add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
     ds = char.death_saves
     return DeathSaveRollResult(
-        die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], outcome=outcome,
+        die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], bonus=total - die, outcome=outcome,
         successes=ds["successes"], failures=ds["failures"], stable=ds.get("stable", False), revived=revived,
         current_hp=char.current_hit_points, option_result=roll["option_result"],
     ), {**death, "after": death_state(char)}

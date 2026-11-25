@@ -175,13 +175,14 @@ async def test_hand_of_healing_ends_a_condition_on_yourself_only_from_level_6(cl
     low = await _sub(client, "mercy", 3)
     assert [c["key"] for c in (await _ability(client, low, HEAL))["use_choices"]] == ["mode"] and not (await _ability(client, low, HEAL))["removal"]
     cid = await _sub(client, "mercy", 6)
-    await _conditions(client, cid, poisoned=True, stunned=True, charmed=True)
+    # 2024 Incapacitato p.369: da stordito niente Azione Bonus, quindi una condizione che non incapacita
+    await _conditions(client, cid, poisoned=True, deafened=True, charmed=True)
     row = await _ability(client, cid, HEAL)
     assert [o["key"] for o in row["removal"]["conditions"]] == ["blinded", "deafened", "paralyzed", "poisoned", "stunned"]
     assert row["removal"]["bound"] and row["removal"]["optional"]
     assert (await _use(client, cid, HEAL, params={"mode": "self", "removal": {"targets": ["self"], "conditions": ["poisoned"]}})).status_code == 200
     conditions = (await _full(client, cid))["conditions"]
-    assert not conditions.get("poisoned") and conditions["stunned"] and conditions["charmed"]
+    assert not conditions.get("poisoned") and conditions["deafened"] and conditions["charmed"]
 
 
 async def test_one_flurry_strike_can_become_a_free_hand_of_healing(client, monkeypatch):

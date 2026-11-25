@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
-from api.services.choices import choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
+from api.services.choices import _casts_spells, choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_armor_class, form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
@@ -133,7 +133,8 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     summaries = {spec.key: spec.summary for spec, _ in active_features(char) if spec.on_use and (spec.on_use.spends or "").endswith(".channel_divinity")}
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
-    dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
+    dc_of = {spec.key: (spec.dc_ability, row) for spec, row in active_features(char) if spec.dc_ability}
+    caster_ability_of = {c.class_id: c.ability for c in response.spellcasting.casters}
     rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
     rows = {a.id: a for a in char.abilities}
     dice_of: dict[str, str] = {}
@@ -151,7 +152,11 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         if (ab.feature_key or "").startswith("feat.") and ab.id in rows:  # attivo, da completare o di un'altra edizione
             ab.feat_status = feat_status(char, rows[ab.id])
         if ab.feature_key in dc_of:
-            ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
+            ability, owner = dc_of[ab.feature_key]
+            # CD della classe che lancia con la stessa caratteristica = CD degli incantesimi, oggetti compresi (Ladro di Incantesimi 2014 pag. 80)
+            spell_dc = owner in char.classes and caster_ability_of.get(owner.id) == ability
+            ab.dc = (8 + char.proficiency_bonus + effective_ability_mod(char, ability)
+                     + (item_bonus_total(char.items, "spell_dc") if spell_dc else 0))
         ab.has_on_use = on_use is not None
         if on_use and on_use.available and owner is not None:
             try:
@@ -183,7 +188,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         elif on_use and on_use.spends and ab.max_uses is not None and owner is not None:
             free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.free_use = on_use.available is None or bool(on_use.available(free_ctx))
-        if on_use and on_use.spends:
+        if on_use and on_use.spends and on_use.spends_slot_when is None:  # pagabile anche con uno slot (Fuga Velata): la riserva vuota non lo spegne
             held = pool_key(char, on_use.spends)
             pool = next((a for a in response.abilities if a.feature_key == held), None)
             ab.spends_left = (pool.uses or 0) if pool is not None and pool.max_uses is not None else None
@@ -246,15 +251,15 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
 
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}
-    walk = effective_speed(char, (
-        char.speed + response.speed_homebrew_modifier + response.speed_items_modifier
-        - response.speed_encumbrance_penalty_ft
-    ))
+    adjust = response.speed_homebrew_modifier + response.speed_items_modifier - response.speed_encumbrance_penalty_ft
+    walk = effective_speed(char, char.speed + adjust)
+    # Il volo fisso (Volare) cambia come la Velocità: Afferrato, Trattenuto, Indebolimento (2014 pag. 290-292), Passo Lungo (2024 pag. 374)
+    fly = effective_speed(char, rule_damage.fly_speed_value + adjust) if rule_damage.fly_speed_value else 0
     if rule_damage.carry_double:
         response.carry_capacity *= 2
     response.computed = ComputedStats(
         speed=walk,
-        fly_speed=(max(walk if rule_damage.fly_speed else 0, rule_damage.fly_speed_value) or None),
+        fly_speed=(max(walk if rule_damage.fly_speed else 0, fly) or None),
         climb_speed=walk if rule_damage.climb_speed else None,
         swim_speed=walk * 2 if rule_damage.swim_speed_double else walk if rule_damage.swim_speed else None,
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
@@ -271,10 +276,12 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         senses=[{"type": k, "range_ft": v} for k, v in sorted(rule_damage.senses.items())],
         long_jump_bonus_ft=rule_damage.jump_bonus_ft,
         attunement_limit=attunement_limit(char),
+        casts_spells=_casts_spells(char),
         scroll_casting=has_use_magic_device(char),
     )
-    response.computed.bloodied = (  # 2024 p.27: di per sé non fa nulla, è un segnale per chi gioca
-        edition == "2024" and 0 < char.current_hit_points * 2 <= response.computed.hp_max_effective)
+    hp_max = response.computed.hp_max_effective
+    response.computed.bloodied = (  # 2024 p.27 e p.362: a metà PF o meno, anche a 0; un morto non ha PF (p.365)
+        edition == "2024" and not char.is_dead and 0 < hp_max and char.current_hit_points * 2 <= hp_max)
     return response
 
 

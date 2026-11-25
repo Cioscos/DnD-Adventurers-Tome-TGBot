@@ -81,7 +81,7 @@ SD_COST = Cost(feature_key=SD, amount_by=_sd_cost)
 
 def _stamped_state(key: str) -> Any:
     """Lo stato di Finta/Affondo ricorda se l'Usa è stato pagato con Implacabile: il colpo successivo tira allora 1d8."""
-    return lambda ctx, _p: StateSpec(key, rounds=1, ends_on=("new_turn", "manual"), data={"relentless": _armed(ctx)})
+    return lambda ctx, _p: StateSpec(key, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"relentless": _armed(ctx)})
 
 
 def _strike_dice(key: str) -> Any:
@@ -118,8 +118,19 @@ def _after(ctx: RuleContext) -> bool:
     return _weapon_attack(ctx) and not _other_maneuver_used(ctx)
 
 
+def _after_any(ctx: RuleContext) -> bool:
+    """Come ``_after``, anche con un incantesimo: le manovre che dicono solo «se si colpisce» (pag. 95)."""
+    return _attack_roll(ctx) and not _other_maneuver_used(ctx)
+
+
 def _melee(ctx: RuleContext) -> bool:
     return ctx.attack_mode in ("melee", "offhand")
+
+
+def _attack_roll(ctx: RuleContext) -> bool:
+    """Un tiro per colpire con arma, Colpo Senz'Armi o incantesimo (2024 pag. 361), non quello di un compagno: le manovre
+    che non nominano l'arma (Attacco Preciso, Attacco con Finta, pag. 95) e Atleta Straordinario (pag. 96)."""
+    return ctx.roll == "attack" and (ctx.spell is not None or _weapon_attack(ctx))
 
 
 # ---------------------------------------------------------------------------
@@ -196,11 +207,11 @@ MANEUVER_ROWS = (
                "On an Intimidation, Performance or Persuasion check, spend a die and add it."), roll_options=(PRESENCE,)),
     _maneuver("disarming", "Attacco Disarmante", "Disarming Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Forza o il bersaglio lascia cadere un oggetto.",
-               "After a hit, +die to damage; Strength save or the target drops an item."), roll_options=(_paid(DISARMING, available=_after),)),
+               "After a hit, +die to damage; Strength save or the target drops an item."), roll_options=(_paid(DISARMING, available=_after_any),)),
     _maneuver("distracting", "Colpo Distraente", "Distracting Strike", 95,
               ("Dopo un colpo, +dado al danno; il prossimo attacco di un altro contro il bersaglio ha vantaggio fino al tuo turno.",
                "After a hit, +die to damage; the next attack by someone else against the target has advantage until your turn."),
-              roll_options=(_paid(DISTRACTING, available=_after),)),
+              roll_options=(_paid(DISTRACTING, available=_after_any),)),
     _maneuver("evasive_footwork", "Scarto Elusivo", "Evasive Footwork", 95,
               ("Azione bonus: Disimpegno; il dado tirato si somma alla CA fino all'inizio del tuo prossimo turno.",
                "Bonus action: Disengage; the die rolled is added to your AC until the start of your next turn."),
@@ -213,13 +224,13 @@ MANEUVER_ROWS = (
               ("Azione bonus e un dado: vantaggio al prossimo attacco del turno contro una creatura entro 1,5 m, +dado al danno se colpisce.",
                "Bonus action and a die: advantage on your next attack this turn against a creature within 5 ft, +die to damage on a hit."),
               "bonus_action", roll_options=(replace(FEINT_STRIKE, extra_dice=_strike_dice("feinting_attack"),
-                                         available=lambda c: _weapon_attack(c) and state_on(c, "feinting_attack")),),
+                                         available=lambda c: _attack_roll(c) and state_on(c, "feinting_attack")),),
               on_use=OnUse(slot="bonus", spends=SD, cost_by=lambda c, _p: _sd_cost(c), effect=_clear_relentless,
                            state=_stamped_state("feinting_attack"))),
     _maneuver("goading", "Attacco Adescante", "Goading Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Saggezza o il bersaglio ha svantaggio contro chi non sei tu fino al tuo prossimo turno.",
                "After a hit, +die to damage; Wisdom save or the target has disadvantage against anyone but you until your next turn."),
-              roll_options=(_paid(GOADING, available=_after),)),
+              roll_options=(_paid(GOADING, available=_after_any),)),
     _maneuver("lunging", "Attacco con Affondo", "Lunging Attack", 95,
               ("Azione bonus: Scatto; se ti sei mosso in linea retta di 1,5 m prima di colpire in mischia, +dado al danno.",
                "Bonus action: Dash; if you moved 5 ft in a straight line before a melee hit, +die to damage."),
@@ -231,18 +242,18 @@ MANEUVER_ROWS = (
     _maneuver("maneuvering", "Attacco con Manovra", "Maneuvering Attack", 95,
               ("Dopo un colpo, +dado al danno; un alleato usa la reazione per muoversi di metà velocità senza provocare.",
                "After a hit, +die to damage; an ally uses their reaction to move half speed without provoking."),
-              roll_options=(_paid(MANEUVERING, available=_after),)),
+              roll_options=(_paid(MANEUVERING, available=_after_any),)),
     _maneuver("menacing", "Attacco Minaccioso", "Menacing Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Saggezza o il bersaglio è spaventato fino alla fine del tuo prossimo turno.",
                "After a hit, +die to damage; Wisdom save or the target is frightened until the end of your next turn."),
-              roll_options=(_paid(MENACING, available=_after),)),
+              roll_options=(_paid(MENACING, available=_after_any),)),
     _maneuver("parry", "Parata", "Parry", 95,
               ("Reazione: un attacco in mischia ti ferisce, il danno scende del dado + Forza o Destrezza.",
                "Reaction: a melee attack hurts you, the damage drops by the die + Strength or Dexterity."), "reaction", roll_options=(PARRY_24,)),
     _maneuver("precision", "Attacco Preciso", "Precision Attack", 95,
               ("Dopo un tiro per colpire mancato, somma il dado al tiro e può diventare un colpo.",
                "After a missed attack roll, add the die to the roll; it may turn into a hit."),
-              roll_options=(_paid(PRECISION, available=lambda c: _weapon_attack(c) and not _other_maneuver_used(c)),)),
+              roll_options=(_paid(PRECISION, available=lambda c: _attack_roll(c) and not _other_maneuver_used(c)),)),
     _maneuver("pushing", "Attacco con Spinta", "Pushing Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Forza o il bersaglio Grande o più piccolo è spinto fino a 4,5 m.",
                "After a hit, +die to damage; Strength save or a Large or smaller target is pushed up to 15 ft."),
@@ -289,7 +300,8 @@ BATTLE_MASTER = (
         ("Dadi di superiorità: 4 (5 al 7°, 6 al 15°), d8 (d10 al 10°, d12 al 18°). Manovre 3 (5, 7, 9 ai livelli 7, 10, 15). CD 8 + competenza + Forza o Destrezza.",
          "Superiority dice: 4 (5 at 7th, 6 at 15th), d8 (d10 at 10th, d12 at 18th). Maneuvers 3 (5, 7, 9 at 7th, 10th, 15th). DC 8 + proficiency + Strength or Dexterity."),
         uses=Uses(table={3: 4, 7: 5, 15: 6}), restoration="short_rest",
-        choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True, options=lambda _c: ALL_MANEUVERS),)),
+        choices=(ChoiceSpec(group=MANEUVER_GROUP, levels={3: 3, 7: 5, 10: 7, 15: 9}, replaceable=True, replace_per_level="new_picks",
+                            options=lambda _c: ALL_MANEUVERS),)),
     _bm("student_of_war", 3, "Studioso di Guerra", "Student of War", 94,
         ("Competenza in un'abilità della lista del guerriero e in un tipo di strumenti da artigiano a tua scelta.",
          "Proficiency in a skill from the fighter list and in one type of artisan's tools of your choice."),
@@ -340,7 +352,7 @@ def _athlete_move(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 
 ATHLETE_MOVE = RollOptionSpec(
-    key=f"{CK}.remarkable_athlete_move", phase="after_hit", rolls=("attack",), available=lambda c: _weapon_attack(c) and _crit_pending(c),
+    key=f"{CK}.remarkable_athlete_move", phase="after_hit", rolls=("attack",), available=lambda c: _attack_roll(c) and _crit_pending(c),
     label=_both("Atleta Straordinario: hai messo a segno un critico, ti muovi di metà velocità",
                 "Remarkable Athlete: you scored a critical hit, move half your Speed"), effect=_athlete_move)
 
@@ -467,6 +479,11 @@ PROTECTIVE_FIELD = RollOptionSpec(
                 "Protective Field: reduce the damage by a psionic die + Intelligence"))
 
 
+def _with_weapon(ctx: RuleContext) -> bool:
+    """Un attacco con un'arma: nel 2024 il Colpo Senz'Armi non è un'arma (Colpo Psionico pag. 98, Colpo Senz'Armi pag. 377)."""
+    return _weapon_attack(ctx) and ctx.item is not None
+
+
 def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"{_psi_die(ctx)}{_int_mod(ctx):+d}"
 
@@ -474,7 +491,7 @@ def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
 PSIONIC_STRIKE = RollOptionSpec(
     key=f"{CK}.psionic_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, cost=Cost(feature_key=PSI), extra_dice=_strike_dice,
     crit_doubles=False,  # danno a sé, tirato dopo il colpo: il critico non lo raddoppia
-    available=_weapon_attack,
+    available=_with_weapon,
     label=_both("Colpo Psionico: spendi un dado psionico per danno da Forza (dado + Intelligenza), una volta per turno",
                 "Psionic Strike: spend a psionic die for Force damage (die + Intelligence), once per turn"),
     effect=lambda c, _i: _both(f"Danno da Forza: dado psionico + Intelligenza ({_int_mod(c):+d}), già nel totale; il bersaglio entro 9 m.",
@@ -486,7 +503,7 @@ def _thrust_dc(ctx: RuleContext) -> int:
 
 
 THRUST = RollOptionSpec(
-    key=f"{CK}.telekinetic_thrust", phase="after_hit", rolls=("attack",), needs=PSIONIC_STRIKE.key, available=_weapon_attack,
+    key=f"{CK}.telekinetic_thrust", phase="after_hit", rolls=("attack",), needs=PSIONIC_STRIKE.key, available=_with_weapon,
     label=_both("Spinta Telecinetica: il bersaglio fa un TS Forza o cade prono o è spinto di 3 m",
                 "Telekinetic Thrust: the target makes a Strength save or falls prone or is moved 10 ft"),
     effect=lambda c, _i: _both(f"TS Forza CD {_thrust_dc(c)}: se fallisce è prono oppure lo sposti fino a 3 m in orizzontale.",
@@ -495,7 +512,7 @@ THRUST = RollOptionSpec(
 
 MASTER_ATTACK = RollOptionSpec(
     key=f"{CK}.telekinetic_master_attack", phase="before", rolls=("attack",), slot="bonus",
-    available=lambda c: _weapon_attack(c) and _concentrating_on_telekinesis(c),
+    available=lambda c: _with_weapon(c) and _concentrating_on_telekinesis(c),
     label=_both("Maestro Telecinetico: attacco con arma come azione bonus mentre ti concentri su Telecinesi",
                 "Telekinetic Master: weapon attack as a bonus action while you concentrate on Telekinesis"))
 

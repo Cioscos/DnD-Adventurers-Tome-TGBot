@@ -43,7 +43,7 @@ def _inspiration_state(ctx: RuleContext, params: dict) -> StateSpec:
     data = {"die": inspiration_die(ctx.class_level), "others": [BI, COMBAT_INSPIRATION] if valor else [BI]}
     if params.get("target_character_id") is None:
         return StateSpec("bardic_inspiration", rounds=600, data=data)
-    return StateSpec(BARDIC_DIE, rounds=600, data={**data, "combat": valor})
+    return StateSpec(BARDIC_DIE, rounds=600, data={**data, "combat": valor, "edition": "2024"})  # l'Offesa 2024 vale anche sugli incantesimi
 
 
 def _inspiration_spent(ctx: RuleContext, _params: dict) -> None:
@@ -172,8 +172,8 @@ CLASS_FEATURES = (
             ("Segreti Magici", "Magical Secrets"),
             ("I nuovi incantesimi preparati dal 10° livello possono venire dalle liste di Bardo, Chierico, Druido e Mago e contano da bardo.",
              "From level 10 the new prepared spells can come from the Bard, Cleric, Druid and Wizard lists and count as bard spells."),
-            choices=(ChoiceSpec(group="magical_secrets", levels={10: 1, 11: 2, 13: 3, 15: 4, 17: 5, 18: 6, 19: 7, 20: 8},
-                                options=_no_options, spell_pick="known"),)),
+            # un permesso, non una scelta da fare (pag. 61): si aggiungono come ogni preparato, il catalogo non filtra le liste
+            ),
     feature("superior_inspiration", CK, ED, 18, "Ispirazione Superiore / Superior Inspiration (Bardo 18, pag. 61)",
             ("Ispirazione Superiore", "Superior Inspiration"),
             ("Quando tiri l'Iniziativa, se hai meno di due usi di Ispirazione Bardica ne recuperi fino ad averne due.",

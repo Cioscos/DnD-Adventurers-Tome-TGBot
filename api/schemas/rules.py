@@ -103,6 +103,7 @@ class TargetEffectRead(BaseModel):
     condition: str | None = None
     also: list[str] = []  # altre condizioni insieme a ``condition``, stesso TS e stessa durata
     save_ability: str | None = None
+    save_alt_ability: str | None = None  # il bersaglio sceglie fra le due
     save_dc: int | None = None
     rounds: int | None = None
     ends_at: dict | None = None
@@ -110,6 +111,7 @@ class TargetEffectRead(BaseModel):
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    immune_on_end: bool = False  # immune anche quando l'effetto finisce (Sguardo Ipnotico 2014)
     repeat_save: str | None = None  # il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura)
     note: str | None = None  # chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano
     ends_with_concentration: bool = False  # cade con la concentrazione di chi la applica (le punizioni)

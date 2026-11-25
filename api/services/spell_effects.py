@@ -5,6 +5,7 @@ Ogni stato ``spell:<chiave>`` sul bersaglio non ha durata propria: la scandisce 
 della richiesta (``api.services.effects``) toglie loro lo stato."""
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Collection
 
@@ -23,6 +24,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.catalog.y2014.sorcerer import EXTENDED_KEY, MAX_DURATION_ROUNDS, TWINNED_KEY
 from core.rules.edition import character_edition
 from core.game.stats import effective_ability_mod
+from core.rules.spell_healing import healing_spec
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
@@ -88,6 +90,13 @@ async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Ch
         raise _invalid("invalid_choice")
 
 
+def _check_again(effect: SpellEffect, variant: SpellVariant, chars: list[Character]) -> None:
+    """409 ``already_affected``: un bersaglio porta ancora lo stato di un incantesimo che non lo influenza di nuovo prima del suo Riposo Lungo."""
+    key = f"{SPELL_STATE_PREFIX}{effect.key}"
+    if variant.once_per_long_rest and any(s.get("key") == key for c in chars for s in c.active_states or []):
+        raise _invalid("already_affected", status.HTTP_409_CONFLICT)
+
+
 async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: int,
                    targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = ()):
     """``(effetto, variante, bersagli, scelte, fuori_serata)`` o ``None`` se l'incantesimo non è nel catalogo.
@@ -100,8 +109,11 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
     chosen = _check_choices(variant, edition, choices)
     if effect.target.kind == "self" and any(t != caster.id for t in targets or []):
         raise _invalid("self_only_spell")  # un effetto solo su chi lancia non si dà ad altri
+    if variant.not_self and (targets is None or caster.id in targets):
+        raise _invalid("invalid_target")  # lega chi lancia a un'altra creatura, mai a sé stesso (Vincolo di Interdizione)
     if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio
         await _check_weapon(session, variant, caster, chosen)
+        _check_again(effect, variant, [caster])
         return effect, variant, [caster], chosen, False
     if len(targets) != len(set(targets)) or len(targets) > effect.max_targets(edition, slot_level) + (TWINNED_KEY in options):  # Raddoppiato: una creatura in più
         raise _invalid("invalid_target")
@@ -114,6 +126,7 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
             if ally.is_dead:
                 raise _invalid("target_dead", status.HTTP_409_CONFLICT)
             chars.append(ally)
+    _check_again(effect, variant, chars)
     if not outside and chars:
         await _check_weapon(session, variant, chars[0], chosen)
     else:
@@ -206,30 +219,35 @@ async def _cap_hp(session: AsyncSession, char: Character, changed: list[dict]) -
     cap_hp_to_max(char, changed, await get_passive_modifiers(session, char, "character.hit_points_max"))
 
 
+def drop_clock_target(caster: Character, key: str, target_id: int) -> None:
+    """Il bersaglio ha perso lo stato ``key``: l'orologio di chi lancia lo toglie e, se era l'ultimo, si chiude con la
+    concentrazione (D-032, anche su sé stessi): non resta nulla da mantenere."""
+    clock = SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]
+    settings = dict(caster.settings or {})
+    given = dict(settings.get(SPELL_GIVEN) or {})
+    left = [t for t in given.get(clock, []) if t != target_id]
+    if left:
+        caster.settings = {**settings, SPELL_GIVEN: {**given, clock: left}}
+        return
+    caster.settings = {**settings, SPELL_GIVEN: {k: v for k, v in given.items() if k != clock}}
+    closing = [s for s in caster.active_states or [] if s.get("key") == clock]
+    if not closing:
+        return
+    caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
+    settle_closed(caster, closing)
+    if any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
+            and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
+        end_concentration(caster)
+
+
 async def end_by_target(session: AsyncSession, char: Character, closed: list[dict]) -> None:
     """``char`` ha chiuso a mano gli stati ``closed``: i PF non superano il nuovo massimo e gli orologi dei lanciatori
     (``spell_cast:*``) perdono questo bersaglio, e si chiudono se non ne restano altri."""
     for state in closed:
         data, key = state.get("data") or {}, str(state.get("key", ""))
         caster = None if data.get("caster_id") is None else char if data["caster_id"] == char.id else await session.get(Character, data["caster_id"])
-        clock = SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]
-        if caster is None or not key.startswith(SPELL_STATE_PREFIX):
-            continue
-        settings = dict(caster.settings or {})
-        given = dict(settings.get(SPELL_GIVEN) or {})
-        left = [t for t in given.get(clock, []) if t != char.id]
-        if left:
-            caster.settings = {**settings, SPELL_GIVEN: {**given, clock: left}}
-            continue
-        caster.settings = {**settings, SPELL_GIVEN: {k: v for k, v in given.items() if k != clock}}
-        closing = [s for s in caster.active_states or [] if s.get("key") == clock]
-        if closing:
-            caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
-            settle_closed(caster, closing)
-            # Concentrazione su altri: finito l'ultimo bersaglio non resta nulla da mantenere (non se l'effetto era su di sé)
-            if caster is not char and any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
-                    and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
-                end_concentration(caster)
+        if caster is not None and key.startswith(SPELL_STATE_PREFIX):
+            drop_clock_target(caster, key, char.id)
     await _cap_hp(session, char, closed)
 
 
@@ -271,10 +289,11 @@ def with_spell_hints(states: list[dict] | None) -> list[dict] | None:
 
 async def apply_spell_effects(session: AsyncSession, caster: Character, spell, slot_level: int,
                               targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = (),
-                              no_concentration: bool = False) -> SpellEffectsRead | None:
+                              no_concentration: bool = False, lasts: dict | None = None) -> SpellEffectsRead | None:
     """Dopo la spesa: uno stato per bersaglio e l'orologio su chi lancia. Fuori serata (o per un effetto solo descrittivo)
     nessuno stato e un testo per il GM. ``options``: le opzioni di lancio scelte (Esteso raddoppia la durata, Raddoppiato un bersaglio in più);
-    ``no_concentration``: lanciato senza concentrazione (Schiavo), lo stato non è legato a quella del lanciatore."""
+    ``no_concentration``: lanciato senza concentrazione (Schiavo), lo stato non è legato a quella del lanciatore;
+    ``lasts``: la durata propria del lancio (``rounds``, ``ends_on``) al posto di quella dell'incantesimo (Benedizione del Dio della Guerra)."""
     resolved = await _resolve(session, caster, spell, slot_level, targets, choices, options)
     if resolved is None:
         _remember_cast_type(caster, None, None)
@@ -283,8 +302,10 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     inflicts = any(c.key == "damage_type" and c.inflicts for c in variant.choices)
     _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
     _remember_cast_type(caster, effect.key + UPCAST_SUFFIX, chosen.get("upcast_type"))
+    if hasattr(spell, "class_id") and healing_spec(spell.srd_index, character_edition(caster)) is not None:
+        variant = replace(variant, heal=None)  # la cura la tira la «Cura» dell'incantesimo (Rigenerazione); un oggetto non ce l'ha
     concentration = variant.concentration and not no_concentration
-    rounds = variant.duration(slot_level)
+    rounds = variant.duration(slot_level) if lasts is None else lasts.get("rounds")
     if EXTENDED_KEY in options and rounds is not None:
         rounds = min(rounds * 2, MAX_DURATION_ROUNDS)  # Esteso: l'orologio dell'effetto raddoppia come la concentrazione
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
@@ -308,6 +329,10 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.choices and not variant.text and not (_stateful(variant, data) or variant.temp_hp or variant.heal):
         return SpellEffectsRead(applied=[])  # solo una scelta (il tipo di danno): viaggia con il tiro di danno, nulla da dire al GM
     if not chars or not (_stateful(variant, data) or variant.temp_hp or variant.heal):  # nessun personaggio: l'effetto lo applica il GM
+        ended = [s for s in caster.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{effect.key}"] if variant.ends_on_recast else []
+        if ended:  # rilanciato su un PNG: i bersagli di prima lo perdono lo stesso
+            caster.active_states = [s for s in caster.active_states if s not in ended]
+            settle_closed(caster, ended)
         return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
     if not _stateful(variant, data):  # istantaneo: solo PF, nessuno stato né orologio
         for target in chars:
@@ -317,14 +342,15 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     settings = dict(caster.settings or {})
     given = dict(settings.get(SPELL_GIVEN) or {})
     older = set(given.get(clock, [])) - {c.id for c in chars}
-    for old in older if concentration else ():  # a concentrazione, lanciato di nuovo su altri: i vecchi bersagli lo perdono (altrimenti restano)
+    replaces = concentration or variant.ends_on_recast or lasts is not None  # lanciato di nuovo su altri: i vecchi bersagli lo perdono (altrimenti restano); con la durata propria del lancio termina se lo si rilancia
+    for old in older if replaces else ():
         previous = caster if old == caster.id else await session.get(Character, old)
         if previous is not None:
             await _drop_state(session, previous, key, caster.id)
     aura = effect.target.kind == "aura"  # l'aura è viva: solo l'orologio del lanciatore, nessuno stato sui bersagli
     applied = []
     rolled: dict[str, dict] = {}  # i dati tirati per ogni bersaglio: l'orologio li tiene, un annullo li ridà (Banchetto degli Eroi)
-    if not concentration and older:  # i vecchi bersagli restano: ognuno tiene i dati e lo slot del proprio lancio, non quelli del nuovo
+    if not replaces and older:  # i vecchi bersagli restano: ognuno tiene i dati e lo slot del proprio lancio, non quelli del nuovo
         before = next(((s.get("data") or {}).get("state_data") or {} for s in caster.active_states or [] if s.get("key") == clock), {})
         for old in older:
             rolled[str(old)] = {"slot_level": before.get("slot_level", slot_level), **(before.get("per_target") or {}).get(str(old), {})}
@@ -342,13 +368,15 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         applied.append({"id": target.id, "name": target.name})
     if rolled:
         data["per_target"] = rolled
-    ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on]
-    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
+    ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on,
+            *((lasts or {}).get("ends_on") or ())]
+    counted = {"skip_new_turns": 1} if "turn_end_counted" in ends else {}  # fino alla fine del turno seguente (Interdizione alle Lame 2014)
+    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data, **counted}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
     pending = [e for e in settings.get(SPELL_RELEASE) or [] if (e["id"], e["key"]) not in regranted]  # chiuso e riaperto nella stessa richiesta
-    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [*([] if concentration else sorted(older)), *(a["id"] for a in applied)]}  # per l'aura: vuoto
+    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [*([] if replaces else sorted(older)), *(a["id"] for a in applied)]}  # per l'aura: vuoto
     if pending:
         settings[SPELL_RELEASE] = pending
     else:
@@ -392,4 +420,5 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
 
 def item_spell(spell: dict) -> SimpleNamespace:
     """L'incantesimo concesso da un oggetto (un dict dei metadati) con la forma che il servizio si aspetta."""
-    return SimpleNamespace(name=spell.get("name"), srd_index=spell.get("srd_index"), level=int(spell.get("level") or 1))
+    return SimpleNamespace(name=spell.get("name"), srd_index=spell.get("srd_index"), level=int(spell.get("level") or 1),
+                           duration=spell.get("duration"))

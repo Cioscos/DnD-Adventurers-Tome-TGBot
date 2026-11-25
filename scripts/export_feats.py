@@ -21,6 +21,7 @@ def build(feats: list[FeatSpec]) -> list[dict]:
         "prereq_abilities": {"any_of": list(f.prereq_abilities[0]), "min": f.prereq_abilities[1]}
         if f.prereq_abilities else None,
         "needs_spellcasting": f.needs_spellcasting, "repeatable": f.repeatable,
+        **({} if f.pact_magic_counts else {"pact_magic_counts": False}),  # solo il privilegio Incantesimi (Dono del Richiamo)
         "prereq_armor": f.prereq_armor, "needs_fighting_style": f.needs_fighting_style,
         "needs": list(FEAT_NEEDS.get(f"feat.{f.key}", ())),
         **({"choices": _CHOICES[f.key]} if f.key in _CHOICES else {}),

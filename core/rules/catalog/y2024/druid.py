@@ -176,7 +176,7 @@ def _regain_use(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 
 EVERGREEN = RollOptionSpec(
-    key=f"{CK}.evergreen_wild_shape", phase="before", rolls=("initiative",), on_confirm=_regain_use,
+    key=f"{CK}.evergreen_wild_shape", phase="before", rolls=("initiative",), automatic=True, on_confirm=_regain_use,  # passivo: nessuna scelta
     available=lambda c: _no_uses_left(c) and c.class_level >= 20,
     label={"it": "Forma Selvatica Sempreverde: tirando l'Iniziativa senza usi ne recuperi uno",
            "en": "Archdruid's Evergreen Wild Shape: rolling Initiative with no uses left gives one back"})
@@ -283,7 +283,7 @@ def _land_rows() -> list:
                     ("Dopo ogni riposo lungo scegli il terreno: i suoi incantesimi sono sempre preparati, fuori dal limite.",
                      "After each long rest you choose the terrain: its spells are always prepared, outside the limit."),
                     subclass="land", no_row=True,
-                    choices=(ChoiceSpec(group=LAND_TERRAIN, levels={3: 1}, options=lambda _c: list(TERRAINS), replaceable=True),),
+                    choices=(ChoiceSpec(group=LAND_TERRAIN, levels={3: 1}, options=lambda _c: list(TERRAINS), replaceable=True, replace_per_long_rest=1),),
                     covered_by="ChoiceSpec land_terrain di questa riga e le righe dei terreni; test_land_spells_follow_the_chosen_terrain")]
     for key, (it, en, _res, tiers) in TERRAINS.items():
         name = (f"{it} (terreno)", f"{en} (terrain)")
@@ -350,8 +350,8 @@ def _circle_cast_options(ctx: RuleContext) -> list[str]:
 def _recovery_cast(ctx: RuleContext, params: dict) -> None:
     """Autorizza un lancio gratuito (R43) di un incantesimo di circolo; il lancio chiude l'autorizzazione."""
     spell = str(params["spell"])
-    begin_state(ctx.char, StateSpec("natural_recovery_free", ends_on=("manual", "rest_long"), data={"free_cast": spell, "spell": spell}),
-                f"{CK}.natural_recovery_cast", "Recupero Naturale")
+    begin_state(ctx.char, StateSpec("natural_recovery_free", ends_on=("manual", "rest_long"), data={
+        "free_cast": spell, "spell": spell, "refund": f"{CK}.natural_recovery_cast"}), f"{CK}.natural_recovery_cast", "Recupero Naturale")
 
 
 NATURAL_RECOVERY_CAST = OnUse(
@@ -514,8 +514,10 @@ FREE_ARCHER = "free_archer"  # nel turno: il colpo dell'attivazione non costa un
 
 
 def _starry_effect(ctx: RuleContext, params: dict) -> None:
-    if params["constellation"] == "archer":
-        ctx.char.turn_state = {**(ctx.char.turn_state or {}), FREE_ARCHER: True}
+    turn = ctx.char.turn_state or {}
+    # Costellazioni Scintillanti cambia costellazione all'inizio dei turni seguenti in Forma Stellare, non in quello in cui la assumi (pag. 89)
+    turn = {**turn, "once_per_turn": [*(turn.get("once_per_turn") or []), f"{CK}.twinkling_constellations"]}
+    ctx.char.turn_state = {**turn, FREE_ARCHER: True} if params["constellation"] == "archer" else turn
 
 
 def _starry_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
@@ -561,11 +563,11 @@ def _chalice_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 # Il Calice cura te (i PF li applica il server) oppure un'altra creatura (esito testuale: da qui nessun campo altrui è scrivibile)
 CHALICE = RollOptionSpec(
-    key=f"{CK}.chalice", phase="before", rolls=("spell_healing",), self_heal=lambda c, _i: _chalice_heal(c),
+    key=f"{CK}.chalice", phase="before", rolls=("spell_healing",), group="chalice", self_heal=lambda c, _i: _chalice_heal(c),
     available=lambda c: _constellation(c) == "chalice" and (c.casting_level or 0) >= 1,
     label={"it": "Calice: ti curi dei dadi del Calice più Saggezza", "en": "Chalice: you regain the Chalice dice plus Wisdom"})
 CHALICE_OTHER = RollOptionSpec(
-    key=f"{CK}.chalice_other", phase="before", rolls=("spell_healing",), effect=_chalice_effect,
+    key=f"{CK}.chalice_other", phase="before", rolls=("spell_healing",), group="chalice", effect=_chalice_effect,
     available=lambda c: _constellation(c) == "chalice" and (c.casting_level or 0) >= 1,
     label={"it": "Calice: un'altra creatura entro 9 m recupera i dadi del Calice più Saggezza",
            "en": "Chalice: another creature within 30 ft regains the Chalice dice plus Wisdom"})
@@ -774,8 +776,10 @@ CLASS_FEATURES = (
             "bonus_action", uses=Uses(table={2: 2, 6: 3, 17: 4}), restoration="long_rest", short_rest_recovers=1),
     feature("wild_shape_rules", CK, ED, 2, "Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)",
             ("Regole della Forma Selvatica", "Rules While Shape-Shifted"),
-            ("PF temporanei pari al livello da druido; PF, Dadi Vita, Int, Sag e Car restano tuoi; vale il modificatore più alto fra druido e Bestia.",
-             "Temporary HP equal to your druid level; HP, Hit Dice, Int, Wis and Cha stay yours; the higher modifier of druid and Beast applies."),
+            ("PF temporanei pari al livello da druido; For, Des e Cos sono della Bestia, mentre PF, Dadi Vita, Int, Sag e Car restano tuoi. "
+             "Le tue competenze si sommano a quelle della Bestia: per prove e TS vale il modificatore più alto fra il tuo e quello della Bestia.",
+             "Temporary HP equal to your druid level; Str, Dex and Con are the Beast's, while HP, Hit Dice, Int, Wis and Cha stay yours. "
+             "Your proficiencies add to the Beast's: for checks and saves the higher of your modifier and the Beast's applies."),
             no_row=True, covered_by="api/services/wild_shape.py (start_form), core/game/stats.py e core/rules/forms.py; "
                                     "test_wild_shape_is_a_bonus_action_gives_temporary_hp_equal_to_the_level_and_keeps_the_real_hp"),
     feature("wild_companion", CK, ED, 2, "Compagno Selvatico / Wild Companion (Druido 2, pag. 81)", ("Compagno Selvatico", "Wild Companion"),

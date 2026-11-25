@@ -480,6 +480,7 @@ class DeathSaveRollResult(BaseModel):
     mode: RollMode = "normal"
     mode_applied: RollMode = "normal"
     notes: list[str] = []
+    bonus: int = 0  # ciò che si somma al d20 (Anima Adamantina, auree): la soglia è 10
     outcome: str  # "nat20" | "nat1" | "success" | "failure" | "revived" (Vendetta Ardente: nessun tiro)
     successes: int
     failures: int
@@ -560,6 +561,11 @@ class D20RollSubmission(RollOptionsBody):
     with_inspiration: bool = False
     mode: RollMode = "normal"
     dice: Optional[D20Dice] = None
+
+
+class PendingSaveSubmission(D20RollSubmission):
+    """TS in sospeso: ``ability`` è la scelta del bersaglio, quando l'effetto ne ammette due (Collera della Natura 2014)."""
+    ability: Optional[str] = None
 
 
 class ToolCheckSubmission(D20RollSubmission):

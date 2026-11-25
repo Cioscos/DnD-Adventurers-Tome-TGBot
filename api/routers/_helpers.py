@@ -67,12 +67,14 @@ def weapon_attack_profile(
     ``chosen`` vale solo dove la regola lascia la scelta (Accurata, armi da monaco); senza, la migliore."""
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
     mods = {a: roll_ability_mod(char, a) for a in ("strength", "dexterity")}
-    is_ranged = meta.get("weapon_type", "melee") == "ranged" and attack_mode != "thrown"
+    ranged_weapon = meta.get("weapon_type", "melee") == "ranged"
+    is_ranged = ranged_weapon and attack_mode != "thrown"
     if has_property(item, "finesse") or martial_arts_level(char, item):
         best = "dexterity" if mods["dexterity"] > mods["strength"] else "strength"
         ability = chosen if chosen in mods else best
     else:
-        ability = "dexterity" if is_ranged else "strength"
+        # Lancio: la Forza solo per le armi da mischia; un'arma a distanza lanciata (Rete) usa la Destrezza (2014 pag. 147, 176)
+        ability = "dexterity" if ranged_weapon else "strength"
     mode = "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
     if (enchanted := enchanted_weapon(char, item)) and enchanted[0].weapon_ability and enchanted[1].get("ability"):
         cast = enchanted[1]["ability"]  # Randello Incantato: al posto di Forza o Destrezza (2024: solo se è meglio, edizione del lanciatore)

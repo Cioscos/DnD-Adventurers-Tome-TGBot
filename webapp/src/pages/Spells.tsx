@@ -46,6 +46,8 @@ export default function Spells() {
   const [editingSpell, setEditingSpell] = useState<Spell | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [confirmForget, setConfirmForget] = useState<Spell | null>(null)
+  // D-020: cambio lontano dal riposo lungo, da confermare (`prepared` assente: dimenticare)
+  const [offRest, setOffRest] = useState<{ spellId: number; prepared?: boolean } | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
   const [concBannerExpanded, setConcBannerExpanded] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -209,10 +211,16 @@ export default function Spells() {
   })
 
   const removeMutation = useMutation({
-    mutationFn: (spellId: number) => api.spells.remove(charId, spellId),
+    mutationFn: ({ spellId, confirm }: { spellId: number; confirm?: boolean }) => api.spells.remove(charId, spellId, confirm),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       setConfirmForget(null)
+      setOffRest(null)
+    },
+    onError: (e, { spellId }) => {
+      setConfirmForget(null)
+      if (apiErrorCode(e) === 'change_after_long_rest') setOffRest({ spellId })
+      else notifyMutationError(e)
     },
   })
 
@@ -227,13 +235,18 @@ export default function Spells() {
   const spellcasting = char?.spellcasting ?? null
 
   const preparedMutation = useMutation({
-    mutationFn: ({ spellId, prepared }: { spellId: number; prepared: boolean }) =>
-      api.spells.update(charId, spellId, { is_prepared: prepared }),
+    mutationFn: ({ spellId, prepared, confirm }: { spellId: number; prepared: boolean; confirm?: boolean }) =>
+      api.spells.update(charId, spellId, { is_prepared: prepared }, confirm),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      setOffRest(null)
       haptic.light()
     },
-    onError: onPrepareError,
+    onError: (e, { spellId, prepared }) => {
+      if (apiErrorCode(e) === 'change_after_long_rest') { setOffRest({ spellId, prepared }); return }
+      setOffRest(null)
+      onPrepareError(e)
+    },
   })
 
   const handlePreparedToggle = useCallback((spell: Spell) => {
@@ -679,6 +692,22 @@ export default function Spells() {
         onConfirm={() => loseBook.mutate()}
       />
 
+      <ConfirmSheet
+        open={offRest !== null}
+        onClose={() => setOffRest(null)}
+        title={t('character.spells.off_rest_title')}
+        body={t('character.spells.off_rest_body')}
+        confirmLabel={t('character.spells.off_rest_confirm')}
+        confirmVariant="primary"
+        loading={preparedMutation.isPending || removeMutation.isPending}
+        onConfirm={() => {
+          if (!offRest) return
+          const { spellId, prepared } = offRest
+          if (prepared === undefined) removeMutation.mutate({ spellId, confirm: true })
+          else preparedMutation.mutate({ spellId, prepared, confirm: true })
+        }}
+      />
+
       {/* Dimentica: eliminazione definitiva, sempre confermata (audit #9). */}
       <ConfirmSheet
         open={confirmForget !== null}
@@ -690,7 +719,7 @@ export default function Spells() {
         confirmLabel={t('character.spells.forget')}
         loading={removeMutation.isPending}
         onConfirm={() => {
-          if (confirmForget) removeMutation.mutate(confirmForget.id)
+          if (confirmForget) removeMutation.mutate({ spellId: confirmForget.id })
         }}
       />
 

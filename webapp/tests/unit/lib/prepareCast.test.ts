@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const { rollOptions, castCheck } = vi.hoisted(() => ({ rollOptions: vi.fn(), castCheck: vi.fn() }))
 vi.mock('@/api/client', () => ({ api: { characters: { rollOptions }, spells: { castCheck } } }))
 
-import { prepareCast, useEffectPickStore } from '@/lib/rollOptions'
+import { prepareCast, useCastConfirmStore, useEffectPickStore, usePromptStore } from '@/lib/rollOptions'
 
 describe('prepareCast', () => {
   beforeEach(() => {
@@ -30,5 +30,17 @@ describe('prepareCast', () => {
     await prepareCast(3, 9, false, null)
     expect(rollOptions).toHaveBeenNthCalledWith(1, 3, { roll: 'cast', spell_id: 9, slotless: true })  // il rituale non spende slot
     expect(rollOptions).toHaveBeenNthCalledWith(2, 3, { roll: 'cast', spell_id: 9 })
+  })
+
+  it('rechecks the turn rules when Quickened Spell is chosen (CB-2012): the cast becomes a bonus action', async () => {
+    const key = 'sorcerer.metamagic_quickened'
+    rollOptions.mockResolvedValue([{ key, phase: 'before' }])
+    castCheck.mockImplementation((_c, _s, _r, _slotless, quickened) => Promise.resolve(quickened ? ['bonus_spell'] : []))
+    const prepared = prepareCast(3, 9, false, 1)
+    await vi.waitFor(() => expect(usePromptStore.getState().request).not.toBeNull())
+    usePromptStore.getState().request!.answer({ options: [key], option_inputs: {} })
+    await vi.waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('bonus_spell'))
+    useCastConfirmStore.getState().request!.answer(true)
+    expect(await prepared).toEqual({ confirm: ['bonus_spell'], options: [key], option_inputs: {} })
   })
 })

@@ -7,7 +7,8 @@ from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
 from core.rules.modifiers import is_incapacitated
 from core.rules.spell_effects import spell_instances
-from core.rules.types import FORGONE, TURN_FLAGS as _FLAGS
+from core.rules.states import CAST_ONCE
+from core.rules.types import FORGONE, OTHERS_TURN, TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
 
@@ -32,9 +33,22 @@ def _save(char, state: dict) -> None:
     char.turn_state = state  # nuovo dict: SQLAlchemy non vede le mutazioni in place
 
 
+# turn_state: attacchi fatti nel turno di un altro (``others_turn``); ``reset_turn`` li passa in ``attacked_before``, che
+# l'Ira 2014 guarda a fine turno («non ha attaccato una creatura ostile ... dal turno precedente», 2014 pag. 48)
+OFF_TURN_ATTACKS = "off_turn_attacks"
+
+
 def action_taken(st: dict) -> bool:
     """L'azione del turno è spesa: segnata, oppure l'azione Attacco è già iniziata (LA4b)."""
     return bool(st["action_used"] or st["action_attacks"] > 0)
+
+
+def refuse_surge_magic(char) -> None:
+    """2024: l'azione in più (Azione Impetuosa pag. 91, Velocità) non può essere Magia. L'azione Attacco già iniziata (attacchi
+    o lancio fatti) è l'azione spesa; la Magia da Guerra fa parte dell'Attacco (non passa di qui)."""
+    st = get_turn(char)
+    if (action_taken(st) or st.get("action_spell_level") is not None) and st["extra_actions"] > 0:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "surge_no_magic"})
 
 
 def spend(char, slot: str, *, own_slot: bool = False) -> dict:
@@ -50,6 +64,8 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     action_spent = slot == "action" and action_taken(st)
     if slot == "attack":
         st["attacks_made"] += 1
+        if st.get(OTHERS_TURN):  # Ira 2014: conta alla fine del proprio turno seguente
+            st[OFF_TURN_ATTACKS] = st.get(OFF_TURN_ATTACKS, 0) + 1
         if not own_slot:
             st["action_attacks"] += 1
     elif action_spent and st["extra_actions"] > 0:
@@ -60,7 +76,15 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     else:
         st[_FLAGS[slot]] = True
     _save(char, st)
+    if slot in ("action", "reaction"):
+        _end_acting(char, slot)
     return st
+
+
+def _end_acting(char, slot: str) -> None:
+    """Gli stati che finiscono agendo o reagendo (Tutt'Uno con le Ombre e Nascondersi in Piena Vista 2014)."""
+    from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
+    end_states(char, slot)
 
 
 def release(char, slot: str) -> dict:
@@ -70,6 +94,8 @@ def release(char, slot: str) -> dict:
     st = get_turn(char)
     if slot == "attack":
         st["attacks_made"] = max(0, st["attacks_made"] - 1)
+        if st.get(OTHERS_TURN) and st.get(OFF_TURN_ATTACKS):
+            st[OFF_TURN_ATTACKS] -= 1
         weapons = list(st.get("action_weapons") or [])
         forgone = sum(w[0] == FORGONE for w in weapons)  # gli attacchi ceduti non sono fra quelli fatti e restano
         st["action_attacks"] = min(st["action_attacks"], st["attacks_made"] + forgone)
@@ -90,9 +116,14 @@ def grant_action(char) -> dict:
     return st
 
 
+# turn_state: gli usi «una volta per il proprio turno» (``OnUse.own_turn``): il turno di un altro non li riapre, ``reset_turn`` sì
+OWN_TURN_ONCE = "own_turn_once"
+
+
 def once_used(char, key: str) -> bool:
     """L'effetto «una volta per turno» ``key`` è già stato usato in questo turno."""
-    return key in get_turn(char)["once_per_turn"]
+    st = get_turn(char)
+    return key in st["once_per_turn"] or key in st.get(OWN_TURN_ONCE, ())
 
 
 def forgo_attack(char) -> dict:
@@ -104,25 +135,27 @@ def forgo_attack(char) -> dict:
     st["action_attacks"] += 1
     st["action_weapons"] = [*(st.get("action_weapons") or []), [FORGONE, False]]  # ceduto: non è un attacco con un'arma leggera
     _save(char, st)
+    _end_acting(char, "action")  # è un attacco dell'azione Attacco
     return st
 
 
-def mark_once(char, key: str) -> bool:
-    """Registra un effetto «una volta per turno»; False se era già stato usato."""
+def mark_once(char, key: str, own_turn: bool = False) -> bool:
+    """Registra un effetto «una volta per turno» (``own_turn``: per il proprio turno); False se era già stato usato."""
     st = get_turn(char)
-    if key in st["once_per_turn"]:
+    if once_used(char, key):
         return False
-    st["once_per_turn"] = [*st["once_per_turn"], key]
+    field = OWN_TURN_ONCE if own_turn else "once_per_turn"
+    st[field] = [*st.get(field, []), key]
     _save(char, st)
     return True
 
 
 def clear_once_per_turn(char) -> list[str]:
-    """Comincia il turno di un altro: tornano gli effetti «una volta per turno», reazione esclusa.
-    Restituisce la lista svuotata."""
+    """Comincia il turno di un altro: tornano gli effetti «una volta per turno», reazione esclusa, e il turno non è più il
+    suo (``OTHERS_TURN``: lo tolgono ``reset_turn`` e ``set_others_turn``). Restituisce la lista svuotata."""
     used = get_turn(char)["once_per_turn"]
-    if used:
-        _save(char, {**get_turn(char), "once_per_turn": []})
+    if used or not get_turn(char).get(OTHERS_TURN):
+        _save(char, {**get_turn(char), "once_per_turn": [], OTHERS_TURN: True})
     return used
 
 
@@ -141,14 +174,18 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
     hasted = any(variant.extra_action for _s, _e, variant, _d in spell_instances(char))  # Velocità: un'azione in più, limitata a un attacco
     _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"] and keep_surprise,
-                 "turn_no": previous.get("turn_no", 0) + 1,  # marcatore del turno: i rimborsi delle reazioni lo confrontano
+                 "turn_no": previous.get("turn_no", 0) + 1,
+                 "attacked_before": previous.get(OFF_TURN_ATTACKS, 0),  # marcatore del turno: i rimborsi delle reazioni lo confrontano
+                 **{k: v for k, v in previous.items() if k.startswith(CAST_ONCE)},  # i lanci in corso non ricominciano col turno
                  **({"extra_actions": 1, "haste_action": True} if hasted else {}), **vex, **notice})
     return char.turn_state
 
 
 def clear_turn(char) -> None:
     """Fine dello scontro o riposo: il turno torna intatto, senza gli effetti d'inizio turno di ``reset_turn``."""
-    _save(char, {**_default(), "turn_no": get_turn(char).get("turn_no", 0) + 1})  # turn_no avanza: nessun rimborso vecchio vale
+    turn = get_turn(char)
+    kept = {k: v for k, v in turn.items() if k.startswith(CAST_ONCE) and k.endswith(f":{char.concentrating_spell_id}")}  # la concentrazione continua
+    _save(char, {**_default(), **kept, "turn_no": turn.get("turn_no", 0) + 1})  # turn_no avanza: nessun rimborso vecchio vale
 
 
 def set_start_heal(char, notices: list[dict]) -> None:
@@ -163,6 +200,14 @@ def set_damaged(char, value: bool = True) -> None:
     st = get_turn(char)
     if st["damaged"] != value:
         _save(char, {**st, "damaged": value})
+
+
+def set_others_turn(char, value: bool) -> None:
+    """In uno scontro è (o non è) il turno di un altro combattente: ``turn_state["others_turn"]``, letto da ciò che vale solo
+    nei propri turni (Sterminatore di Nemici 2014). ``reset_turn`` e ``clear_turn`` lo tolgono; fuori da uno scontro non c'è."""
+    st = get_turn(char)
+    if bool(st.get(OTHERS_TURN)) != value:
+        _save(char, {**st, OTHERS_TURN: value})
 
 
 def set_surprised(char, value: bool = True) -> None:

@@ -128,6 +128,246 @@
         "regola": "fatta",
         "ripetizione": "fatta"
       }
+    },
+    "regola:2014/background": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "non_applicabile",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2014/equipaggiamento": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2014/incantesimi-D-F": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2014/incantesimi-S-Z": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2014/razze": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "non_applicabile",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2014/warlock": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "regola:2024/barbarian": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "regola:2024/cleric": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "regola:2024/equipaggiamento": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2024/incantesimi-A-C": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2024/incantesimi-D-F": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2024/incantesimi-G-L": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "non_applicabile",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "non_applicabile"
+      }
+    },
+    "regola:2024/monk": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "regola:2024/ranger": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "non_applicabile",
+        "permessi": "non_applicabile",
+        "persistenza": "non_applicabile",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "regola:2024/warlock": {
+      "commit": "53d2564c6e35fca44f68335eaa7541403bbf18d6",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "non_applicabile",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "non_applicabile",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
     }
   }
 }

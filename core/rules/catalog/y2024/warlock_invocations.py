@@ -11,11 +11,12 @@ import json
 import random
 from typing import Any
 
+from core.data.feats_2024 import FEATS_2024
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.paladin import _drops_to_zero
 from core.rules.catalog.y2014.warlock import PACT_WEAPONS, _create_pact_weapon, _is_pact, _weapon_label
 from core.rules.catalog.y2014.warlock_invocations import (
-    MAGE_ARMOR_AC, MAGE_ARMOR_CAST, PACT_WEAPON, _beams, _is_pact_weapon, _mod, _say,
+    BLAST, MAGE_ARMOR_AC, MAGE_ARMOR_CAST, PACT_WEAPON, _is_pact_weapon, _mod, _say, is_blast,
 )
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses,
@@ -47,11 +48,16 @@ def _names(index: str) -> set[str]:
 def is_cantrip(spell: Any, index: str) -> bool:
     """L'incantesimo è questo trucchetto: dallo `srd_index` o, se scritto a mano, dal nome."""
     return spell is not None and ((getattr(spell, "srd_index", None) or "").lower() == index
-                                  or (getattr(spell, "name", None) or "").strip().lower() in _names(index))
+                                  or (getattr(spell, "name", None) or "").strip().lower() in _names(index)
+                                  or (index == BLAST and is_blast(spell)))
 
 
-def knows_cantrip(char: Any, index: str) -> bool:
-    return any(is_cantrip(s, index) and s.level == 0 for s in char.spells or [])
+def knows_cantrip(char: Any, cls: Any, index: str) -> bool:
+    """Conosciuto con Magia del Patto (D-026): non col solo Libro delle Ombre, da un'altra classe o da un talento."""
+    from core.rules.level_choices import FREE_KNOWN_KEY  # import locale: level_choices carica il catalogo
+    free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
+    return any(is_cantrip(s, index) and s.level == 0 and not s.always_prepared and s.id not in free
+               and s.class_id in (None, cls.id) for s in char.spells or [])
 
 
 def _slug(index: str) -> str:
@@ -67,8 +73,7 @@ def _chosen(ctx: RuleContext) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _agonizing(index: str, key: str) -> Modifier:
-    return Modifier("damage", lambda c: _mod(c, "charisma") * (_beams(c) if index == "eldritch-blast" else 1),  # un tiro per raggio solo per Deflagrazione Occulta
-                    when=lambda c: is_cantrip(c.spell, index),
+    return Modifier("damage", lambda c: _mod(c, "charisma"), when=lambda c: is_cantrip(c.spell, index),
                     source=f"feature:{CK}.{key}")
 
 
@@ -146,18 +151,23 @@ def _bindable(ctx: RuleContext) -> list[str]:
 
 def _release_bound(char: Any) -> None:
     """Il legame con un'arma vera termina: torna com'era, non si cancella (l'arma evocata la toglie ``_create_pact_weapon``)."""
-    from core.game.item_bonuses import item_meta  # import locale
     for item in char.items:
-        meta = dict(item_meta(item))
-        if meta.get(BOUND):
-            original = meta.pop(ORIGINAL_TYPE, None)
-            meta.pop(PACT_WEAPON, None)
-            meta.pop(BOUND, None)
-            if original is None:
-                meta.pop("damage_type", None)
-            else:
-                meta["damage_type"] = original
-            item.item_metadata = json.dumps(meta)
+        unbind(item)
+
+
+def unbind(item: Any) -> None:
+    """Una sola arma: anche quando passa a un altro personaggio."""
+    from core.game.item_bonuses import item_meta  # import locale
+    meta = dict(item_meta(item))
+    if meta.get(BOUND):
+        original = meta.pop(ORIGINAL_TYPE, None)
+        meta.pop(PACT_WEAPON, None)
+        meta.pop(BOUND, None)
+        if original is None:
+            meta.pop("damage_type", None)
+        else:
+            meta["damage_type"] = original
+        item.item_metadata = json.dumps(meta)
 
 
 def _blade_use() -> OnUse:
@@ -203,7 +213,7 @@ def _gaze_state(_ctx: RuleContext, _params: dict) -> StateSpec:
 
 GAZE_USE = OnUse(slot="bonus", state=_gaze_state)
 # I PF temporanei sono il massimo dei dadi (2d4 + 4): niente tiro
-VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 12)  # Vita Falsa 2024: 2d4+4, il massimo (p.271)
+VIGOR_USE = OnUse(slot="action", magic_action=True, temp_hp=lambda _c, _rolled: 12)  # Vita Falsa 2024: 2d4+4, il massimo (p.271)
 CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio attacca con la sua reazione
 
 
@@ -270,6 +280,16 @@ def _per_cantrip(family: str, it: str, en: str, suffix: str, summary: tuple[str,
     return rows
 
 
+def _lessons() -> list:
+    """Lezioni dei Primi è Ripetibile con un talento di Origine diverso a ogni scelta (pag. 156): una riga per talento."""
+    return [_inv(f"lessons_of_the_first_ones__{f.key.removeprefix('2024_')}", "Lezioni dei Primi", "Lessons of the First Ones",
+                 f"{_P}, livello 2+, pag. 156", 2,
+                 ("Ripetibile, con un talento di Origine diverso a ogni scelta: questo. L'app non lo assegna: aggiungilo tu ai talenti.",
+                  "Repeatable, with a different Origin feat each pick: this one. The app does not grant it: add it to your feats yourself."),
+                 name=(f"Lezioni dei Primi: {f.name['it']}", f"Lessons of the First Ones: {f.name['en']}"), passive=True)
+            for f in FEATS_2024 if f.category == "origin"]
+
+
 _P = "Suppliche Occulte"
 _DAMAGE = "trucchetto Warlock che infligge danno"
 _ROWS: list = [
@@ -327,6 +347,7 @@ _ROWS: list = [
     _inv("lessons_of_the_first_ones", "Lezioni dei Primi", "Lessons of the First Ones", f"{_P}, livello 2+, pag. 156", 2,
          ("Ripetibile: un talento di Origine a tua scelta, diverso a ogni scelta. L'app non lo assegna: aggiungilo tu ai talenti.",
           "Repeatable: an Origin feat of your choice, a different one each pick. The app does not grant it: add it to your feats yourself."), passive=True),
+    *_lessons(),
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", f"{_P}, livello 9+, Patto della Lama, pag. 156", 9,
          ("Dopo un colpo con l'arma del patto: 1d6 danni necrotici, psichici o radiosi in più e, spendendo un Dado Vita, recuperi PF pari al tiro più COS. Una volta per turno.",
           "After a hit with the pact weapon: extra 1d6 necrotic, psychic or radiant damage and, spending a Hit Die, you regain hit points equal to the roll plus Con. Once per turn."),
@@ -353,7 +374,7 @@ _ROWS: list = [
          passive=True,
          choices=(ChoiceSpec(group="tome_cantrips", levels={1: 3}, options=lambda _c: [], spell_pick="extra", spell_level=0),
                   ChoiceSpec(group="tome_rituals", levels={1: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
-                             spell_ritual=True))),
+                             spell_ritual=True, always_prepared=True))),  # «finché il libro è con sé sono preparati» (pag. 157)
     *_per_cantrip(
         "repelling_blast", "Deflagrazione Respingente", "Repelling Blast",
         f"{_P}, livello 2+, {_DAMAGE} con un tiro per colpire, pag. 157",
@@ -385,12 +406,14 @@ def prerequisites_met(ctx: RuleContext, key: str, owned: list[str]) -> bool:
     if key in REQUIRES and REQUIRES[key] not in owned and not prerequisites_met(ctx, REQUIRES[key], owned):
         return False
     _family, _, slug = key.partition("__")
-    return not slug or knows_cantrip(ctx.char, next(i for i in CANTRIPS if _slug(i) == slug))
+    index = next((i for i in CANTRIPS if _slug(i) == slug), None)  # Lezioni dei Primi: il suffisso è un talento, non un trucchetto
+    return index is None or knows_cantrip(ctx.char, ctx.class_row, index)
 
 
-# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). La riga resta per chi
-# l'ha già scelta (nessun personaggio perde nulla); non si offre più alle nuove scelte.
-RETIRED = frozenset({"eldritch_spear__chill_touch"})
+# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). Lezioni dei Primi senza
+# talento ha lasciato il posto a una riga per talento (Ripetibile). Le righe restano per chi le ha già scelte (nessun personaggio perde
+# nulla); non si offrono più alle nuove scelte.
+RETIRED = frozenset({"eldritch_spear__chill_touch", "lessons_of_the_first_ones"})
 
 
 def available_invocations(ctx: RuleContext) -> list[str]:
@@ -410,6 +433,6 @@ def protected_invocations(ctx: RuleContext) -> set[str]:
 
 
 INVOCATION_CHOICE = ChoiceSpec(
-    group=INVOCATIONS, levels={1: 1, 2: 3, 5: 5, 7: 6, 9: 7, 12: 8, 15: 9, 18: 10}, replaceable=True, options=available_invocations,
+    group=INVOCATIONS, levels={1: 1, 2: 3, 5: 5, 7: 6, 9: 7, 12: 8, 15: 9, 18: 10}, replaceable=True, replace_per_level="each", options=available_invocations,
     import_options=lambda _c: list(LEVELS), protected=protected_invocations,
     batch_ok=picks_ok)

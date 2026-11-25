@@ -10,7 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from core.rules.catalog._common import feature
-from core.rules.catalog.y2014.warlock_invocations import _mod, _say
+from core.rules.catalog.y2014.cleric import spell_dc
+from core.rules.catalog.y2014.warlock_invocations import _say
 from core.rules.catalog.y2024 import warlock_invocations as inv
 from core.rules.types import ChoiceSpec, OnUse, RollOptionSpec, RuleContext, Uses
 
@@ -21,8 +22,8 @@ _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/r
 
 
 def dc(ctx: RuleContext) -> int:
-    """CD degli incantesimi del warlock: 8 + competenza + Carisma."""
-    return 8 + ctx.char.proficiency_bonus + _mod(ctx, "charisma")
+    """CD degli incantesimi del warlock."""
+    return spell_dc(ctx, "charisma")
 
 
 def pact_slots(char: Any) -> list[Any]:
@@ -82,7 +83,13 @@ def _cunning_given(ctx: RuleContext, _rolled: int, _params: dict) -> int:
     return resilience_ally_points(ctx)[1]
 
 
-CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)),
+def _cunning_available(ctx: RuleContext) -> bool:
+    """Uno slot di Patto da recuperare o, per il Celestiale, i PF di Resilienza Celestiale (pag. 161: a ogni uso, anche a slot pieni)."""
+    from core.rules.catalog.y2024.warlock_subclasses import resilience_hp  # import locale, come sopra
+    return any(s.used > 0 for s in pact_slots(ctx.char)) or resilience_hp(ctx) is not None
+
+
+CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=_cunning_available,
                     temp_hp_ally=True, ally_count=_cunning_ally_count, gives_by=_cunning_given, preview=_cunning_preview)
 
 
@@ -111,7 +118,7 @@ def _arcanum(grade: str, level: int, spell_level: int):
          f"A warlock spell of level {spell_level} of your choice: you cast it once per long rest with no slot, from the spells page."),
         uses=Uses(table={level: 1}), restoration="long_rest", arcanum_group=f"arcanum_{grade}", passive=True,
         choices=(ChoiceSpec(group=f"arcanum_{grade}", levels={level: 1}, options=_no_options, spell_pick="extra", spell_level=spell_level,
-                            spell_exact=True),))
+                            spell_exact=True, spell_list="warlock"),))
 
 
 # ---------------------------------------------------------------------------

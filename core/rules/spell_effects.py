@@ -44,6 +44,7 @@ class SpellVariant:
     rounds_by_slot: Callable[[int], int] | None = None  # durata in round secondo lo slot (Sortilegio, Marchio del Cacciatore)
     until_rest: Literal["long"] | None = None  # l'incantesimo dura fino a questo riposo (Aiuto: il lungo)
     concentration: bool = False
+    ends_on_recast: bool = False  # un nuovo lancio di chi lo ha lanciato toglie lo stato ai bersagli di prima (Previsione, Arma Magica 2024)
     choices: tuple[SpellChoice, ...] = ()
     on_apply: Callable[[Any, dict], None] | None = None
     text: dict[str, str] | None = None
@@ -51,6 +52,9 @@ class SpellVariant:
     also_conditions: tuple[str, ...] = ()  # altre condizioni imposte e tolte con ``condition`` (Morte Apparente: Accecato)
     immune_conditions: tuple[str, ...] = ()  # condizioni che il bersaglio non può avere finché dura
     ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
+    not_self: bool = False  # il bersaglio è un'altra creatura, mai chi lancia (Vincolo di Interdizione)
+    # chi porta ancora lo stato non ne è influenzato di nuovo (409 ``already_affected``): lo stato cade con il suo Riposo Lungo (Preghiera di Guarigione 2024)
+    once_per_long_rest: bool = False
     max_targets: Callable[[int], int] | None = None  # sostituisce ``target.count`` quando il numero di bersagli cambia con l'edizione (Saltare 2014)
     track: bool = False  # lo stato (e l'orologio di concentrazione) esiste anche senza modificatori: effetti solo descrittivi
     # PF al lancio, per ogni bersaglio: i temporanei (il maggiore vince) e la cura (limitata al massimo, Aiuto alza prima il massimo).
@@ -74,6 +78,7 @@ class SpellVariant:
     weapon_die: Callable[[int], str] | None = None  # il dado dell'arma scelta, secondo il livello del personaggio
     on_close: Callable[[dict], dict] | None = None  # stato che lo stato sul bersaglio lascia alla fine (Velocità: la letargia), come ``data["on_close"]``
     extra_action: bool = False  # a ogni turno del bersaglio un'azione in più, limitata (Velocità)
+    hurled: bool = False  # il tiro per colpire non è il lancio: si fa finché lo stato dura, con un'azione (Produrre Fiamma 2024, Lama Infuocata)
 
     def duration(self, slot: int) -> int | None:
         """Durata in round dell'incantesimo lanciato con lo slot ``slot``."""
@@ -108,13 +113,14 @@ def own_aura_clocks(char: Any) -> list[dict]:
     return out
 
 
-def _hp_max(variant: SpellVariant, data: dict) -> int:
-    return sum(m.value for m in variant.modifiers(data) if m.target == "hp_max")
+def _potency(variant: SpellVariant, data: dict) -> tuple[int, int]:
+    """Fra due lanciatori dello stesso incantesimo vale il più potente: PF massimi, poi PF temporanei a inizio turno (Eroismo)."""
+    return sum(m.value for m in variant.modifiers(data) if m.target == "hp_max"), variant.turn_temp_hp(data) if variant.turn_temp_hp else 0
 
 
 def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, dict]]:
     """Gli incantesimi che agiscono su ``char``: ``(stato, effetto, variante, data)``. Sono i suoi stati ``spell:*`` e le aure vive di incantesimi,
-    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo (con due lanciatori sullo stesso bersaglio, l'ultimo; per i PF massimi il più forte)."""
+    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo (con due lanciatori sullo stesso bersaglio, l'ultimo; per i PF massimi e i PF temporanei il più forte)."""
     from core.rules.auras import party_auras  # import locale: auras usa il catalogo
     from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
 
@@ -128,8 +134,8 @@ def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, 
         variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
         if variant:
             held = by_spell.get(effect.key)
-            if held and _hp_max(held[2], held[3]) > _hp_max(variant, data):
-                continue  # PF massimi: fra due lanciatori vale il più potente (manuale), non il più recente
+            if held and _potency(held[2], held[3]) > _potency(variant, data):
+                continue  # fra due lanciatori vale il più potente (Combinare Effetti Magici, 2014 pag. 205), non il più recente
             by_spell.pop(effect.key, None)
             by_spell[effect.key] = (state, effect, variant, data)
     out = list(by_spell.values())

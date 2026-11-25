@@ -83,6 +83,18 @@ async def test_cast_requires_attunement(client):
     assert r.status_code == 409 and r.json()["detail"] == "attunement_required"
 
 
+async def test_cast_in_untrained_armor_asks_confirmation_like_spells(client):
+    cid = await _char(client)
+    await _item(client, cid, name="Piastre", item_type="armor", slot="body", armor_type="heavy", ac_value=18)
+    iid = await _item(client, cid, charges=_ch(cur=7), granted_spells=[BOLT])
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.status_code == 409 and r.json()["detail"] == {"code": "cast_confirm", "warnings": ["armor"]}
+    assert await _cur(client, cid, iid) == 7
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0, "confirm": ["armor"]})
+    assert r.status_code == 200, r.text
+    assert await _cur(client, cid, iid) == 5
+
+
 async def test_cast_not_enough_charges_409(client):
     cid = await _char(client)
     iid = await _item(client, cid, charges=_ch(cur=1), granted_spells=[BOLT])

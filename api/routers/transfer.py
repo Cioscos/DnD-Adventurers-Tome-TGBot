@@ -176,6 +176,7 @@ async def import_ddb_character(
     for cls in char.classes:
         if class_table_key(cls.class_name) is not None:
             await sync_class_feature_abilities(session, char, cls, lang=lang, retrofit=True)  # Beyond somma già i modificatori di classe
+    char.current_hit_points = export.character.current_hit_points  # sono già sul massimo effettivo: il retrofit non li riempie
     await _apply_feature_uses(session, char, feature_uses)
     await recalc_spell_slots(session, char)
     char = await refresh_char_full(session, char.id, user_id)

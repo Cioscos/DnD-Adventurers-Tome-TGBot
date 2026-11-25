@@ -38,11 +38,31 @@ async def test_upcast_at_base_level_unchanged(client):
     assert (await _roll(client, cid, sid, 3, [1] * 8)).status_code == 200
 
 
-async def test_sleep_pool_not_upcast(client):
-    cid, sid = await _spell(client, name="Sonno", level=1, damage_dice="5d8", damage_type=None,
-                            higher_levels_dice="2d8", srd_index="sleep")
-    r = await _roll(client, cid, sid, 3, [1] * 5)
-    assert r.status_code == 200 and r.json()["scaled_dice"] == "5d8"
+async def test_sleep_pool_upcast(client):
+    # 2014 pag. 279: la riserva di PF di Sonno cresce di 2d8 per slot oltre il 1°, anche sulle righe salvate senza dadi di scalata
+    for extra in ({"higher_levels_dice": "2d8"}, {}):
+        cid, sid = await _spell(client, name="Sonno", level=1, damage_dice="5d8", damage_type=None, srd_index="sleep", **extra)
+        r = await _roll(client, cid, sid, 3, [1] * 9)
+        assert r.status_code == 200 and r.json()["scaled_dice"] == "9d8"
+
+
+async def test_caster_modifier_added_only_where_the_card_says(client, monkeypatch):
+    # Arma Spirituale (2014 pag. 215, 2024 pag. 319-320), Lama infuocata e Spada di Mordenkainen 2024 (pag. 275, 302):
+    # dadi + modificatore da incantatore; Lama Infuocata 2014 (pag. 247) no.
+    import random
+    monkeypatch.setattr(random, "randint", lambda a, b: 1)
+    for edition, index, level, dice, mod in [("2014", "spiritual-weapon", 2, "1d8", 3), ("2024", "spiritual-weapon", 2, "1d8", 3),
+                                             ("2024", "flame-blade", 2, "3d6", 3), ("2024", "arcane-sword", 7, "4d12", 3),
+                                             ("2014", "flame-blade", 2, "3d6", 0)]:
+        r = await client.post("/characters", json={"name": "Chierico", "rules_edition": edition,
+                                                   "initial_class": {"class_name": "cleric", "level": 13}})
+        cid = r.json()["id"]
+        assert (await client.patch(f"/characters/{cid}/ability_scores/wisdom", json={"value": 16})).status_code == 200
+        r = await client.post(f"/characters/{cid}/spells", json={"name": index, "level": level, "damage_dice": dice,
+                                                                 "damage_type": "force", "srd_index": index})
+        r = await _roll(client, cid, r.json()["id"], level)
+        assert r.status_code == 200, r.text
+        assert r.json()["total"] == int(dice.split("d")[0]) + mod, (edition, index)
 
 
 async def test_higher_levels_dice_validated(client):

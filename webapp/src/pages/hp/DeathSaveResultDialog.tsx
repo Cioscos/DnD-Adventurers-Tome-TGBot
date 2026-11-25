@@ -2,6 +2,7 @@ import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
+import { D20Breakdown } from '@/components/RollResultModal'
 import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import ResultDialog from '@/components/ui/ResultDialog'
 import { useRetouched } from '@/hooks/useRetouched'
@@ -17,11 +18,12 @@ interface Props {
 export default function DeathSaveResultDialog({ result: rolled, onClose, afterRoll }: Props) {
   const { t } = useTranslation()
   const [result, retouch] = useRetouched(rolled)
-  const { outcome, die, successes, failures, revived, stable } = result
+  const { outcome, die, bonus = 0, successes, failures, revived, stable } = result
+  const natural = outcome === 'nat20' || outcome === 'nat1'
 
   const isSuccess = outcome === 'success' || outcome === 'nat20' || outcome === 'revived'
   const accent = outcome === 'nat20' ? 'gold' : isSuccess ? 'emerald' : 'crimson'
-  const pulse = outcome === 'nat20' || outcome === 'nat1'
+  const pulse = natural
 
   const dieColor = outcome === 'nat20'
     ? 'text-dnd-gold-bright'
@@ -66,9 +68,10 @@ export default function DeathSaveResultDialog({ result: rolled, onClose, afterRo
           transition={{ ...spring.elastic, delay: 0.1 }}
           className={`text-7xl font-black font-display ${dieColor}`}
         >
-          {die}
+          {natural ? die : die + bonus}
         </m.p>
       )}
+      {outcome !== 'revived' && bonus !== 0 && <D20Breakdown roll={{ ...result, bonus }} />}
 
       <RollNotes notes={result.notes} optionResult={result.option_result} charId={afterRoll?.charId} />
       <p className={`font-bold font-cinzel uppercase tracking-wider ${verdictColor}`}>

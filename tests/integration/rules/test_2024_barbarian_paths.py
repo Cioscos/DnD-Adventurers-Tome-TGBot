@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import pytest
 
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration.rules.test_2014_barbarian import _ability, _armor, _full, _hit, _hp, _keys, _states, _turn, _weapon
+from tests.integration.rules.test_2014_barbarian_round1 import _in_encounter
 from tests.integration.rules.test_2024_barbarian import RAGE, _barbarian, _new_turn, _rage
 from tests.integration.rules.test_2024_barbarian_strike import _damage, _deferred
 
@@ -257,6 +259,21 @@ async def test_aspect_rows_exist_only_for_the_chosen_option(client):
     assert "barbarian.aspect_salmon" in keys and not keys & {"barbarian.aspect_owl", "barbarian.aspect_panther"}
 
 
+async def test_aspect_and_weapon_mastery_each_have_their_own_swap_per_long_rest(client):
+    cid = await _barbarian(client, 6, WILD)
+    await _pick(client, cid, "aspect_of_the_wilds", "owl")
+    mastery = next(c for c in (await _full(client, cid))["pending_choices"] if c.get("group") == "weapon_mastery")
+    picked = [o["key"] for o in mastery["options"]][:mastery["count"]]
+    r = await client.post(f"/characters/{cid}/choices/{mastery['id']}/resolve", json={"kind": "class_option", "options": picked})
+    assert r.status_code == 200, r.text
+    spare = next(o["key"] for o in mastery["options"] if o["key"] not in picked)
+    url = f"/characters/{cid}/classes/{(await _full(client, cid))['classes'][0]['id']}/options/replace"
+    assert (await client.post(url, json={"group": "aspect_of_the_wilds", "old_key": "owl", "new_key": "panther"})).status_code == 200
+    assert (await client.post(url, json={"group": "weapon_mastery", "old_key": picked[0], "new_key": spare})).status_code == 200
+    again = await client.post(url, json={"group": "aspect_of_the_wilds", "old_key": "panther", "new_key": "salmon"})
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "replace_after_long_rest"
+
+
 # ---------------------------------------------------------------------------
 # Albero del Mondo
 # ---------------------------------------------------------------------------
@@ -383,6 +400,36 @@ async def test_divine_fury_adds_d6_plus_half_the_level_of_a_chosen_type_once_per
     assert result["extra_types"] == ["radiant"]  # I1: l'esito dice il tipo scelto
     keys = await _keys(client, cid, "attack", item_id=sword)
     assert not [k for k in keys if k.startswith("barbarian.divine_fury")]
+
+
+async def test_divine_fury_is_off_on_another_creatures_turn_and_back_when_the_turn_returns(client, test_session_factory, monkeypatch):
+    def fury(keys: list[str]) -> set[str]:
+        return {k for k in keys if k.startswith("barbarian.divine_fury")}
+
+    async def gm(path: str) -> None:
+        as_user(GM_ID)
+        assert (await client.post(f"/sessions/{sid}/encounter/{path}")).status_code == 200
+        as_user(PLAYER_ID)
+
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "barbarian", "level": 3, "hit_die": 12,
+                                                                    "subclass": ZEALOT})).status_code == 201
+    sword = await _weapon(client, cid)
+    assert (await _rage(client, cid)).status_code == 200
+    assert fury(await _keys(client, cid, "attack", item_id=sword))
+    await gm("next-turn")  # il turno di un goblin
+    assert not fury(await _keys(client, cid, "attack", item_id=sword))
+    await gm("prev-turn")  # il GM riporta indietro: è di nuovo il turno del barbaro
+    assert fury(await _keys(client, cid, "attack", item_id=sword))
+    # fuori da un incontro: «Turno di un altro» la spegne, «Nuovo turno» la riaccende
+    other = await _barbarian(client, 3, ZEALOT)
+    blade = await _weapon(client, other)
+    await _rage(client, other)
+    assert (await client.post(f"/characters/{other}/turn/other")).status_code == 200
+    assert not fury(await _keys(client, other, "attack", item_id=blade))
+    await _new_turn(client, other)
+    assert fury(await _keys(client, other, "attack", item_id=blade))
 
 
 @pytest.mark.parametrize("level,dice", [(3, 4), (5, 4), (6, 5), (12, 6), (17, 7)])

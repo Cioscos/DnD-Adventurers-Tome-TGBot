@@ -26,6 +26,8 @@ async def test_metamagic_2014_cannot_be_replaced(client):
 
 async def test_metamagic_2024_can_be_replaced(client):
     cid = await _caster24(client, 2, "twinned", "quickened")
+    klass = (await _full(client, cid))["classes"][0]
+    assert (await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 3})).status_code == 200  # una per livello
     state, r = await _replace(client, cid)
     assert state["replaceable"] is True
     assert r.status_code == 200, r.text

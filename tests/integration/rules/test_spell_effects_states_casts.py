@@ -359,12 +359,12 @@ async def test_h3b_heroism_ended_on_the_last_target_ends_the_casters_concentrati
     assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] is None
 
 
-async def test_h3b_self_cast_ended_by_the_caster_keeps_the_concentration(client, test_session_factory):
+async def test_h3b_self_cast_ended_by_the_caster_ends_the_concentration(client, test_session_factory):  # D-032
     hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
     await _defense_cast(client, caster, spell, [caster], level=1)
     as_user(GM_ID)
     assert (await client.delete(f"/characters/{caster}/active-states/spell:heroism")).status_code == 200
-    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+    assert (await _full(client, caster))["concentrating_spell_id"] is None
 
 
 async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_factory):
@@ -374,12 +374,12 @@ async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_fac
         async with test_session_factory() as s:
             row = await s.get(Character, caster)
             row.turn_state = {"spell_slot_cast": True, "bonus_spell_cast": True, "leveled_cast": True, "cast_prior_slot": True,
-                              "empowered_used": "x", "spell_attack_dice": 2, "cast_metamagic": ["m"], "attacks_made": 3}
+                              "cast_once:empowered:0": "x", "spell_attack_dice": 2, "cast_metamagic": ["m"], "attacks_made": 3}
             await s.commit()
         assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": kind, "confirm_early": True})).status_code == 200
         async with test_session_factory() as s:
             turn = (await s.get(Character, caster)).turn_state
         assert not turn.get("spell_slot_cast") and not turn.get("bonus_spell_cast"), kind
-        for key in ("leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic"):
+        for key in ("leveled_cast", "cast_prior_slot", "cast_once:empowered:0", "spell_attack_dice", "cast_metamagic"):
             assert key not in turn or not turn[key], (kind, key)
         assert turn["attacks_made"] == 0, kind  # B7: il riposo azzera anche gli attacchi

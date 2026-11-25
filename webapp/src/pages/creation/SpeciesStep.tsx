@@ -8,10 +8,9 @@ import Pressable from '@/components/ui/Pressable'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { localized, type Lang } from '@/lib/srd/catalog'
 import SpeciesChoices from '@/components/character/SpeciesChoices'
-import type { RaceEntry, Species2024Entry, SubraceEntry } from '@/lib/species'
+import { LANGUAGE_KEYS, languageName, raceBonuses, SKILL_KEYS, type RaceEntry, type Species2024Entry, type SpeciesChoice } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
-export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null }
 export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
@@ -26,6 +25,10 @@ interface Props {
   onSpecies24?: (s: Species24State) => void
   /** Abilità già date da classe e background: non sceglibili come abilità della specie. */
   takenSkills?: string[]
+  /** Lingue (nomi) già conosciute: non sceglibili come lingua della razza. */
+  takenLanguages?: string[]
+  /** Talento d'Origine non ripetibile del background: non sceglibile per Versatile. */
+  takenFeats?: string[]
 }
 
 const ABBR: Record<string, string> = {
@@ -38,15 +41,46 @@ function visibleTraits(e: Species2024Entry, options: Record<string, string>) {
     o.key !== options[c.key] && tr.key.startsWith(`${c.key}_`) && tr.key.endsWith(`_${o.key}`))))
 }
 
-export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills }: Props) {
+/** Velocità della specie: speed_ft è la base della scheda, il +5 di Goliath ed Elfo dei boschi (PHB 2024 pag. 192, 190)
+ *  è un modificatore del motore (core/rules/catalog/species_2024.py), qui ripetuto per mostrarlo prima della creazione. */
+function speciesSpeed(e: Species2024Entry, options: Record<string, string>): number {
+  return e.speed_ft + (e.key === '2024_goliath' || (e.key === '2024_elf' && options.lineage === 'wood') ? 5 : 0)
+}
+
+/** Scelte della razza 2014: `max` opzioni, quelle in `taken` non si possono prendere. */
+function RacePicks({ title, options, value, max, taken = [], label, onChange }: {
+  title: string; options: string[]; value: string[]; max: number; taken?: string[]; label: (key: string) => string; onChange: (value: string[]) => void
+}) {
+  if (max === 0) return null
+  return (
+    <div role="group" aria-label={title}>
+      <p className="mb-1.5 text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim tabular-nums">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((k) => (
+          <Pressable
+            key={k}
+            aria-pressed={value.includes(k)}
+            disabled={!value.includes(k) && (value.length >= max || taken.includes(k))}
+            onClick={() => onChange(value.includes(k) ? value.filter((p) => p !== k) : [...value, k])}
+            className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
+              ${value.includes(k) ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'} disabled:opacity-40`}
+          >
+            {label(k)}
+          </Pressable>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills, takenLanguages = [], takenFeats }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
   const [picking, setPicking] = useState(false)
-  const { race, sub } = choice
+  const { race, sub, picks = [], skills = [], languages = [] } = choice
   const e24 = edition === '2024' ? species24?.entry ?? null : null
-  const bonuses: Record<string, number> = { ...race?.ability_bonuses }
-  for (const [k, v] of Object.entries(sub?.ability_bonuses ?? {})) bonuses[k] = (bonuses[k] ?? 0) + v
+  const bonuses = raceBonuses(race, sub, picks)
 
   return (
     <div className="space-y-3">
@@ -57,10 +91,10 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
 
       {e24 && species24 && onSpecies24 && (
         <>
-          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} />
+          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} takenFeats={takenFeats} />
           <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
             <p className="tabular-nums">
-              {t('character.create.species_speed')}: {formatLength(e24.speed_ft, unit)}
+              {t('character.create.species_speed')}: {formatLength(speciesSpeed(e24, species24.options), unit)}
             </p>
             <p className="text-dnd-text-muted">
               {visibleTraits(e24, species24.options).map((tr) => tr.name[lang]).join(', ')}
@@ -80,15 +114,28 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
           {[null, ...race.subraces].map((s) => (
             <Pressable
               key={s?.index ?? 'none'}
-              onClick={() => onChoice({ race, sub: s })}
+              onClick={() => onChoice({ ...choice, sub: s })}
               className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
-                ${(sub?.index ?? null) === (s?.index ?? null)
+                ${sub !== undefined && (sub?.index ?? null) === (s?.index ?? null)
                   ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
             >
-              {s ? localized(s.name, lang).text : t('character.create.subrace_none')}
+              {s ? localized(s.name, lang).text : t('character.create.subrace_other')}
             </Pressable>
           ))}
         </div>
+      )}
+
+      {edition === '2014' && race && (
+        <>
+          <RacePicks title={t('character.create.ability_choices', { n: picks.length, max: race.ability_choices })} value={picks} max={race.ability_choices ?? 0}
+            options={Object.keys(ABBR).filter((k) => !(k in race.ability_bonuses))} label={(k) => `${t(`common.abilities.${ABBR[k]}`)} +1`}
+            onChange={(v) => onChoice({ ...choice, picks: v })} />
+          <RacePicks title={t('character.create.skill_choices', { n: skills.length, max: race.skill_choices })} value={skills} max={race.skill_choices ?? 0}
+            options={SKILL_KEYS} taken={takenSkills} label={(k) => t(`character.skills.${k}`)} onChange={(v) => onChoice({ ...choice, skills: v })} />
+          <RacePicks title={t('character.create.language_choices', { n: languages.length, max: race.language_choices })} value={languages} max={race.language_choices ?? 0}
+            options={LANGUAGE_KEYS.filter((k) => !race.languages.includes(k))} taken={LANGUAGE_KEYS.filter((k) => takenLanguages.includes(languageName(k, lang)))}
+            label={(k) => languageName(k, lang)} onChange={(v) => onChoice({ ...choice, languages: v })} />
+        </>
       )}
 
       {edition === '2014' && race && (
@@ -129,7 +176,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
         <CatalogPicker
           kind="races"
           onClose={() => setPicking(false)}
-          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: null }); setPicking(false) }}
+          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: undefined }); setPicking(false) }}
         />
       )}
       {picking && edition === '2024' && (

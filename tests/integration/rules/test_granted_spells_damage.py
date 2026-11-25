@@ -20,7 +20,11 @@ def test_every_granted_spell_has_damage_data_the_server_can_roll():
         assert spell.higher_levels_dice is None or DICE.match(spell.higher_levels_dice), key
         assert spell.attack_save in (None, "ATK", "SAVE"), key
         if spell.damage_dice:  # un incantesimo che fa danno dice come: tiro per colpire o tiro salvezza
-            assert spell.attack_save is not None and spell.damage_type, key
+            # Scudo di Fuoco ferisce chi ti colpisce senza attacco né TS (2014 p.275, 2024 p.274). Spiriti Guardiani: radiosi o
+            # necrotici (2014 p.240, 2024 p.319), scelti al lancio (D-031, D-046)
+            # Parola del Potere: Uccidere 2024 non chiede né l'uno né l'altro (p.306)
+            assert spell.attack_save is not None or key in ("fire-shield", "power-word-kill"), key
+            assert spell.damage_type or key == "spirit-guardians", key
         else:  # senza danno non c'è altro da tirare
             assert spell.extra_damage_dice is None and spell.higher_levels_dice is None, key
         assert (spell.extra_damage_dice is None) == (spell.extra_damage_type is None), key
@@ -95,7 +99,7 @@ async def test_a_spell_whose_damage_cannot_be_rolled_is_cast_anyway_and_says_so(
     assert {s["level"]: s["available"] for s in use.json()["spell_slots"]}[2] == before[2] - 1
     roll = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 2})
     assert roll.status_code == 422 and roll.json()["detail"]["code"] == "bad_damage_dice"
-    normal = await client.post(f"/characters/{cid}/spells", json={
+    normal = await client.post(f"/characters/{cid}/spells?confirm=true", json={
         "name": "Dardo", "level": 1, "damage_dice": "1d4", "damage_type": "force", "is_prepared": True})
     use = await client.post(f"/characters/{cid}/spells/{normal.json()['id']}/use", json={"slot_level": 1})
     assert use.json()["damage_unrollable"] is False

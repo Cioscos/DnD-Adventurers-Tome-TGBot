@@ -9,7 +9,7 @@ import ConditionBadge from '@/components/ui/ConditionBadge'
 import Pressable from '@/components/ui/Pressable'
 import PublicStates from '@/components/session/PublicStates'
 import { formatCondition } from '@/lib/conditions'
-import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
+import { conditionRounds, formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import type {
   CharacterLiveSnapshot,
   CombatantLive,
@@ -80,7 +80,7 @@ export default function CombatantRow({
 
   // Effetti ricchi (durata, TS, fonte) delle condizioni: PG dalla scheda, mostri dal combattente.
   const effects = (isPc ? snapshot?.condition_effects : c.condition_effects) ?? []
-  const effectOf = (key: string) => effects.find((e) => e.slug === key)
+  const rounds = conditionRounds(effects)  // una condizione può avere più istanze, una per fonte
 
   // Etichetta del TS in sospeso: il primo effetto con un TS ripetuto.
   const pcSave = snapshot?.condition_effects?.find((e) => e.save_ability && e.save_dc != null)
@@ -259,19 +259,18 @@ export default function CombatantRow({
           {conds.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
               {conds.map(([key, val]) => {
-                const e = effectOf(key)
                 return (
                   <ConditionBadge
                     key={key}
                     conditionKey={key}
                     value={val}
                     showLabel
-                    detail={e?.expiry_count ? t('character.conditions.effect.rounds', { count: e.expiry_count }) : undefined}
-                    notes={e ? [
+                    detail={rounds[key] ? t('character.conditions.effect.rounds', { count: rounds[key] }) : undefined}
+                    notes={effects.filter((e) => e.slug === key).flatMap((e) => [
                       formatExpiry(e, t, c.name),
                       formatSave(e, t, c.name) ?? '',
                       formatSource(e) ? t('session.combat.source_label', { name: formatSource(e) }) : '',
-                    ].filter(Boolean) : []}
+                    ].filter(Boolean))}
                   />
                 )
               })}
@@ -289,7 +288,7 @@ export default function CombatantRow({
             >
               <p className="flex-1 min-w-0 text-xs text-dnd-amber break-words">
                 {t('character.conditions.effect.save_any', {
-                  ability: t(`character.ability.${ps.ability}_short`), dc: ps.dc,
+                  ability: [ps.ability, ps.alt_ability].filter(Boolean).map((a) => t(`character.ability.${a}_short`)).join(' / '), dc: ps.dc,
                 })}
                 {' — '}{formatCondition(ps.slug, true, t)}
               </p>

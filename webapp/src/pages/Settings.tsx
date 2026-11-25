@@ -665,19 +665,21 @@ export default function Settings() {
 
       <div className="border-b border-dnd-border/60 px-1 py-3">
         <div className="space-y-3">
-          <SwitchToggle
-            checked={settings.encumbrance_variant === true}
-            pending={updateMutation.isPending && activeSetting === 'encumbrance_variant'}
-            onChange={(next) => {
-              setActiveSetting('encumbrance_variant')
-              updateMutation.mutate({ ...settings, encumbrance_variant: next })
-            }}
-            label={t('character.settings.encumbrance_variant_label')}
-            hint={t('character.settings.encumbrance_variant_hint', {
-              slow1: `−${formatLength(10, unitSystem)}`,
-              slow2: `−${formatLength(20, unitSystem)}`,
-            })}
-          />
+          {char.rules_edition !== '2024' && (
+            <SwitchToggle
+              checked={settings.encumbrance_variant === true}
+              pending={updateMutation.isPending && activeSetting === 'encumbrance_variant'}
+              onChange={(next) => {
+                setActiveSetting('encumbrance_variant')
+                updateMutation.mutate({ ...settings, encumbrance_variant: next })
+              }}
+              label={t('character.settings.encumbrance_variant_label')}
+              hint={t('character.settings.encumbrance_variant_hint', {
+                slow1: `−${formatLength(10, unitSystem)}`,
+                slow2: `−${formatLength(20, unitSystem)}`,
+              })}
+            />
+          )}
           <SwitchToggle
             checked={settings.coin_weight === true}
             pending={updateMutation.isPending && activeSetting === 'coin_weight'}

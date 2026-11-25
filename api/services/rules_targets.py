@@ -14,13 +14,15 @@ from fastapi import HTTPException, status
 from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.encounter import GmConditionApply, InternalConditionApply
-from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, item_concentration, upsert_effect
+from api.schemas.encounter import GmConditionApply, InternalConditionApply, SaveIn
+from api.services.condition_effects import (
+    ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, expire_effect, item_concentration, same_source, upsert_effect,
+)
 from api.services.effects import apply_conditions
 from api.services.history import add_history
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
-from core.rules.states import RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune
+from core.rules.states import EXCLUSIVE_TARGETS, RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune, target_key
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -40,12 +42,19 @@ async def pc_char_by_id(db: AsyncSession, char_id: int) -> Character:
     return char
 
 
+def knocked_prone(comb: Combatant, conditions: dict) -> dict:
+    """Le condizioni nuove di un mostro: chi diventa Privo di sensi cade Prono (2014 pag. 292; 2024 pag. 377), come per i PG in
+    ``apply_conditions``."""
+    fell = conditions.get("unconscious") and not (comb.conditions or {}).get("unconscious")
+    return {**conditions, "prone": True} if fell else conditions
+
+
 async def set_condition(db: AsyncSession, comb: Combatant, slug: str, value: Any) -> None:
     """Write one slug on the target's map; a falsy value drops the slug's effect."""
     if comb.kind == "pc":
         await apply_conditions(db, await pc_char(db, comb), {slug: value})
         return
-    comb.conditions = {**(comb.conditions or {}), slug: value}
+    comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), slug: value})
     if not value:
         await clear_effects_for(db, ("combatant", comb.id), [slug])
 
@@ -147,8 +156,8 @@ async def _activate_also(db: AsyncSession, eff: ConditionEffect, target: tuple[s
         else:
             comb = await db.get(Combatant, target[1])
             if not (comb.conditions or {}).get(slug):
-                comb.conditions = {**(comb.conditions or {}), slug: True}
-        await clear_effects_for(db, target, [slug])
+                comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), slug: True})
+        await clear_effects_for(db, target, [slug], *same_source(eff.source_combatant_id, eff.source_character_id, None))
         db.add(ConditionEffect(
             character_id=eff.character_id, combatant_id=eff.combatant_id, slug=slug, expiry_anchor=eff.expiry_anchor,
             expiry_edge=eff.expiry_edge, expiry_count=eff.expiry_count, source_combatant_id=eff.source_combatant_id,
@@ -160,8 +169,9 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
     """TS fallito: la condizione va sulla scheda o sul mostro e la durata decorre da ora."""
     others = (await db.execute(select(ConditionEffect).where(
         ConditionEffect.character_id == eff.character_id, ConditionEffect.combatant_id == eff.combatant_id,
-        ConditionEffect.slug == eff.slug, ConditionEffect.id != eff.id))).scalars().all()
-    for other in others:  # un solo effetto per condizione, come in ``upsert_effect``
+        ConditionEffect.slug == eff.slug, ConditionEffect.id != eff.id,
+        *same_source(eff.source_combatant_id, eff.source_character_id, eff.source_note)))).scalars().all()
+    for other in others:  # un solo effetto per condizione e fonte, come in ``upsert_effect``
         await _delete_effect(db, other)
     if eff.character_id is not None:
         char = await pc_char_by_id(db, eff.character_id)
@@ -175,7 +185,7 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
     else:
         comb = await db.get(Combatant, eff.combatant_id)
         if not (comb.conditions or {}).get(eff.slug):
-            comb.conditions = {**(comb.conditions or {}), eff.slug: True}
+            comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), eff.slug: True})
         target = ("combatant", eff.combatant_id)
     eff.pending = False
     enc = await db.get(Encounter, eff.encounter_id) if eff.encounter_id else None
@@ -195,6 +205,39 @@ async def drop_pending_effects(db: AsyncSession, encounter_id: int) -> None:
     await db.flush()
 
 
+async def _release_previous_target(db: AsyncSession, char: Character, effect_key: str, slug: str, target: Combatant) -> None:
+    """Un bersaglio alla volta (Creare Servitore): la condizione data al precedente, se viene ancora da ``char``, cade."""
+    ref = ["character", target.character_id] if target.kind == "pc" else ["combatant", target.id]
+    held = (char.settings or {}).get(EXCLUSIVE_TARGETS) or {}
+    old = held.get(effect_key)
+    if old and old != ref:
+        kind, tid = old
+        eff = (await db.execute(select(ConditionEffect).where(
+            ConditionEffect.character_id == (tid if kind == "character" else None),
+            ConditionEffect.combatant_id == (tid if kind == "combatant" else None),
+            ConditionEffect.slug == slug, ConditionEffect.source_character_id == char.id))).scalars().first()
+        if eff is not None:
+            await expire_effect(db, eff, f"Terminata (nuovo bersaglio di {char.name}): {{label}}", None)
+    char.settings = {**(char.settings or {}), EXCLUSIVE_TARGETS: {**held, effect_key: ref}}
+
+
+async def _extends_own(db: AsyncSession, char: Character, target: Combatant, slug: str | None) -> bool:
+    """Il bersaglio porta già ``slug`` da chi usa il privilegio, non in attesa di un TS: si può prolungare."""
+    return bool(slug and (await db.execute(select(ConditionEffect.id).where(
+        ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
+        ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
+        ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
+        ConditionEffect.source_character_id == char.id))).first())
+
+
+async def target_immune(db: AsyncSession, char: Character, effect: dict, effect_key: str, target: Combatant) -> bool:
+    """Il bersaglio non si può più scegliere: TS superato o, con ``immune_on_end``, effetto già usato su di lui. Finché
+    l'effetto dura lo si prolunga (Sguardo Ipnotico 2014: «una volta finito l'effetto»)."""
+    if not (effect.get("immune_on_success") or effect.get("immune_on_end")) or not is_target_immune(char, effect_key, target):
+        return False
+    return not (effect.get("extends") and await _extends_own(db, char, target, effect.get("condition")))
+
+
 async def apply_target_effect(
     db: AsyncSession, char: Character, enc: Encounter, mine: Combatant, target: Combatant, effect_key: str,
 ) -> tuple[bool, PendingSave | None]:
@@ -202,15 +245,11 @@ async def apply_target_effect(
 
     Con un TS la condizione non c'è ancora: nasce un effetto ``pending`` e il TS ne decide la sorte."""
     effect = pending_target_effect(char, effect_key)
-    if effect.get("immune_on_success") and is_target_immune(char, effect_key, target):
+    if await target_immune(db, char, effect, effect_key, target):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "target_immune"})
     slug = effect.get("condition")
     with_save = bool(slug and effect.get("save_ability") and effect.get("on_failure_only", True))
-    extending = bool(with_save and effect.get("extends") and (await db.execute(select(ConditionEffect.id).where(
-        ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
-        ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
-        ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
-        ConditionEffect.source_character_id == char.id))).first())
+    extending = bool(with_save and effect.get("extends") and await _extends_own(db, char, target, slug))
     if extending:
         with_save = False  # prolungamento: la condizione c'è già da parte nostra, la durata si rinnova senza un nuovo TS
     if with_save and (await db.execute(select(ConditionEffect.id).where(
@@ -221,14 +260,21 @@ async def apply_target_effect(
     turn = dict(char.turn_state or {})
     turn["target_effects"] = {k: v for k, v in turn["target_effects"].items() if k != effect_key}
     char.turn_state = turn
+    if effect.get("immune_on_end") and not extending:  # finito l'effetto il bersaglio non si sceglie più; mentre dura si prolunga
+        add_target_immunity(char, effect_key, target_key(target))
     if not slug:
         return False, None
+    if effect.get("exclusive"):
+        await _release_previous_target(db, char, effect_key, slug, target)
     expiry, anchor_id = _expiry(effect, enc)
     anchor_id = anchor_id or mine.id  # shortcut: con «turno in corso» la fonte registrata è chi agisce, non chi ha usato il privilegio
     if not with_save:
         for each in (slug, *effect.get("also", ())):
             await apply_condition_to_combatant(db, enc, target, InternalConditionApply(
                 slug=each, expiry=expiry, source_combatant_id=anchor_id,
+                # applicata subito ma con il TS ripetuto per terminarla (Colpo Accecante 2024)
+                save=SaveIn(ability=effect["save_ability"], dc=effect["save_dc"], edge=effect["repeat_save"])
+                if effect.get("repeat_save") and effect.get("save_ability") else None,
                 ends_with_concentration=bool(effect.get("ends_with_concentration"))), applied_by_gm=False)
         add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
@@ -247,7 +293,8 @@ async def apply_target_effect(
         also_slugs=",".join(effect.get("also", ())) or None,
         # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito
         save_ability=effect["save_ability"] if effect.get("repeat_save") else None,
-        save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"))
+        save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"),
+        save_alt_ability=effect.get("save_alt_ability"))
     db.add(eff)
     await db.flush()
     save = PendingSave(

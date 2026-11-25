@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  equipmentToForm, loadCatalog, loadSpellCatalog, localized, searchCatalog, spellCatalogKind, spellToForm, upcastExtraDice, type SpellEntry,
+  equipmentToForm, loadCatalog, loadSpellCatalog, localized, searchCatalog, spellCatalogKind, spellToForm, upcastBoth, upcastExtraDice, type SpellEntry,
 } from '@/lib/srd/catalog'
 
 const find = async (index: string) => (await loadCatalog('spells')).find((e) => e.index === index) as SpellEntry
@@ -42,12 +42,12 @@ describe('catalog', () => {
     expect(spellToForm(await find('fireball'), 'en', 'imperial').range_area).toBe('150 ft (sphere 20 ft)')
   })
 
-  it('tolerates healing and no-attack spells; sleep never prefills upcast dice', async () => {
+  it('tolerates healing and no-attack spells; sleep prefills its pool dice', async () => {
     expect(spellToForm(await find('cure-wounds'), 'it', 'imperial')).toMatchObject({ damage_dice: '', damage_type: '', attack_save: '' })
     expect(spellToForm(await find('magic-missile'), 'it', 'imperial')).toMatchObject({ damage_dice: '3d4+3', attack_save: '' })
     const sleep = spellToForm(await find('sleep'), 'it', 'imperial')
     expect(sleep.damage_dice).toBe('5d8')
-    expect(sleep.higher_levels_dice).toBe('')
+    expect(sleep.higher_levels_dice).toBe('2d8')  // 2014 pag. 279: la riserva cresce di 2d8 per slot oltre il 1°
   })
 
   it('upcastExtraDice mirrors the server rule', () => {
@@ -55,7 +55,16 @@ describe('catalog', () => {
     expect(upcastExtraDice(fb, 5, 6)).toBe(2)
     expect(upcastExtraDice(fb, 3, 6)).toBe(0)
     expect(upcastExtraDice(fb, 5, 8)).toBe(0)
-    expect(upcastExtraDice({ ...fb, srd_index: 'sleep' }, 5, 6)).toBe(0)
+    // Sonno 2014 (pag. 279): +2d8 per slot anche sulle righe salvate senza dadi di scalata
+    expect(upcastExtraDice({ level: 1, srd_index: 'sleep', higher_levels_dice: null }, 3, 8)).toBe(4)
+    // Arma Spirituale: +1d8 ogni due slot nel 2014 (pag. 215), a ogni slot nel 2024 (pag. 319-320)
+    expect(upcastExtraDice({ level: 2, srd_index: 'spiritual-weapon' }, 4, 8, '2014')).toBe(1)
+    expect(upcastExtraDice({ level: 2, srd_index: 'spiritual-weapon', higher_levels_dice: '1d8' }, 4, 8, '2024')).toBe(2)
+    // Raffica di Spine 2014 (pag. 266): al massimo 6d10
+    expect(upcastExtraDice({ level: 1, srd_index: 'hail-of-thorns', higher_levels_dice: '1d10' }, 9, 10, '2014')).toBe(5)
+    expect(upcastBoth('flame-strike', '2024')).toBe(true)
+    expect(upcastBoth('jallarzis-storm-of-radiance', '2024')).toBe(true)
+    expect(upcastBoth('flame-strike', '2014')).toBe(false)
     expect(upcastExtraDice({ level: 0, higher_levels_dice: '1d6' }, 5, 6)).toBe(0)
     expect(upcastExtraDice({ level: 3 }, 5, 6)).toBe(0)
     // Dardo incantato: un dardo (1d4+1) in più per livello, il bonus non conta come dado.

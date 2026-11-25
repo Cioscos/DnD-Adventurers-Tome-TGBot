@@ -12,7 +12,7 @@ _AB = {"S": "strength", "D": "dexterity", "C": "constitution", "I": "intelligenc
 ALL6 = "SDCIWH"
 
 
-def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=False, armor=None, repeatable=False) -> FeatSpec:
+def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=False, armor=None, repeatable=False, pact=True) -> FeatSpec:
     """`inc` = lettere delle caratteristiche aumentabili, `pre` = lettere + minimo (es. "SD13")."""
     abilities = tuple(_AB[c] for c in pre.rstrip("0123456789"))
     return FeatSpec(
@@ -21,7 +21,7 @@ def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=Fals
         category="epic_boon" if boon else "general", min_level=19 if boon else 4,
         prereq_abilities=(abilities, int(pre.lstrip(ALL6))) if pre else None,
         needs_spellcasting=caster, max_score=30 if boon else 20, save_proficiency_from_increase=save,
-        prereq_armor=armor, repeatable=repeatable)
+        prereq_armor=armor, repeatable=repeatable, pact_magic_counts=pact)
 
 
 def _o24(key, it, en, sit, sen, repeatable=False) -> FeatSpec:
@@ -94,7 +94,7 @@ FEATS_2024: list[FeatSpec] = [
     _p24("boon_recovery", "Dono del Recupero", "Boon of Recovery", ALL6, "Una volta per riposo lungo resti a 1 PF invece di 0 e curi metà del massimo; riserva di dieci d10.", "Once per long rest drop to 1 HP instead of 0 and heal half your maximum; a pool of ten d10.", boon=True),
     _p24("boon_skill", "Dono dell'Abilità", "Boon of Skill", ALL6, "Competenza in tutte le abilità e Maestria in una a scelta.", "Proficiency in every skill and Expertise in one of your choice.", boon=True),
     _p24("boon_speed", "Dono della Velocità", "Boon of Speed", ALL6, "Velocità +30 piedi; Disimpegno come azione Bonus che ti libera dalla presa.", "Speed +30 ft; Disengage as a Bonus Action that also frees you from grapples.", boon=True),
-    _p24("boon_spell_recall", "Dono del Richiamo degli incantesimi", "Boon of Spell Recall", "IWH", "Lanciando slot di 1-4 livello tira 1d4: se uguale al livello, lo slot non si consuma.", "Casting with a 1st-4th level slot, roll 1d4: if it equals the slot level, it isn't spent.", caster=True, boon=True),
+    _p24("boon_spell_recall", "Dono del Richiamo degli incantesimi", "Boon of Spell Recall", "IWH", "Lanciando slot di 1-4 livello tira 1d4: se uguale al livello, lo slot non si consuma.", "Casting with a 1st-4th level slot, roll 1d4: if it equals the slot level, it isn't spent.", caster=True, boon=True, pact=False),
     _p24("boon_night_spirit", "Dono dello Spirito della notte", "Boon of the Night Spirit", ALL6, "Al buio diventi invisibile e resisti a quasi tutti i danni.", "In dim light or darkness you turn invisible and resist most damage.", boon=True),
     _p24("boon_truesight", "Dono della Vista veritiera", "Boon of Truesight", ALL6, "Vista veritiera fino a 60 piedi.", "Truesight out to 60 feet.", boon=True),
 ]

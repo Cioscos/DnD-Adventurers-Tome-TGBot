@@ -8,13 +8,15 @@ from dataclasses import dataclass
 class HealingSpec:
     """``dice``: dadi base (``NdM``); ``per_level``: dadi in più per ogni livello di slot oltre quello dell'incantesimo
     (stessi lati); ``fixed``/``fixed_per_level``: PF fissi (Cura Completa); ``add_mod``: somma il modificatore da incantatore;
-    ``targets``: quante creature cura al massimo (chi lancia compreso), ognuna dello stesso totale."""
+    ``targets``: quante creature cura al massimo (chi lancia compreso), ognuna dello stesso totale;
+    ``pool``: i PF si dividono fra i bersagli, una quantità ciascuno (Guarigione di Massa)."""
     dice: str | None
     per_level: str | None = None
     fixed: int = 0
     fixed_per_level: int = 0
     add_mod: bool = True
     targets: int = 1
+    pool: bool = False
 
 
 SPELL_HEALING: dict[str, HealingSpec] = {
@@ -26,10 +28,9 @@ SPELL_HEALING: dict[str, HealingSpec] = {
     "heal": HealingSpec(None, fixed=70, fixed_per_level=10, add_mod=False),
     "regenerate": HealingSpec("4d8", fixed=15, add_mod=False),
     # Gli altri che ridanno PF: i privilegi che contano «ogni incantesimo di 1° livello o superiore che ripristina PF»
-    # (Discepolo della Vita) li vedono. Bacca benefica: una bacca (ognuna ridà 1 PF).
-    "mass-heal": HealingSpec(None, fixed=700, add_mod=False),
-    "revivify": HealingSpec(None, fixed=1, add_mod=False),
-    "raise-dead": HealingSpec(None, fixed=1, add_mod=False),
+    # (Discepolo della Vita) li vedono. Bacca benefica: una bacca (ognuna ridà 1 PF). Rinascita e Rianimare Morti no:
+    # riportano in vita solo una creatura morta (2014 pag. 271 e 270), cosa che fa POST /revive, e il tiro curerebbe i vivi.
+    "mass-heal": HealingSpec(None, fixed=700, add_mod=False, targets=20, pool=True),  # «quante creature vuole»: oltre il tavolo
     "goodberry": HealingSpec(None, fixed=1, add_mod=False),
 }
 

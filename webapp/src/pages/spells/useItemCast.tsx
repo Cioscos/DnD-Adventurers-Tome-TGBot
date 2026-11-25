@@ -5,6 +5,7 @@ import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { notifyCastError, notifyMutationError } from '@/lib/mutationError'
+import { CastCancelled, castWithConfirm } from '@/lib/rollOptions'
 import { resolveItemCast, matchingSpell, type ResolvedItemCast } from '@/lib/itemCast'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import { needsEffectAsk } from '@/lib/spellChoice'
@@ -24,7 +25,7 @@ export function useItemCast(charId: number) {
 
   const mutation = useMutation({
     mutationFn: ({ itemId, spellIndex, pick }: { itemId: number; spellIndex: number; name: string; pick?: SpellEffectPick }) =>
-      api.items.cast(charId, itemId, spellIndex, pick),
+      castWithConfirm((confirm) => api.items.cast(charId, itemId, spellIndex, confirm ? { ...pick, confirm } : pick)),
     onSuccess: (updated, { itemId, spellIndex }) => {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
@@ -33,6 +34,7 @@ export function useItemCast(charId: number) {
       setResolved(item ? resolveItemCast(updated, item, spellIndex) : null)
     },
     onError: (err) => {
+      if (err instanceof CastCancelled) return  // il giocatore ha rinunciato: nessun errore da mostrare
       const raw = err instanceof ApiError ? err.detail : undefined
       const detail = typeof raw === 'string' ? raw : (raw as { code?: string } | null)?.code ?? ''
       if (['invalid_target', 'target_dead', 'invalid_choice'].includes(detail)) notifyCastError(err)

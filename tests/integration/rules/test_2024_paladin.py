@@ -184,11 +184,12 @@ async def test_a_cure_costs_exactly_five_points_per_condition_and_needs_a_condit
 
 async def test_restoring_touch_adds_six_conditions_at_level_14_and_each_costs_five(client):
     cid = await _paladin24(client, 14)
-    await _conditions(client, cid, poisoned=True, blinded=True, stunned=True, prone=True)
-    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "blinded", "stunned"]))
+    # 2024 Incapacitato p.369: da stordito niente Azione Bonus, quindi una condizione che non incapacita
+    await _conditions(client, cid, poisoned=True, blinded=True, deafened=True, prone=True)
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "blinded", "deafened"]))
     assert r.status_code == 200, r.text
     left = (await _full(client, cid))["conditions"]
-    assert not any(left.get(c) for c in ("poisoned", "blinded", "stunned")) and left.get("prone") is True
+    assert not any(left.get(c) for c in ("poisoned", "blinded", "deafened")) and left.get("prone") is True
     assert (await _ability(client, cid, LOH))["uses"] == 70 - 15
 
 
@@ -423,7 +424,7 @@ async def test_a_slot_smite_is_not_offered_after_another_slot_spell_this_turn_bu
     assert SMITE not in keys and FREE in keys
 
 
-async def test_smite_is_for_melee_weapons_and_unarmed_strikes_not_ranged_or_thrown(client):
+async def test_smite_is_for_melee_weapons_even_thrown_and_unarmed_strikes_not_ranged_weapons(client):
     cid = await _paladin24(client, 5)
     wid = await _sword(client, cid)
     bow = await _item(client, cid, "Arco", damage_dice="1d8", weapon_type="ranged", properties=["ammunition"])
@@ -431,7 +432,8 @@ async def test_smite_is_for_melee_weapons_and_unarmed_strikes_not_ranged_or_thro
     assert {SMITE, FREE} <= set(await _melee_keys(client, cid, wid, attack_mode="melee", grip="one"))
     assert {SMITE, FREE} <= set(await _melee_keys(client, cid))
     assert not {SMITE, FREE} & set(await _melee_keys(client, cid, bow))
-    assert not {SMITE, FREE} & set(await _melee_keys(client, cid, axe, attack_mode="thrown", grip="one"))
+    # 2024: Punizione Divina pag. 265 vuole un'arma da mischia, e lanciata resta tale (Lancio, pag. 214): CB-4475
+    assert {SMITE, FREE} <= set(await _melee_keys(client, cid, axe, attack_mode="thrown", grip="one"))
 
 
 async def test_smite_on_an_unarmed_strike_and_the_critical_doubles_the_dice(client):

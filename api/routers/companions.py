@@ -21,6 +21,7 @@ from api.schemas.companion import (
 from api.routers.hp import update_hp
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
+from api.services.effects import end_hide
 from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, remember_roll, use_options
 from core.rules.roll_options import refund_spent
@@ -32,7 +33,8 @@ from api.services.wild_shape import (
 from api.services.history import add_history
 from core.db.models import Ability, Character, Companion, SpellSlot
 from core.rules.companions import (
-    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
+    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition,
+    rangers_beast_allowed, stat_int, summon_temp_hp, thrall_stats,
 )
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
@@ -68,6 +70,8 @@ def _read(char: Character, comp: Companion) -> CompanionRead:
         out.save_dc, out.fly_or_swim_m, out.can_resist = stats.save_dc, stats.fly_or_swim_m, stats.can_resist
         out.damage_type_options = list(stats.damage_types)
         out.current_hp = min(comp.current_hp, out.max_hp)
+        if stats.hit_dice:
+            out.statblock = {**out.statblock, "hit_dice": stats.hit_dice}
     return out
 
 
@@ -94,6 +98,12 @@ async def _refuse_second_beast(session: AsyncSession, char: Character, comp: Com
         Companion.id != comp.id, Companion.current_hp > 0).limit(1))
     if alive is not None:
         raise HTTPException(status_code=422, detail="companion_exists")
+
+
+def _refuse_beast_out_of_rule(statblock: dict) -> None:
+    """Compagno del Ranger 2014 oltre taglia, GS o tipo: si ammette solo confermando (D-042), come la Forma Selvatica."""
+    if not rangers_beast_allowed(statblock):
+        raise HTTPException(status_code=409, detail={"code": "beast_not_allowed"})
 
 
 @router.get("/{char_id}/companions", response_model=list[CompanionRead])
@@ -128,13 +138,15 @@ async def create_companion(
             raise HTTPException(status_code=422, detail="feature_unavailable")
         if any(c.feature_key == body.feature_key and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
+        if body.feature_key == BEAST_COMPANION and not body.force:
+            _refuse_beast_out_of_rule(body.statblock)
     limits = form_limits(char)
     if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
         raise HTTPException(status_code=409, detail={"code": "use_activate"})
     if body.kind == "wild_shape" and limits is not None and limits.known_forms is not None:
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
             raise HTTPException(status_code=422, detail="known_forms_limit")
-    data = body.model_dump()
+    data = body.model_dump(exclude={"force"})
     school = data.pop("spell_school", None)  # l'incantesimo che l'ha creato: i privilegi del Mago ne danno PF temporanei
     if school == "necromancy":  # Servitori Non Morti lo legge dallo statblock: PF e danni seguono il livello del mago
         data["statblock"] = {**data["statblock"], THRALL_KEY: True}
@@ -163,7 +175,7 @@ async def update_companion(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
     was_active = comp.is_active
-    changes = body.model_dump(exclude_unset=True)
+    changes = body.model_dump(exclude_unset=True, exclude={"force"})
     for required in ("kind", "name", "statblock", "max_hp", "armor_class", "temp_hp", "is_active", "current_hp"):
         if required in changes and changes[required] is None:
             raise HTTPException(status_code=422, detail=f"{required}_required")
@@ -172,6 +184,8 @@ async def update_companion(
         changes["statblock"] = {k: v for k, v in changes["statblock"].items() if k != "hit_dice_spent"}
         if kept is not None:
             changes["statblock"]["hit_dice_spent"] = kept
+        if comp.feature_key == BEAST_COMPANION and not body.force and changes["statblock"] != comp.statblock:
+            _refuse_beast_out_of_rule(changes["statblock"])
     limits = form_limits(char)
     if changes.get("kind") == "wild_shape" and comp.kind != "wild_shape" and limits is not None and limits.known_forms is not None:
         rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
@@ -382,13 +396,25 @@ def _save_beast_state(char: Character, beast: dict) -> None:
 
 def _take_beast_attack(char: Character, comp: Companion, reaction: bool) -> None:
     """La bestia del ranger attacca solo se il ranger glielo ha ordinato in questo turno (un attacco per ordine, due con Furia
-    Bestiale); la sua reazione non ha bisogno di ordini, e con il ranger incapacitato agisce da sola."""
+    Bestiale); la sua reazione non ha bisogno di ordini, e con il ranger incapacitato agisce da sola. Una reazione per round e,
+    da sola, la sua azione: un attacco o il Multiattacco della scheda (2014 p.106, 2024 p.122). Lo stato «beast» si azzera
+    al turno del ranger, che è anche quello della bestia."""
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
-    if reaction or is_incapacitated(char):
-        return
     beast = _beast_state(char)
+    if beast.get("id") != comp.id:
+        beast = {}
+    if reaction:
+        if beast.get("reaction_used"):
+            raise HTTPException(status_code=409, detail={"code": "beast_reaction_used"})
+        _save_beast_state(char, {**beast, "id": comp.id, "reaction_used": True})
+        return
+    if is_incapacitated(char) and not beast.get("acted_alone"):  # la sua azione, una sola nel turno
+        own = max(1, stat_int(comp.statblock, "multiattack", high=MAX_MULTIATTACK))
+        beast = {**beast, "id": comp.id, "acted_alone": True, "attacks_left": max(own, int(beast.get("attacks_left") or 0))}
     if beast.get("id") != comp.id or int(beast.get("attacks_left") or 0) < 1:
+        if beast.get("acted_alone"):
+            raise HTTPException(status_code=409, detail={"code": "beast_acted"})
         raise HTTPException(status_code=409, detail={"code": "no_order"})
     _save_beast_state(char, {**beast, "attacks_left": beast["attacks_left"] - 1, "attacked": True})
 
@@ -467,10 +493,11 @@ async def spend_beast_hit_dice(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceResult:
-    """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
+    """La bestia del ranger, o la forma attiva con PF propri (Forma Selvatica 2014 pag. 66), spende Dadi Vita (quelli del suo
+    profilo) in un riposo breve: dado + Costituzione, mai sotto 0 (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello attuale (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
-    if comp.feature_key != BEAST_COMPANION:
+    if comp.feature_key not in BEAST_KEYS and not (form_own_hp(char) and await get_active_form(session, char.id) is comp):
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
@@ -478,7 +505,8 @@ async def spend_beast_hit_dice(
     if comp.current_hp >= top:
         raise HTTPException(status_code=409, detail={"code": "hp_full"})
     sb = dict(comp.statblock or {})
-    dice = DICE_RE.match(str(sb.get("hit_dice") or ""))
+    stats = companion_stats(char, comp)
+    dice = DICE_RE.match(str((stats and stats.hit_dice) or sb.get("hit_dice") or ""))
     total, sides = (int(dice.group(1)), int(dice.group(2))) if dice else (0, 0)
     spent = stat_int(sb, "hit_dice_spent")
     if not sides or total - spent < body.count:
@@ -488,7 +516,8 @@ async def spend_beast_hit_dice(
     rolls = [random.randint(1, sides) for _ in range(body.count)]
     record_dice(char, [(f"d{sides}", r) for r in rolls])
     before = comp.current_hp
-    comp.current_hp = min(top, before + sum(max(0, r + mod) for r in rolls))
+    low = 1 if character_edition(char) == "2024" else 0
+    comp.current_hp = min(top, before + sum(max(low, r + mod) for r in rolls))
     comp.statblock = {**sb, "hit_dice_spent": spent + body.count}  # nuovo dict: SQLAlchemy non vede le mutazioni in place
     add_history(session, char_id, "companion_hp", f"{comp.name}: {body.count} Dadi Vita, +{comp.current_hp - before} PF")
     return HitDiceResult(companion=_read(char, comp), rolls=rolls, healed=comp.current_hp - before,
@@ -545,7 +574,11 @@ async def companion_attack(
     is_fumble = outcome.kept == 1
     is_critical = outcome.kept >= applied.crit_min or (opts.force_crit and not is_fumble)
     if in_form:  # solo la forma è il druido che attacca: un famiglio o un compagno non chiude gli stati del personaggio
+        end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio (2024 p.368)
         end_on_action(char, "attack")  # il Vantaggio di Passo Lunare vale per il prossimo tiro per colpire, anche della forma
+        # è un attacco del turno (l'Ira lo guarda, 2014 p.48 e 2024 p.51); own_slot: il Multiattacco o la reazione della forma
+        # non sono contati fra gli attacchi dell'azione Attacco del druido
+        spend(char, "attack", own_slot=True)
 
     rolls: list[int] = []
     flat = 0

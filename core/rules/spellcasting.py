@@ -16,7 +16,7 @@ from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.schools import normalize_school  # noqa: F401  (ri-esportata: la usano i chiamanti storici)
-from core.rules.states import casting_blocked_by, free_cast_state, has_state
+from core.rules.states import casting_blocked_by, has_state
 from core.rules.types import Edition
 
 
@@ -141,10 +141,16 @@ def caster_ability(row: Any) -> str:
     return stored or ("intelligence" if getattr(row, "subclass_key", None) in THIRD_SUBCLASSES else "")
 
 
+def _stats(char: Any, class_id: int | None, name: str, ability: str, dc_bonus: int = 0) -> CasterStats:
+    """CD e attacco con questa caratteristica, bonus degli oggetti compresi."""
+    attack = char.proficiency_bonus + effective_ability_mod(char, ability)
+    return CasterStats(class_id, name, ability, 8 + attack + dc_bonus + item_bonus_total(char.items, "spell_dc"),
+                       attack + item_bonus_total(char.items, "spell_attack"))
+
+
 def caster_stats(char: Any) -> list[CasterStats]:
     out: list[CasterStats] = []
     edition = character_edition(char)
-    pb = char.proficiency_bonus
     for row in char.classes:
         ability = caster_ability(row)
         if not ability:
@@ -153,10 +159,8 @@ def caster_stats(char: Any) -> list[CasterStats]:
         # anche con una caratteristica salvata; una classe custom conserva la propria.
         if normalize_class_name(row.class_name) is not None and caster_kind(row, edition) is None:
             continue
-        mod = effective_ability_mod(char, ability)
         innate = 1 if edition == "2024" and row_class_key(row) == "sorcerer" and has_state(char, "innate_sorcery") else 0  # Stregoneria Innata
-        out.append(CasterStats(row.id, row.class_name, ability, 8 + pb + mod + innate + item_bonus_total(char.items, "spell_dc"),
-                               pb + mod + item_bonus_total(char.items, "spell_attack")))
+        out.append(_stats(char, row.id, row.class_name, ability, innate))
     return out
 
 
@@ -174,8 +178,7 @@ def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
     key = getattr(spell, "srd_index", None)
     for spec, row in active_features(char):
         if spec.dc_ability and key and key in spec.granted_spells and getattr(spell, "class_id", row.id) in (None, row.id):
-            mod = effective_ability_mod(char, spec.dc_ability)
-            return CasterStats(row.id, row.class_name, spec.dc_ability, 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+            return _stats(char, row.id, row.class_name, spec.dc_ability)
     return None
 
 
@@ -189,8 +192,7 @@ def _feat_stats(char: Any, spell: Any) -> CasterStats | None:
                 else {"ability": (row.options or {}).get("spell_ability")} if spec.class_key == "species" else {})
         own = {*(opts.get("cantrips") or []), *(opts.get("spell") or []), *(opts.get("rituals") or []), *spec.granted_spells}
         if opts.get("ability") and names & own:  # anche gli incantesimi fissi del talento (Passo velato, Mano magica)
-            mod = effective_ability_mod(char, opts["ability"])
-            return CasterStats(None, "feat", opts["ability"], 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+            return _stats(char, None, "feat", opts["ability"])
     return None
 
 
@@ -201,25 +203,53 @@ def spell_stats(char: Any, spell: Any) -> CasterStats | None:
     return own or _feat_stats(char, spell) or _granted_stats(char, spell) or best_caster(char)
 
 
+# La CD scritta sulla carta, non quella di chi lancia: il TS lo fa chi lancia (Contattare Altri Piani, CD 15 in entrambe le edizioni)
+FIXED_SAVE_DC = {"contact-other-plane": 15}
+
+
 def concentration_dc(edition: Edition, damage: int) -> int:
     dc = max(10, damage // 2)
     return min(dc, 30) if edition == "2024" else dc
 
 
-# shortcut: il talento 2014 non è nel catalogo, si riconosce dal nome anche se scritto a mano; da togliere se ci entra.
+# shortcut: il talento 2014 scritto a mano non ha feature_key, si riconosce dal nome.
 _RITUAL_FEAT_NAMES = {"incantatore rituale", "ritual caster"}
 
 
-def _has_ritual_feat(char: Any) -> bool:
-    return any(a.feature_key == "feat.ritual_caster" or (a.name or "").strip().lower() in _RITUAL_FEAT_NAMES
+def _feat_ritual(char: Any, spell: Any = None) -> bool:
+    """Incantatore Rituale 2014 (pag. 168): celebra i rituali del suo libro, scelti col talento o copiati dopo (senza classe).
+    Senza incantesimo: il personaggio ha il talento."""
+    return any((a.feature_key == "feat.ritual_caster" or (a.name or "").strip().lower() in _RITUAL_FEAT_NAMES)
+               and (spell is None or spell.class_id is None or spell.srd_index in ((a.options or {}).get("rituals") or []))
                for a in char.abilities)
 
 
+def _granted_by(char: Any, spell: Any, flag: str) -> bool:
+    """L'incantesimo è concesso (``granted_spells``) alla classe a cui è assegnato da un privilegio con ``flag``."""
+    return any(getattr(spec, flag) and spell.srd_index in spec.granted_spells and spell.srd_index in GRANTED_SPELLS
+               and spell.class_id == row.id for spec, row in active_features(char))
+
+
 def granted_ritual_only(char: Any, spell: Any) -> bool:
-    """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), alla
-    classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
-    return any(spell.srd_index == key and spec.granted_ritual_only and spell.class_id == row.id
-               for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
+    """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), o scelto
+    con una sua scelta (i rituali del Libro degli Antichi Segreti 2014), alla classe a cui è assegnato: chi lo ha da
+    un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri.
+    Anche i rituali del libro di Incantatore Rituale 2014 (pag. 168), se non sono pure di una classe o già sulla scheda."""
+    srd_index = getattr(spell, "srd_index", None)
+    if spell.class_id is None and srd_index and any(
+            a.feature_key == "feat.ritual_caster"
+            and srd_index in ((a.options or {}).get("granted", (a.options or {}).get("rituals")) or [])
+            for a in char.abilities):
+        return True
+    return _granted_by(char, spell, "granted_ritual_only") or any(
+        spec.granted_ritual_only and spell.class_id == row.id
+        and any(ch.spell_pick and (srd_index or spell.name) in ((getattr(row, "options", None) or {}).get(ch.group) or []) for ch in spec.choices)
+        for spec, row in active_features(char))
+
+
+def granted_ritual(char: Any, spell: Any) -> bool:
+    """Un privilegio fa lanciare l'incantesimo come rituale: solo così, o anche con uno slot (Patto della Catena 2014)."""
+    return granted_ritual_only(char, spell) or _granted_by(char, spell, "granted_ritual")
 
 
 def _book_rituals(char: Any, spell: Any) -> bool:
@@ -309,9 +339,9 @@ def can_ritual(char: Any, spell: Any = None) -> bool:
     """2014: Lancio Rituale di classe o talento. 2024: chiunque abbia incantesimi preparati. Un incantesimo concesso
     come rituale si lancia anche senza."""
     edition = character_edition(char)
-    if spell is not None and granted_ritual_only(char, spell):
+    if spell is not None and granted_ritual(char, spell):
         return True
-    if _has_ritual_feat(char) or _book_rituals(char, spell):
+    if _feat_ritual(char, spell) or _book_rituals(char, spell):
         return True
     if edition == "2014":  # il Lancio Rituale è della classe a cui appartiene l'incantesimo, non di tutto il personaggio
         return has_ritual_caster(_spell_rows(char, spell))
@@ -332,7 +362,7 @@ def _ritual_unprepared(char: Any, spell: Any) -> bool:
     if character_edition(char) == "2024":
         return True
     # 2014: chi non prepara li conosce, il talento ha un suo libro.
-    return not _has_ritual_feat(char) and any(row_class_key(c) in ("cleric", "druid") for c in rows)
+    return not _feat_ritual(char, spell) and any(row_class_key(c) in ("cleric", "druid") for c in rows)
 
 
 def bonus_cast(char: Any, spell: Any) -> bool:
@@ -365,11 +395,13 @@ def _armor_block(char: Any) -> bool:
 
 
 def _form_block(char: Any, spell: Any = None) -> bool:
-    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali) o che
-    concede proprio questo (Incantesimi del Circolo della Luna)."""
+    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali; 2014 pag. 67:
+    solo quelli della classe del privilegio) o che concede proprio questo (Incantesimi del Circolo della Luna)."""
     index = getattr(spell, "srd_index", None)
+    own = {c.id for c in _spell_rows(char, spell)} if character_edition(char) == "2014" else None
     return (any(s.get("key") == "wild_shape" for s in char.active_states or [])
-            and not any(spec.cast_in_form or (index and index in spec.cast_in_form_spells) for spec, _row in active_features(char)))
+            and not any((spec.cast_in_form and (own is None or row.id in own)) or (index and index in spec.cast_in_form_spells)
+                        for spec, row in active_features(char)))
 
 
 def at_will(char: Any, spell: Any) -> bool:
@@ -387,7 +419,7 @@ _MATERIAL = re.compile(r"^M(?![A-Za-z])", re.IGNORECASE)
 
 
 # shortcut: riconosce il testo libero dei componenti (it/en), costo in monete e verbo «consum*»; rivederlo se cambia il formato dell'SRD
-_COSTLY_CONSUMED = re.compile(r"(?=.*\d\s*(?:mo|gp|mp|pp|ma|sp|ar|cp)\b)(?=.*consum)", re.IGNORECASE | re.DOTALL)
+_COSTLY_CONSUMED = re.compile(r"(?=.*\d\+?,?\s*(?:mo|gp|mp|pp|ma|sp|ar|cp|monete|copper)\b)(?=.*consum)", re.IGNORECASE | re.DOTALL)
 
 
 def _form_materials(char: Any, spell: Any) -> str | None:
@@ -404,23 +436,25 @@ def _form_materials(char: Any, spell: Any) -> str | None:
     return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
 
 
-def _turn_warning(char: Any, spell: Any, slotless: bool | None = None) -> str | None:
-    kind = casting_kind(spell)
+def _turn_warning(char: Any, spell: Any, slotless: bool = False, quickened: bool = False) -> str | None:
+    kind = "bonus" if quickened else casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
-        free = free_cast_state(char, spell) if slotless is not False else None  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
-        if free is not None and (free.get("data") or {}).get("free_cast_slot", "action") is None:
-            return None
-        return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
+        if spell.level > 0 and turn.get("quickened_cast"):  # Incantesimo Rapido 2024 (pag. 142): dopo, solo trucchetti, comunque pagati
+            return "quickened_after"
+        # il limite è sullo slot speso (pag. 236): un lancio senza slot non ne spende un secondo
+        return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") and not slotless else None
     if kind == "bonus":
-        return "bonus_spell" if turn.get("spell_slot_cast") or turn.get("bonus_spell_cast") else None
+        # ogni incantesimo di livello già lanciato, anche senza slot (pag. 202)
+        return "bonus_spell" if any(turn.get(k) for k in ("spell_slot_cast", "leveled_cast", "bonus_spell_cast")) else None
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
-def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = None) -> list[str]:
-    """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
+def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool = False, quickened: bool = False) -> list[str]:
+    """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri.
+    ``quickened``: il lancio usa Incantesimo Rapido, quindi l'azione bonus."""
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char, spell):
         out.append("wild_shape")
@@ -434,7 +468,7 @@ def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = N
         out.append("ritual_only")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
-    warning = _turn_warning(char, spell, slotless)
+    warning = _turn_warning(char, spell, slotless, quickened)
     return [*out, warning] if warning else out
 
 
@@ -466,7 +500,7 @@ def ki_cast_info(char: Any, spell: Any) -> KiCast | None:
         return None
     for spec, row in active_features(char):
         for ks in spec.ki_spells:
-            if ks.spell != key:
+            if ks.spell != key or row.level < ks.min_level:
                 continue
             pool = next((a for a in char.abilities if a.feature_key == ks.pool), None)
             if pool is None or pool.max_uses is None:

@@ -45,9 +45,11 @@ from api.services.choices import take_feat
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, TOOL_SEED_FLAG, sync_level_choices
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
+from core.rules.states import ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_MANUAL, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
-from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
+from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG, normalize
+from core.rules.weapons import WEAPONS
+from core.data.damage_types import DAMAGE_TYPES
 from api.routers import maps, notes, silhouette
 from api.schemas.character import (
     CharacterCreate,
@@ -60,7 +62,7 @@ from api.schemas.character import (
     SavingThrowsUpdate,
     XPUpdate,
 )
-from api.schemas.common import D20RollSubmission, RollResult, ToolCheckSubmission
+from api.schemas.common import D20RollSubmission, PendingSaveSubmission, RollResult, ToolCheckSubmission
 from api.schemas.condition_effects import EscapeResult, PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
@@ -88,14 +90,16 @@ from core.rules.starting_equipment import (
 from core.data.backgrounds_2024 import BACKGROUNDS_2024, GOLD_OPTION, BackgroundData
 from core.data.feats_2024 import ALL_FEATS
 from core.rules.tools import add_tools
-from api.services.species_apply import apply_species, plan_species
+from api.services.species_apply import RACE_GRANTS, apply_species, plan_species
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, release_concentration_effects, upsert_effect
+from api.services.condition_effects import (
+    ExpirySpec, effects_for_character, expire_effect, pending_read, release_concentration_effects, upsert_effect,
+)
 from api.services.durations import end_concentration, tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -108,9 +112,9 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_level", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, CREATED_SLOTS,
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, TEMP_GIVEN, TEMP_RELEASE, TEMP_MANUAL, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
-                         SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, ASSASSIN_KITS_FLAG)
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, RACE_GRANTS, ASSASSIN_KITS_FLAG)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -244,10 +248,14 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
             full = _SHORT_ABILITY.get(k, k)
             if full not in scores:
                 raise bad(f"Unknown ability bonus: {k}")
-            scores[full] += v
+            if body.rules_edition != "2024":  # 2024: le specie non danno aumenti, solo il background (pag. 177; pag. 38)
+                scores[full] += v
         for k, v in sp.roll_notes.items():
             if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
                 raise bad(f"Invalid roll note: {k}")
+        if (any(w not in WEAPONS for w in sp.weapons) or any(t not in TOOLS for t in sp.tools)
+                or any(d not in DAMAGE_TYPES for d in sp.resistances)):
+            raise bad("Invalid species proficiency")
     if body.ability_scores or sp or bg:
         if any(not 3 <= v <= 20 for v in scores.values()):
             raise bad("Ability scores must be between 3 and 20")
@@ -273,6 +281,19 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
         char.settings = s
         langs = list(char.languages or [])
         char.languages = langs + [l for l in sp.languages if l not in langs]
+        granted = {"skills": [k for k in sp.skills if (char.skills or {}).get(k)], "resistances": list(sp.resistances),
+                   "tools": [t for t in sp.tools if t not in (char.tool_proficiencies or {})]}
+        if sp.weapons:  # per nome, come il Maestro d'Armi: is_weapon_proficient li riconosce in entrambe le lingue
+            cats = normalize(char.general_proficiencies)
+            granted["weapons"] = [WEAPONS[w].en if lang == "en" else WEAPONS[w].it for w in dict.fromkeys(sp.weapons)]
+            cats["weapons"] += granted["weapons"]
+            char.general_proficiencies = cats
+        if sp.tools:
+            add_tools(char, sp.tools)
+        if sp.resistances:
+            char.damage_modifiers = {**(char.damage_modifiers or {}), "resistances": sorted(set(sp.resistances))}
+        if body.rules_edition == "2014" and any(granted.values()):  # il passaggio a una specie 2024 li toglie
+            char.settings = {**char.settings, RACE_GRANTS: granted}
     return bg
 
 
@@ -372,8 +393,8 @@ async def create_character(
             row.options = {**(row.options or {}), "list": bg.feat_list}
     if origin_feat or body.species_2024:  # tratti (Robustezza nanica) e talento (Robusto) contano nei PF massimi
         await sync_cataloged_features(session, char, lang)
-        if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)
-            char.current_hit_points = effective_hp_max(char)
+    if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto, razza 2014)
+        char.current_hit_points = effective_hp_max(char)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See refresh_char_full for the full rationale.
@@ -676,6 +697,7 @@ async def update_xp(
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
     old_xp = char.experience_points or 0
+    old_total_level = char.total_level
     if body.set is not None:
         char.experience_points = max(0, body.set)
     elif body.add is not None:
@@ -698,6 +720,8 @@ async def update_xp(
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
+        if body.set is None or char.experience_points >= old_xp:  # solo un 'set' verso il basso è una correzione (D-028)
+            new_level = max(new_level, old_level)
         if new_level != old_level or body.hp_rolls:
             cls.level = new_level
             lost_rolls = stored_rolls(char).get(cls.id, {})  # read before record_rolls drops them
@@ -738,7 +762,7 @@ async def update_xp(
         await sync_zero_hp(session, char, was_at_zero)
 
     # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
-    old_level_from_xp = xp_to_level(old_xp)
+    old_level_from_xp = max(xp_to_level(old_xp), old_total_level)  # i livelli già presi non si annunciano (D-028)
     new_level_from_xp = xp_to_level(char.experience_points)
     if (
         not milestone
@@ -848,14 +872,17 @@ async def escape_condition(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     skill: Literal["athletics", "acrobatics"] = "athletics",
     body: Annotated[D20RollSubmission | None, Body()] = None,
+    effect_id: int | None = None,
 ) -> EscapeResult:
     """U36: con un'azione il PG Trattenuto (o Afferrato) prova a liberarsi con Atletica o Acrobazia contro la CD
-    dell'effetto; se la raggiunge la condizione cade. In combattimento l'azione si spende prima del tiro."""
+    dell'effetto; se la raggiunge finisce quell'istanza (``effect_id``, altrimenti la prima con una CD), e con l'ultima la
+    condizione (2024 pag. 29). In combattimento l'azione si spende prima del tiro."""
     if slug not in ESCAPABLE:
         raise HTTPException(status_code=422, detail={"code": "not_escapable"})
     char = await get_owned(char_id, user_id, session, full=True)
-    eff = next((e for e in await effects_for_character(session, char_id) if e.slug == slug), None)
-    if not (char.conditions or {}).get(slug) or eff is None or eff.save_dc is None:
+    eff = next((e for e in await effects_for_character(session, char_id) if e.slug == slug and e.save_dc is not None
+                and effect_id in (None, e.id)), None)
+    if not (char.conditions or {}).get(slug) or eff is None:
         raise HTTPException(status_code=409, detail={"code": "no_escape_dc"})
     refuse_if_incapacitated(char)
     if await active_encounter_row(session, char_id) is not None:
@@ -865,9 +892,10 @@ async def escape_condition(
     add_history(session, char.id, "condition_change",
                 f"Liberarsi da {condition_label(slug)}: {roll.total} contro CD {eff.save_dc}, "
                 + ("riuscito" if escaped else "fallito"))
-    if escaped:
-        await apply_conditions(session, char, {slug: False})
-    return EscapeResult(roll=roll, dc=eff.save_dc, escaped=escaped)
+    dc = eff.save_dc
+    if escaped:  # finisce la presa battuta: quella di un'altra fonte, con la sua CD, lo tiene ancora
+        await expire_effect(session, eff, None, None)
+    return EscapeResult(roll=roll, dc=dc, escaped=escaped)
 
 
 # ---------------------------------------------------------------------------
@@ -936,7 +964,7 @@ async def roll_tool_check(
         description=tool, option_result=option_result(opts, option_rolls, option_total),
     )
     remember_roll(char, "ability", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
-                  ability=ability)
+                  ability=ability, proficient=True)  # dopo il tiro valgono i privilegi delle prove con competenza
     return result
 
 
@@ -1081,7 +1109,7 @@ async def close_pending_save(
     ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
     ps.last_roll = {**roll, "passed": passed}
     # Build the read model before apply_conditions deletes the effect and its saves.
-    save_read = pending_read(ps, effect.slug)
+    save_read = pending_read(ps, effect)
     if effect.pending:  # effetto di un privilegio: il TS decide se la condizione esiste, nulla di preesistente si tocca
         if passed:
             await drop_pending_effect(session, effect)
@@ -1089,9 +1117,8 @@ async def close_pending_save(
             await activate_pending_effect(session, effect)
             add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
         return save_read, passed
-    if passed:
-        add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
-        await apply_conditions(session, char, {effect.slug: False})
+    if passed:  # finisce questa istanza: un'altra della stessa condizione, da un'altra fonte, la tiene accesa
+        await expire_effect(session, effect, "Liberato da: {label}", None)
     await session.flush()
     return save_read, passed
 
@@ -1115,7 +1142,7 @@ async def roll_pending_save(
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    body: Annotated[D20RollSubmission | None, Body()] = None,
+    body: Annotated[PendingSaveSubmission | None, Body()] = None,
 ) -> PendingSaveRollResult:
     char = await get_owned(char_id, user_id, session, full=True)
     ps = await _owned_pending_save(session, char_id, psid)
@@ -1136,6 +1163,10 @@ async def roll_pending_save(
             raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
+    if body and body.ability:
+        if body.ability not in (ps.ability, effect.save_alt_ability if ps.status == "pending" else None):
+            raise HTTPException(status_code=422, detail={"code": "save_ability"})
+        ps.ability = body.ability  # il reroll e le opzioni dopo il tiro restano su questa
     if reroll:
         spend_inspiration_reroll(char)
 

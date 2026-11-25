@@ -14,7 +14,7 @@ async def _pg(client, edizione="2014", classe="bard", livello=5) -> int:
 
 
 async def _incantesimo(client, cid, nome="Benedizione", durata="Concentration, up to 1 minute", conc=True, livello=1) -> int:
-    r = await client.post(f"/characters/{cid}/spells", json={
+    r = await client.post(f"/characters/{cid}/spells?confirm=true", json={
         "name": nome, "level": livello, "is_concentration": conc, "duration": durata, "is_prepared": True})
     assert r.status_code == 201, r.text
     return r.json()["id"]
@@ -173,7 +173,7 @@ async def test_eliminare_l_incantesimo_chiude_concentrazione_e_contatore(client)
     await _slot(client, cid)
     sid = await _incantesimo(client, cid)
     await _lancia(client, cid, sid)
-    assert (await client.delete(f"/characters/{cid}/spells/{sid}")).status_code == 204
+    assert (await client.delete(f"/characters/{cid}/spells/{sid}?confirm=true")).status_code == 204
     s = await _stato(client, cid)
     assert s["concentrating_spell_id"] is None
     assert "concentration_rounds_left" not in (s["settings"] or {})
@@ -352,7 +352,7 @@ async def _chiudi_riposo(client, cid, sid, dadi):
 
 
 async def _chiudi_elimina(client, cid, sid, dadi):
-    await client.delete(f"/characters/{cid}/spells/{sid}")
+    await client.delete(f"/characters/{cid}/spells/{sid}?confirm=true")
 
 
 async def _chiudi_stordito(client, cid, sid, dadi):
@@ -670,7 +670,7 @@ async def _ally_tick(client, c, s, d):
 
 
 async def _ally_elimina(client, c, s, d):
-    await client.delete(f"/characters/{c}/spells/{s}")
+    await client.delete(f"/characters/{c}/spells/{s}?confirm=true")
 
 
 async def _ally_altro(client, c, s, d):

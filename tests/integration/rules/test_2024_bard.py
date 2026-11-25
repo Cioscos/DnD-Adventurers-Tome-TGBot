@@ -305,27 +305,19 @@ async def test_countercharm_is_refused_while_incapacitated(client):
 # Segreti Magici
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("level,count", [(10, 1), (11, 2), (12, 2), (13, 3), (14, 3), (15, 4), (16, 4), (17, 5), (18, 6),
-                                         (19, 7), (20, 8)])
-async def test_magical_secrets_count_follows_the_growth_of_the_prepared_spells_from_level_10(client, level, count):
-    cid = await _bard24(client, level)
-    assert _choice(await _full(client, cid), "magical_secrets")["count"] == count
-    assert PREPARED[level - 1] - PREPARED[8] == count  # i preparati cresciuti dopo il 9°
+# 2024 PHB pag. 61: i nuovi preparati dal 10° «possono» venire dalle liste di Bardo, Chierico, Druido e Mago (passivo):
+# un permesso, non una scelta in sospeso da chiudere come i due incantesimi obbligatori del 2014
+@pytest.mark.parametrize("level", [9, 10, 20])
+async def test_magical_secrets_2024_leaves_no_pending_choice(client, level):
+    assert _choice(await _full(client, await _bard24(client, level)), "magical_secrets") is None
 
 
-async def test_magical_secrets_is_absent_below_level_10(client):
-    assert _choice(await _full(client, await _bard24(client, 9)), "magical_secrets") is None
-
-
-async def test_magical_secrets_pick_a_spell_of_another_list_as_a_bard_spell(client):
+async def test_magical_secrets_a_spell_of_another_list_is_added_as_a_bard_spell(client):
     cid = await _bard24(client, 10)
-    choice = _choice(await _full(client, cid), "magical_secrets")
-    assert choice["spell_pick"]["max_level"] == 5 and choice["spell_pick"]["free"] is False
-    assert (await _add_spell(client, cid, "Disintegrazione", 6, pick_id=choice["id"])).status_code == 422
-    r = await _add_spell(client, cid, "Palla di fuoco", 3, pick_id=choice["id"])
+    bard = (await _full(client, cid))["classes"][0]["id"]
+    r = await _add_spell(client, cid, "Palla di fuoco", 3, class_id=bard)
     assert r.status_code == 201, r.text
-    assert r.json()["class_id"] == (await _full(client, cid))["classes"][0]["id"]
-    assert _choice(await _full(client, cid), "magical_secrets") is None
+    assert r.json()["class_id"] == bard
 
 
 # ---------------------------------------------------------------------------

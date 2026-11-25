@@ -267,7 +267,10 @@ async def test_session_allies_say_who_is_dead(client, test_session_factory):
 async def test_what_is_left_of_the_life_giving_points_vanishes_too(client, test_session_factory):
     _sid, cid, hero = await _table(client, test_session_factory, _life)
     await _give_life(client, cid, hero)
-    await _set_temp(client, hero, 4)  # ne ha spesi 6
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "damage", "value": 6})).status_code == 200  # ne ha spesi 6
+    assert await _temp(client, hero) == 4
+    as_user(GM_ID)
     await _end_rage(client, cid, "manual")
     assert await _temp(client, hero) == 0
 
