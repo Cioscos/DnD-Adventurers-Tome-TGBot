@@ -47,6 +47,7 @@
       "once_per_turn": "Puoi usarlo una sola volta per turno.",
       "replace_after_long_rest": "Hai già fatto i cambi concessi per questo riposo lungo: riposa e riprova.",
       "replace_after_rest": "Hai già fatto il cambio: serve un riposo breve o lungo prima del prossimo.",
+      "replace_on_level_up": "Questa scelta si cambia solo salendo di livello, una volta: aspetta il prossimo livello che la permette.",
       "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla.",
       "class_already_present": "Il personaggio ha già quella classe."
@@ -1801,6 +1802,7 @@
           "once_per_turn": "Il d20 dell'impulso si tira una volta per turno.",
           "no_repeat": "Non c'è nessuna ripetizione in corso.",
           "tides_not_spent": "Onde di Caos non è stata spesa.",
+          "no_slot_cast": "Impulso Domato si usa subito dopo un incantesimo da stregone lanciato con uno slot.",
           "no_pending_surge": "Non c'è nessun impulso da scegliere.",
           "feature_not_usable": "Questo privilegio non si può usare ora.",
           "invalid_choice": "La scelta non è valida.",

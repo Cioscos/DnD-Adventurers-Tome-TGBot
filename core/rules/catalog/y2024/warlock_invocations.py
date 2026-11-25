@@ -11,6 +11,7 @@ import json
 import random
 from typing import Any
 
+from core.data.feats_2024 import FEATS_2024
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.paladin import _drops_to_zero
 from core.rules.catalog.y2014.warlock import PACT_WEAPONS, _create_pact_weapon, _is_pact, _weapon_label
@@ -270,6 +271,16 @@ def _per_cantrip(family: str, it: str, en: str, suffix: str, summary: tuple[str,
     return rows
 
 
+def _lessons() -> list:
+    """Lezioni dei Primi è Ripetibile con un talento di Origine diverso a ogni scelta (pag. 156): una riga per talento."""
+    return [_inv(f"lessons_of_the_first_ones__{f.key.removeprefix('2024_')}", "Lezioni dei Primi", "Lessons of the First Ones",
+                 f"{_P}, livello 2+, pag. 156", 2,
+                 ("Ripetibile, con un talento di Origine diverso a ogni scelta: questo. L'app non lo assegna: aggiungilo tu ai talenti.",
+                  "Repeatable, with a different Origin feat each pick: this one. The app does not grant it: add it to your feats yourself."),
+                 name=(f"Lezioni dei Primi: {f.name['it']}", f"Lessons of the First Ones: {f.name['en']}"), passive=True)
+            for f in FEATS_2024 if f.category == "origin"]
+
+
 _P = "Suppliche Occulte"
 _DAMAGE = "trucchetto Warlock che infligge danno"
 _ROWS: list = [
@@ -327,6 +338,7 @@ _ROWS: list = [
     _inv("lessons_of_the_first_ones", "Lezioni dei Primi", "Lessons of the First Ones", f"{_P}, livello 2+, pag. 156", 2,
          ("Ripetibile: un talento di Origine a tua scelta, diverso a ogni scelta. L'app non lo assegna: aggiungilo tu ai talenti.",
           "Repeatable: an Origin feat of your choice, a different one each pick. The app does not grant it: add it to your feats yourself."), passive=True),
+    *_lessons(),
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", f"{_P}, livello 9+, Patto della Lama, pag. 156", 9,
          ("Dopo un colpo con l'arma del patto: 1d6 danni necrotici, psichici o radiosi in più e, spendendo un Dado Vita, recuperi PF pari al tiro più COS. Una volta per turno.",
           "After a hit with the pact weapon: extra 1d6 necrotic, psychic or radiant damage and, spending a Hit Die, you regain hit points equal to the roll plus Con. Once per turn."),
@@ -353,7 +365,7 @@ _ROWS: list = [
          passive=True,
          choices=(ChoiceSpec(group="tome_cantrips", levels={1: 3}, options=lambda _c: [], spell_pick="extra", spell_level=0),
                   ChoiceSpec(group="tome_rituals", levels={1: 2}, options=lambda _c: [], spell_pick="extra", spell_level=1, spell_exact=True,
-                             spell_ritual=True))),
+                             spell_ritual=True, always_prepared=True))),  # «finché il libro è con sé sono preparati» (pag. 157)
     *_per_cantrip(
         "repelling_blast", "Deflagrazione Respingente", "Repelling Blast",
         f"{_P}, livello 2+, {_DAMAGE} con un tiro per colpire, pag. 157",
@@ -385,12 +397,14 @@ def prerequisites_met(ctx: RuleContext, key: str, owned: list[str]) -> bool:
     if key in REQUIRES and REQUIRES[key] not in owned and not prerequisites_met(ctx, REQUIRES[key], owned):
         return False
     _family, _, slug = key.partition("__")
-    return not slug or knows_cantrip(ctx.char, next(i for i in CANTRIPS if _slug(i) == slug))
+    index = next((i for i in CANTRIPS if _slug(i) == slug), None)  # Lezioni dei Primi: il suffisso è un talento, non un trucchetto
+    return index is None or knows_cantrip(ctx.char, index)
 
 
-# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). La riga resta per chi
-# l'ha già scelta (nessun personaggio perde nulla); non si offre più alle nuove scelte.
-RETIRED = frozenset({"eldritch_spear__chill_touch"})
+# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). Lezioni dei Primi senza
+# talento ha lasciato il posto a una riga per talento (Ripetibile). Le righe restano per chi le ha già scelte (nessun personaggio perde
+# nulla); non si offrono più alle nuove scelte.
+RETIRED = frozenset({"eldritch_spear__chill_touch", "lessons_of_the_first_ones"})
 
 
 def available_invocations(ctx: RuleContext) -> list[str]:

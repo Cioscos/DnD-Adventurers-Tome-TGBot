@@ -71,7 +71,7 @@ async def _colpo_e_danno(client, cid, wid, *opzioni):
                     copre=["carta:2024/classes/rogue.md#Riflessi del Furfante / Thief's Reflexes (Furfante 17, pag. 137)",
                            "carta:2014/classes/rogue.md#Riflessi da Furfante / Thief's Reflexes (Furfante 17, pag. 79)",
                            "PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}", "POST /sessions/{session_id}/encounter/start"])
-@pytest.mark.parametrize("edizione, secondo_turno", [("2014", False), pytest.param("2024", True, marks=pytest.mark.xfail(strict=True, reason="CB-2561: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("edizione, secondo_turno", [("2014", False), ("2024", True)])
 async def test_riflessi_del_furfante_colto_di_sorpresa_per_edizione(client, test_session_factory, edizione, secondo_turno):
     _sid, _cid, live = await _reflexes_encounter(client, test_session_factory, surprised=True, edition=edizione)
     assert any("Riflessi" in c["name"] for c in live["combatants"]) is secondo_turno
@@ -81,11 +81,11 @@ async def test_riflessi_del_furfante_colto_di_sorpresa_per_edizione(client, test
                     zona="regola:2024/rogue", voce="regola",
                     copre=["carta:2024/classes/rogue.md#Conoscenza Potenziata da Psi / Psi-Bolstered Knack (Coltello dell'Anima 3, pag. 135)",
                            "POST /characters/{char_id}/tool_checks/{tool}/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2562: difforme dal manuale, confermato")
 async def test_conoscenza_potenziata_da_psi_vale_per_la_prova_con_strumento(client, dadi):
     cid = await _ladro(client, 3, "soulknife", dexterity=14)  # arnesi da scasso dalla classe
     prova = await client.post(f"/characters/{cid}/tool_checks/thieves_tools/roll", json={"ability": "dexterity", "die": 3})
     assert prova.status_code == 200, prova.text
+    assert KNACK in await _opzioni(client, cid, "ability", ability="dexterity", proficient="true")  # l'elenco dopo la prova con strumento
     dadi(4)
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [KNACK]})
     assert r.status_code == 200, r.text[:200]
@@ -132,7 +132,6 @@ async def test_schivata_prodigiosa_non_si_usa_da_accecato(client):
                     zona="regola:2024/rogue", voce="regola",
                     copre=["carta:2024/classes/rogue.md#Armi Velenose / Envenom Weapons (Assassino 13, pag. 134)",
                            "POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/{attack_id}/damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2565: difforme dal manuale, confermato")
 async def test_armi_velenose_i_2d6_sono_danni_da_veleno(client):
     cid = await _ladro(client, 13, "assassin", dexterity=16)
     r = await _colpo_e_danno(client, cid, await _stocco(client, cid), SNEAK, POISON, ENVENOM)

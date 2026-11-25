@@ -72,7 +72,6 @@ async def test_incantesimo_potenziato_2024_una_volta_sola_sullo_stesso_danno(cli
                     voce="regola",
                     copre=["carta:2024/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Stregoneria Draconica 6, pag. 148)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2613: difforme dal manuale, confermato")
 async def test_affinita_elementale_2024_somma_il_carisma_a_un_solo_tiro_di_danno_per_lancio(client):
     cid = await _make(client, "draconic", 6, charisma=18)
     await _affinity(client, cid, "fire")
@@ -92,7 +91,6 @@ async def test_affinita_elementale_2024_somma_il_carisma_a_un_solo_tiro_di_danno
                     copre=["carta:2024/classes/sorcerer.md#Impulso di Magia Selvaggia / Wild Magic Surge (Magia Selvaggia 3, pag. 149)",
                            "carta:2024/general.md#Invisible [Condition] (Invisibile) (pag. 370)",
                            "POST /characters/{char_id}/wild-magic/surge"])
-@pytest.mark.xfail(strict=True, reason="CB-2614: difforme dal manuale, confermato")
 async def test_impulso_45_48_rende_invisibile_lo_stregone(client):
     cid = await _make(client, "wild_magic", 3)
     r = await client.post(f"/characters/{cid}/wild-magic/surge", json={"die": 20, "percentile": [45]})
@@ -123,7 +121,6 @@ async def test_stregoneria_psionica_a_punti_non_toglie_il_nascondiglio(client):
                     copre=["carta:2024/classes/sorcerer.md#Stregoneria Psionica / Psionic Sorcery (Stregoneria Aberrante 6, pag. 146)",
                            "carta:2024/classes/sorcerer.md#Incantesimi Psionici / Psionic Spells (Stregoneria Aberrante 3, pag. 145)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2616: difforme dal manuale, confermato")
 async def test_stregoneria_psionica_non_lancia_un_incantesimo_psionico_non_ancora_ottenuto(client):
     # Telecinesi entra negli Incantesimi Psionici al 9° livello: al 6° non è un incantesimo di quel privilegio
     cid = await _make(client, "aberrant", 6)
@@ -141,7 +138,6 @@ async def test_stregoneria_psionica_non_lancia_un_incantesimo_psionico_non_ancor
                            "carta:2024/spells.md#Arrampicarsi come un Ragno", "carta:2024/spells.md#Risata Incontenibile di Tasha",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("srd_index,level", [("spider-climb", 2), ("tashas-hideous-laughter", 1)])
-@pytest.mark.xfail(strict=True, reason="CB-2617: difforme dal manuale, confermato")
 async def test_incantesimo_raddoppiato_vale_per_gli_incantesimi_con_un_bersaglio_in_piu_per_slot(client, srd_index, level):
     cid = await _caster24(client, 6, "twinned")
     spell = await _spell(client, cid, "Prova", level, srd_index=srd_index)
@@ -152,7 +148,6 @@ async def test_incantesimo_raddoppiato_vale_per_gli_incantesimi_con_un_bersaglio
                     voce="regola",
                     copre=["carta:2024/classes/sorcerer.md#Ripristinare l'Equilibrio / Restore Balance (Stregoneria Meccanica 3, pag. 146)",
                            "POST /characters/{char_id}/skills/{skill_name}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2618: difforme dal manuale, confermato")
 async def test_ripristinare_l_equilibrio_non_si_spende_su_un_tiro_senza_vantaggio_ne_svantaggio(client):
     cid = await _make(client, "clockwork", 5, charisma=18)
     r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "normal", "dice": [7], "options": [RESTORE_OWN]})

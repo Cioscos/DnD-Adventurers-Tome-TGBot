@@ -37,6 +37,7 @@ _TYPE_LABELS = {"acid": ("acido", "acid"), "cold": ("freddo", "cold"), "fire": (
 TWINNED_SPELLS = frozenset({
     "animal-friendship", "banishment", "bane", "bless", "blindness-deafness", "charm-monster", "charm-person", "command", "enhance-ability", "fly",
     "freedom-of-movement", "gaseous-form", "heroism", "hold-monster", "hold-person", "invisibility", "jump", "longstrider",
+    "spider-climb", "tashas-hideous-laughter", "hideous-laughter",  # Risata di Tasha: chiave dei concessi e dell'SRD
 })
 _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/routers/classes.py create_class_for_character e add_class"
 

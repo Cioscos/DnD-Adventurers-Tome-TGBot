@@ -160,8 +160,18 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         if slot in swaps:
             raise HTTPException(409, detail={"code": "replace_after_rest"})
         char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: {"at": "rest"}}}
+    if ch.replace_per_level:  # un cambio per livello guadagnato; il livello dell'ultimo sta accanto ai cambi per riposo
+        swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+        slot = f"{cls.id}:{group}"
+        opened = cls.level > min(ch.levels) and (ch.replace_per_level == "each" or cls.level in ch.levels)
+        if not opened or swaps.get(slot) == cls.level:
+            raise HTTPException(409, detail={"code": "replace_on_level_up"})
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: cls.level}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
+    # la nuova ha già ciò che richiede, senza la vecchia (Suppliche 2024, pag. 153); l'errore annulla la sessione
+    if ch.batch_ok and not ch.batch_ok(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level), [new_key]):
+        raise HTTPException(422, detail={"code": "option_prerequisite"})
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
         for spell in char.spells:
             if spell.name == old_key:

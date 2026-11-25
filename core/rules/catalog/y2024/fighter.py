@@ -131,7 +131,7 @@ TACTICAL_MIND = RollOptionSpec(
                 "Tactical Mind: spend a Second Wind use and add 1d10 (the use comes back if the check still fails)"))
 
 INDOMITABLE_REROLL = RollOptionSpec(
-    key=IND, phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=IND), bonus=lambda c, _i: c.class_level,
+    key=IND, phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=IND), bonus=lambda c, _i: c.class_level,
     label=_both("Indomito: ripeti il tiro salvezza fallito con bonus pari al livello da guerriero (vale il nuovo risultato)",
                 "Indomitable: reroll the failed saving throw with a bonus equal to your fighter level (the new result stands)"))
 
@@ -188,7 +188,8 @@ BASE_ROWS = (
             ("Stile di Combattimento", "Fighting Style"),
             ("Scegli un talento Stile di Combattimento (consigliato Difesa); a ogni livello da guerriero puoi cambiarlo.",
              "You choose a Fighting Style feat (Defense is recommended); you can change it at every fighter level."),
-            no_row=True, choices=(ChoiceSpec(group=FIGHTING_STYLE_GROUP, levels={1: 1}, options=style_options(STYLES), replaceable=True),),
+            no_row=True, choices=(ChoiceSpec(group=FIGHTING_STYLE_GROUP, levels={1: 1}, options=style_options(STYLES), replaceable=True,
+                                         replace_per_level="each"),),
             covered_by="ChoiceSpec fighting_style di questa riga e le righe dei dieci stili; test_the_style_is_one_of_ten_feats_chosen_at_level_1_and_can_be_replaced"),
     *STYLE_ROWS,
     feature("second_wind", CK, ED, 1, "Recuperare Energie / Second Wind (Guerriero 1, pag. 91)", ("Recuperare Energie", "Second Wind"),

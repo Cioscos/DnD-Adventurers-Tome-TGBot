@@ -33,7 +33,6 @@ VENGEANCE = "warlock.searing_vengeance"
                                           "carta:2024/classes/warlock.md#Dono dei Protettori / Gift of the Protectors (Suppliche Occulte, livello 9+, Patto del Tomo, pag. 156)",
                                           "POST /characters/{char_id}/classes/{class_id}/options/replace"])
 @pytest.mark.parametrize("nuova", ["thirsting_blade", "eldritch_smite", "lifedrinker", "investment_of_the_chain_master", "gift_of_the_protectors"])
-@pytest.mark.xfail(strict=True, reason="CB-2661: difforme dal manuale, confermato")
 async def test_la_sostituzione_non_da_una_supplica_senza_il_patto_che_richiede(client, nuova):
     cid = await _caster24(client, 9, "devils_sight", "eldritch_mind", "armor_of_shadows", "misty_visions", "fiendish_vigor",
                           "mask_of_many_faces", "otherworldly_leap")
@@ -48,10 +47,10 @@ async def test_la_sostituzione_non_da_una_supplica_senza_il_patto_che_richiede(c
 @pytest.mark.caccia(id="CB-2662", fonte="2024 · Warlock · Lezioni dei Primi (Ripetibile) · pag. 156", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Lezioni dei Primi / Lessons of the First Ones (Suppliche Occulte, livello 2+, pag. 156)",
                            "POST /characters/{char_id}/choices/{choice_id}/resolve", "PATCH /characters/{char_id}/classes/{class_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2662: difforme dal manuale, confermato")
 async def test_lezioni_dei_primi_si_riprende_salendo_di_livello(client):
     cid = await _warlock24(client, 2, charisma=16)
-    r = await _resolve(client, cid, "invocations", ["lessons_of_the_first_ones", "devils_sight", "eldritch_mind"])
+    # «scegliendo ogni volta un talento di Origine diverso» (2024 pag. 156): ogni scelta nomina il suo talento
+    r = await _resolve(client, cid, "invocations", ["lessons_of_the_first_ones__alert", "devils_sight", "eldritch_mind"])
     assert r.status_code == 200, r.text
     klass = (await _full(client, cid))["classes"][0]
     r = await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 5})
@@ -59,6 +58,7 @@ async def test_lezioni_dei_primi_si_riprende_salendo_di_livello(client):
     offerte = await _offered(client, cid)
     assert "ascendant_step" in offerte  # la scelta del 5° livello è aperta
     assert any(k.startswith("lessons_of_the_first_ones") for k in offerte)
+    assert "lessons_of_the_first_ones__alert" not in offerte  # lo stesso talento non si riprende
 
 
 @pytest.mark.caccia(id="CB-2663", fonte="2024 · Warlock · Patto della Lama (arma legata) · pag. 156", zona="regola:2024/warlock", voce="regola",
@@ -77,7 +77,6 @@ async def test_l_arma_magica_da_guerra_legata_al_patto_ha_la_competenza(client):
 @pytest.mark.caccia(id="CB-2664", fonte="2024 · Warlock · Patto del Tomo · pag. 157", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Patto del Tomo / Pact of the Tome (Suppliche Occulte, pag. 157)",
                            "POST /characters/{char_id}/spells", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2664: difforme dal manuale, confermato")
 async def test_il_rituale_del_libro_delle_ombre_e_preparato(client):
     cid = await _caster24(client, 3, TOME)
     rituali = _choice(await _full(client, cid), "tome_rituals")
@@ -93,7 +92,6 @@ async def test_il_rituale_del_libro_delle_ombre_e_preparato(client):
                     voce="interazione", copre=["carta:2024/classes/warlock.md#Astuzia Magica / Magical Cunning (Warlock 2, pag. 154)",
                                                "carta:2024/classes/warlock.md#Resilienza Celestiale / Celestial Resilience (Patrono Celestiale 10, pag. 161)",
                                                "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2665: difforme dal manuale, confermato")
 async def test_astuzia_magica_a_slot_pieni_da_i_pf_della_resilienza_celestiale(client):
     cid = await _make(client, "celestial", 10, charisma=16)
     assert all(s["used"] == 0 for s in await _pact_slots(client, cid))
@@ -105,7 +103,6 @@ async def test_astuzia_magica_a_slot_pieni_da_i_pf_della_resilienza_celestiale(c
 @pytest.mark.caccia(id="CB-2666", fonte="2024 · Warlock · Vendetta Ardente · pag. 161", zona="regola:2024/warlock", voce="limiti",
                     copre=["carta:2024/classes/warlock.md#Vendetta Ardente / Searing Vengeance (Patrono Celestiale 14, pag. 161)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "GET /characters/{char_id}/target-effects/{effect_key}"])
-@pytest.mark.xfail(strict=True, reason="CB-2666: difforme dal manuale, confermato")
 async def test_vendetta_ardente_somma_anche_un_carisma_negativo(client):
     cid = await _make(client, "celestial", 14, charisma=8)
     await _hp(client, cid, op="set_max", value=80)
@@ -116,7 +113,6 @@ async def test_vendetta_ardente_somma_anche_un_carisma_negativo(client):
 
 @pytest.mark.caccia(id="CB-2677", fonte="2024 · Warlock · Arcanum Mistico · pag. 155", zona="regola:2024/warlock", voce="regola",
                     copre=["carta:2024/classes/warlock.md#Arcanum Mistico / Mystic Arcanum (Warlock 11, pag. 155)", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2677: difforme dal manuale, confermato")
 async def test_arcanum_mistico_2024_si_sceglie_dalla_lista_del_warlock(client):
     full = await _full(client, await _warlock24(client, 17))
     liste = {grado: _choice(full, f"arcanum_{grado}")["spell_pick"]["list"] for grado in (6, 7, 8, 9)}

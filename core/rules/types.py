@@ -50,6 +50,9 @@ class ChoiceSpec:
     replace_own_count: bool = False
     # Con ``replaceable``: un cambio, poi serve un riposo breve o lungo (Preda del Cacciatore 2024, «dopo un riposo breve o lungo»)
     replace_per_rest: bool = False
+    # Con ``replaceable``: un cambio per livello di classe, dopo quello della prima scelta; «each» a ogni livello (Stile di
+    # Combattimento 2024), «new_picks» solo ai livelli che danno nuove opzioni del gruppo (manovre 2024)
+    replace_per_level: Literal["each", "new_picks"] | None = None
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
@@ -203,12 +206,14 @@ class KiSpell:
     dei Quattro Elementi). ``spell``: ``srd_index``, anche chiave di ``GRANTED_SPELLS``. ``cost``: punti del lancio base.
     ``upcast``: dal 5° livello di classe i punti in più alzano il livello dell'incantesimo di 1 ciascuno, entro il tetto
     per livello (``ki_spell_cap``). ``pool``: la riga ``Ability`` da cui si spende. ``self_only``: il lancio vale solo per
-    chi lo fa, senza altre creature (Cavalcare il Vento, Proiezione Astrale)."""
+    chi lo fa, senza altre creature (Cavalcare il Vento, Proiezione Astrale). ``min_level``: livello di classe da cui
+    l'incantesimo si lancia coi punti (Incantesimi Psionici del 7° e del 9°)."""
     spell: str
     cost: int
     upcast: bool = False
     pool: str = "monk.ki"
     self_only: bool = False
+    min_level: int = 0
 
 
 @dataclass(frozen=True)
@@ -816,3 +821,4 @@ class RuleContext:
     proficient: bool = False  # prova già con competenza (strumento): niente mezze competenze («Atleta Straordinario»)
     spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)
     natural_d20: int | None = None  # dopo il tiro: il d20 tenuto del tiro salvato (Fortuna dell'Halfling); None se non noto
+    mode: Any = None  # al tiro: il modo dichiarato dal giocatore (``normal``, ``advantage``, ``disadvantage``); None nell'elenco

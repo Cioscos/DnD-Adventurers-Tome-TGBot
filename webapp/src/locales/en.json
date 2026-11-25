@@ -47,6 +47,7 @@
       "once_per_turn": "You can use it only once per turn.",
       "replace_after_long_rest": "You have already made the swaps allowed for this long rest: rest and try again.",
       "replace_after_rest": "You have already made the swap: take a short or long rest before the next one.",
+      "replace_on_level_up": "This choice can only be swapped once when you gain a level: wait for the next level that allows it.",
       "option_prerequisite": "One of the chosen options needs another option you do not have: pick it together with its prerequisite or after taking it.",
       "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it.",
       "class_already_present": "The character already has that class."
@@ -1802,6 +1803,7 @@
           "once_per_turn": "The surge d20 is rolled once per turn.",
           "no_repeat": "There is no repeat in progress.",
           "tides_not_spent": "Tides of Chaos has not been spent.",
+          "no_slot_cast": "Tamed Surge is used right after a sorcerer spell cast with a spell slot.",
           "no_pending_surge": "There is no surge to choose.",
           "feature_not_usable": "This feature cannot be used now.",
           "invalid_choice": "That choice is not valid.",

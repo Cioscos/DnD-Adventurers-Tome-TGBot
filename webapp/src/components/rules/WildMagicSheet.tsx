@@ -12,7 +12,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
-const ERRORS = ['once_per_turn', 'tides_not_spent', 'no_repeat', 'no_pending_surge', 'feature_not_usable', 'invalid_choice']
+const ERRORS = ['once_per_turn', 'tides_not_spent', 'no_slot_cast', 'no_repeat', 'no_pending_surge', 'feature_not_usable', 'invalid_choice']
 const TIDES = 'sorcerer.tides_of_chaos'
 const TAMED = 'sorcerer.tamed_surge'
 const LAST_ROW = 97  // 2024: la riga 97-00 non si sceglie con Impulso Domato

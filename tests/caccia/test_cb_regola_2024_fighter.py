@@ -95,7 +95,6 @@ def _dado_massimo(monkeypatch) -> None:
 
 @pytest.mark.caccia(id="CB-2361", fonte="2024 · Guerriero · Indomito · pag. 92; Tiri Salvezza contro la Morte · pag. 28", zona="regola:2024/fighter", voce="regola",
                     copre=["carta:2024/classes/fighter.md#Indomito / Indomitable (Guerriero 9, pag. 92)", "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2361: difforme dal manuale, confermato")
 async def test_indomito_2024_ripete_un_tiro_salvezza_contro_la_morte_fallito(client, test_session_factory):
     cid = await _guerriero(client, 9)
     await _pf(test_session_factory, cid, 0)
@@ -122,7 +121,6 @@ async def test_l_azione_in_piu_di_azione_impetuosa_non_paga_il_movimento_telecin
 @pytest.mark.caccia(id="CB-2363", fonte="2024 · Guerriero · Colpo Psionico · pag. 98; Maestro Telecinetico · pag. 99", zona="regola:2024/fighter", voce="regola",
                     copre=["carta:2024/classes/fighter.md#Colpo Psionico / Psionic Strike (Potere Psionico, Guerriero Psionico 3, pag. 98)", "carta:2024/classes/fighter.md#Maestro Telecinetico / Telekinetic Master (Guerriero Psionico 18, pag. 99)", "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("livello,opzione", [(3, "fighter.psionic_strike"), (18, "fighter.telekinetic_master_attack")])
-@pytest.mark.xfail(strict=True, reason="CB-2363: difforme dal manuale, confermato")
 async def test_i_poteri_psionici_con_un_arma_non_valgono_per_il_colpo_senz_armi(client, livello, opzione):
     cid = await _guerriero(client, livello, "psi_warrior", intelligence=16)
     if livello >= 18:  # l'attacco come azione bonus vale mentre si mantiene la concentrazione su Telecinesi
@@ -135,7 +133,6 @@ async def test_i_poteri_psionici_con_un_arma_non_valgono_per_il_colpo_senz_armi(
 
 @pytest.mark.caccia(id="CB-2364", fonte="2024 · Guerriero · Superiorità in Combattimento · pag. 93", zona="regola:2024/fighter", voce="limiti",
                     copre=["carta:2024/classes/fighter.md#Superiorità in Combattimento / Combat Superiority (Maestro di Battaglia 3, pag. 93)", "POST /characters/{char_id}/classes/{class_id}/options/replace"])
-@pytest.mark.xfail(strict=True, reason="CB-2364: difforme dal manuale, confermato")
 async def test_al_5_livello_non_si_sostituiscono_due_manovre_di_fila(client):
     cid = await _guerriero(client, 5, "battle_master")  # nessuna manovra nuova al 4° e al 5°
     await _manovre(client, cid, "trip", "rally", "parry")

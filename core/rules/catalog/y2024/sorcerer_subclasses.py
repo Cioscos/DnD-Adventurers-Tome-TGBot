@@ -21,8 +21,9 @@ from core.rules.types import (
 
 ED, CK = "2024", "sorcerer"
 P = f"{CK}."
-D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative")  # D20 Test: prove, tiri per colpire, TS
+D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative", "concentration")  # D20 Test: prove, tiri per colpire, TS
 NO_CONCENTRATION_KEY = f"{P}dragon_companion_no_concentration"  # lo legge il router degli incantesimi
+AFFINITY_USED = "affinity_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il Carisma (un tiro per lancio)
 
 
 def _both(it: str, en: str) -> dict[str, str]:
@@ -79,6 +80,7 @@ PSIONIC_SPELLS = (("arms-of-hadar", "calm-emotions", "detect-thoughts", "dissona
                   ("evards-black-tentacles", "summon-aberration"), ("rarys-telepathic-bond", "telekinesis"))
 PSIONIC_LEVELS = {"arms-of-hadar": 1, "dissonant-whispers": 1, "calm-emotions": 2, "detect-thoughts": 2, "hunger-of-hadar": 3, "sending": 3,
                   "evards-black-tentacles": 4, "summon-aberration": 4, "rarys-telepathic-bond": 5, "telekinesis": 5}
+PSIONIC_FROM = {s: lv for lv, tier in zip((3, 5, 7, 9), PSIONIC_SPELLS) for s in tier}  # livello da cui la lista lo dà (pag. 145)
 PSYCHIC_SAVE = RollOptionSpec(
     key=f"{P}psychic_defenses", phase="before", rolls=("save",), mode="advantage",
     label=_both("Difese Psichiche: il TS è per evitare o terminare Affascinato o Spaventato? Vantaggio",
@@ -160,12 +162,30 @@ def _affinity_label(key: str) -> dict:
                                                                               f"Resistance to {en} damage and + Charisma on its spells.")}
 
 
+def _mark_affinity(_session: Any, ctx: RuleContext, _inputs: dict) -> list[str]:
+    """Il Carisma vale per un solo tiro dei danni per incantesimo (pag. 148): un lancio nuovo riapre (``_end_cast``)."""
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), AFFINITY_USED: ctx.spell.id}
+    return [f"turnkey:{AFFINITY_USED}"]  # un rimborso riapre il bonus
+
+
 AFFINITY_BONUS = RollOptionSpec(
-    key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c),
-    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c),
+    key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c), on_confirm=_mark_affinity,
+    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c)
+    and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
+def _rolls_with_advantage_or_disadvantage(ctx: RuleContext) -> bool:
+    """Ripristinare l'Equilibrio scatta su un d20 con Vantaggio o Svantaggio (pag. 146), dichiarato o automatico.
+    Nell'elenco il modo non è noto: l'opzione si offre e il tiro la riconvalida."""
+    from core.rules.modifiers import collect_modifiers  # import locale: modifiers importa il catalogo
+    if ctx.mode is None or ctx.mode != "normal":
+        return True
+    applied = collect_modifiers(ctx)
+    return applied.advantage or applied.disadvantage
+
+
 RESTORE_OWN_ROLL = RollOptionSpec(
     key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),
+    available=_rolls_with_advantage_or_disadvantage,
     label=_both("Ripristinare l'Equilibrio: tira questo d20 senza vantaggio né svantaggio (reazione)",
                 "Restore Balance: roll this d20 without advantage or disadvantage (reaction)"))
 NO_CONCENTRATION = RollOptionSpec(
@@ -206,7 +226,7 @@ SUBCLASS_ROWS: tuple = (
     aberrant("psionic_sorcery", 6, "Stregoneria Psionica", "Psionic Sorcery", 146,
              ("Lanci un incantesimo psionico di 1° livello o più spendendo punti stregoneria pari al suo livello al posto dello slot, senza componenti.",
               "Cast a level 1+ psionic spell by spending sorcery points equal to its level instead of a slot, with no components."),
-             passive=True, ki_spells=tuple(KiSpell(k, v, pool=SP) for k, v in PSIONIC_LEVELS.items())),
+             passive=True, ki_spells=tuple(KiSpell(k, v, pool=SP, min_level=PSIONIC_FROM[k]) for k, v in PSIONIC_LEVELS.items())),
     aberrant("psychic_defenses", 6, "Difese Psichiche", "Psychic Defenses", 146,
              ("Resistenza ai danni psichici; vantaggio ai TS per evitare o terminare Affascinato e Spaventato.",
               "Resistance to psychic damage; advantage on saves to avoid or end Charmed and Frightened."),

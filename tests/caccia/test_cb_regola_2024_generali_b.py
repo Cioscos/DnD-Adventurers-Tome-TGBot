@@ -56,7 +56,6 @@ async def test_assegnare_punti_esperienza_non_toglie_livelli_gia_presi(client):
                     copre=["carta:2024/general.md#D20 Test (Prova di d20) (pag. 364)",
                            "carta:2024/classes/sorcerer.md#Trance dell'Ordine / Trance of Order (Stregoneria Meccanica 14, pag. 147)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/concentration/save"])
-@pytest.mark.xfail(strict=True, reason="CB-2912: difforme dal manuale, confermato")
 async def test_la_trance_dell_ordine_alza_a_10_anche_il_ts_di_concentrazione(client):
     cid = await _make(client, "clockwork", 14)
     assert (await _use(client, cid, "sorcerer.trance_of_order")).status_code == 200

@@ -481,7 +481,7 @@ def ki_cast_info(char: Any, spell: Any) -> KiCast | None:
         return None
     for spec, row in active_features(char):
         for ks in spec.ki_spells:
-            if ks.spell != key:
+            if ks.spell != key or row.level < ks.min_level:
                 continue
             pool = next((a for a in char.abilities if a.feature_key == ks.pool), None)
             if pool is None or pool.max_uses is None:

@@ -169,6 +169,7 @@ async def roll_options(
     casting_level: int | None = None,
     slotless: bool = False,
     damage: int | None = None,
+    proficient: bool = False,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
     char = await get_owned_full_with_resources(char_id, user_id, db)
@@ -200,7 +201,7 @@ async def roll_options(
     return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level,
                         slotless=slotless and roll == "cast", **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type),
-                        damage=damage if roll == "damage_taken" else None)
+                        damage=damage if roll == "damage_taken" else None, proficient=proficient and roll == "ability")
 
 
 def _refuse(code: str, **extra: str) -> HTTPException:
@@ -238,7 +239,7 @@ async def last_roll_options(
     if last.get("combatant_id") and (encounter is None or encounter.status == "ended"):
         raise _refuse("no_last_roll")
 
-    where = {"skill": last["skill"], "ability": last["ability"],
+    where = {"skill": last["skill"], "ability": last["ability"], "proficient": last.get("proficient", False),  # strumento
              "item": next((i for i in char.items if i.id == last["item_id"]), None),
              "spell": next((s for s in char.spells if s.id == last["spell_id"]), None)}
     grip = ({"attack_mode": pending["attack_mode"], "grip": pending["grip"], "offhand": pending.get("offhand", False)}

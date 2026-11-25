@@ -91,7 +91,7 @@ ASSASSINATE_DAMAGE = RollOptionSpec(
     label=_both("Assassinare: primo round, l'Attacco Furtivo ha colpito? Danni extra pari al livello da ladro, dello stesso tipo dell'arma",
                 "Assassinate: first round, did Sneak Attack hit? Extra damage equal to your rogue level, of the weapon's type"))
 ENVENOM = RollOptionSpec(
-    key=f"{CK}.envenom_weapons", phase="after_hit", rolls=("attack",), needs=POISON.key, extra_dice=lambda _c, _i: "2d6",
+    key=f"{CK}.envenom_weapons", phase="after_hit", rolls=("attack",), needs=POISON.key, extra_damage_type="poison", extra_dice=lambda _c, _i: "2d6",
     crit_doubles=False,  # il danno viene dal TS fallito, non dai dadi dell'attacco: il critico non lo raddoppia
     label=_both("Armi Velenose: il TS contro Veleno è fallito? 2d6 danni da veleno in più (ignorano la Resistenza al veleno)",
                 "Envenom Weapons: did the Poison save fail? 2d6 extra poison damage (ignores Poison resistance)"))
@@ -171,7 +171,8 @@ PSYCHIC_BLADE_BONUS = RollOptionSpec(
     label=_both("Lama Psichica, azione bonus: secondo attacco con una nuova lama (1d4 psichico), mano libera",
                 "Psychic Blade, bonus action: a second attack with a new blade (1d4 psychic), free hand"))
 KNACK = RollOptionSpec(
-    key=f"{CK}.psi_bolstered_knack", phase="after_roll", after="add", rolls=("skill",), cost=Cost(feature_key=PSI), pay_if_success=True,
+    key=f"{CK}.psi_bolstered_knack", phase="after_roll", after="add", rolls=("skill", "ability"),  # anche lo strumento (pag. 135)
+    cost=Cost(feature_key=PSI), pay_if_success=True,
     extra_dice=lambda c, _i: _psi_die(c), available=_proficient_skill_check,
     label=_both("Conoscenza Potenziata da Psi: prova fallita con una competenza? Spendi un Dado Energia e sommalo (il dado torna se fallisce comunque)",
                 "Psi-Bolstered Knack: failed a proficient check? Spend an Energy Die and add it (the die comes back if it still fails)"))
