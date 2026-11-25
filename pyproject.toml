@@ -1,6 +1,6 @@
 [project]
 name = "dnd-bot-revamped"
-version = "3.14.9"
+version = "3.15.0"
 requires-python = ">=3.11"
 dependencies = [
     # Bot
