@@ -64,7 +64,6 @@ async def test_delirio_oscuro_sul_bersaglio_finisce_con_la_concentrazione(client
 @pytest.mark.caccia(id="CB-2063", fonte="2014 · Warlock · Arcanum Mistico · pag. 116", zona="regola:2014/warlock", voce="regola",
                     copre=["carta:2014/classes/warlock.md#Arcanum Mistico / Mystic Arcanum (Warlock 11, pag. 116)",
                            "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2063: difforme dal manuale, confermato")
 async def test_arcanum_mistico_si_sceglie_dalla_lista_del_warlock(client):
     full = await _full(client, await _warlock(client, 17))
     liste = {grado: _choice(full, f"arcanum_{grado}")["spell_pick"]["list"] for grado in (6, 7, 8, 9)}
