@@ -144,3 +144,23 @@ async def test_l_interdizione_di_un_altro_paladino_protegge_chi_ha_la_propria_sp
     assert chiave not in await _roll_keys(client, cid, "damage_taken", damage_type="necrotic")  # ha la sua
     assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})).status_code == 200
     assert chiave in await _roll_keys(client, cid, "damage_taken", damage_type="necrotic")
+
+
+@pytest.mark.caccia(id="CB-4709", fonte="2014 · Condizioni · Privo di Sensi (cade prono) · pag. 292; 2024 · Unconscious · pag. 377", zona="regola:2014/generali",
+                    voce="interazione", copre=["carta:2014/general.md#Privo di Sensi / Unconscious (pag. 292)",
+                                               "carta:2024/general.md#Unconscious [Condition] (Privo di Sensi) (pag. 377)",
+                                               "POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions",
+                                               "PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}"])
+async def test_un_mostro_privo_di_sensi_cade_prono(client, test_session_factory):
+    sid, incontro = await setup_full_encounter(client, test_session_factory)
+    uno, due = [c for c in incontro["combatants"] if c["kind"] == "monster"]
+    base = f"/sessions/{sid}/encounter/combatants"
+    r = await client.post(f"{base}/{uno['id']}/conditions", json={"slug": "unconscious", "value": True})
+    assert r.status_code == 200, r.text
+    r = await client.patch(f"{base}/{due['id']}", json={"conditions": {"unconscious": True}})
+    assert r.status_code == 200, r.text
+    stato = {c["id"]: c["conditions"] for c in r.json()["combatants"]}
+    assert all(stato[m["id"]].get("prone") for m in (uno, due)), stato
+    # risvegliandosi resta prono, e il master può rialzarlo
+    r = await client.patch(f"{base}/{due['id']}", json={"conditions": {"unconscious": True, "prone": False}})
+    assert next(c for c in r.json()["combatants"] if c["id"] == due["id"])["conditions"]["prone"] is False

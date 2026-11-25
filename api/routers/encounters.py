@@ -47,7 +47,7 @@ from api.services.rules_states import MINUTE_ROUNDS, end_minute_states
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
-    pc_char as _pc_char, set_condition as _set_condition,
+    knocked_prone, pc_char as _pc_char, set_condition as _set_condition,
 )
 from api.services.rules_turn import clear_turn, reset_turn, set_others_turn, set_surprised
 from api.services.thiefs_reflexes import add_second_turns
@@ -630,7 +630,7 @@ async def patch_combatant(
     if body.conditions is not None:
         switched_off = [k for k, v in (comb.conditions or {}).items()
                         if v and not body.conditions.get(k)]
-        comb.conditions = body.conditions
+        comb.conditions = knocked_prone(comb, body.conditions)
         await clear_effects_for(db, ("combatant", comb.id), switched_off)
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead

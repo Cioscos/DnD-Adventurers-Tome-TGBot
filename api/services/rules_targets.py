@@ -42,12 +42,19 @@ async def pc_char_by_id(db: AsyncSession, char_id: int) -> Character:
     return char
 
 
+def knocked_prone(comb: Combatant, conditions: dict) -> dict:
+    """Le condizioni nuove di un mostro: chi diventa Privo di sensi cade Prono (2014 pag. 292; 2024 pag. 377), come per i PG in
+    ``apply_conditions``."""
+    fell = conditions.get("unconscious") and not (comb.conditions or {}).get("unconscious")
+    return {**conditions, "prone": True} if fell else conditions
+
+
 async def set_condition(db: AsyncSession, comb: Combatant, slug: str, value: Any) -> None:
     """Write one slug on the target's map; a falsy value drops the slug's effect."""
     if comb.kind == "pc":
         await apply_conditions(db, await pc_char(db, comb), {slug: value})
         return
-    comb.conditions = {**(comb.conditions or {}), slug: value}
+    comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), slug: value})
     if not value:
         await clear_effects_for(db, ("combatant", comb.id), [slug])
 
@@ -149,7 +156,7 @@ async def _activate_also(db: AsyncSession, eff: ConditionEffect, target: tuple[s
         else:
             comb = await db.get(Combatant, target[1])
             if not (comb.conditions or {}).get(slug):
-                comb.conditions = {**(comb.conditions or {}), slug: True}
+                comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), slug: True})
         await clear_effects_for(db, target, [slug], *same_source(eff.source_combatant_id, eff.source_character_id, None))
         db.add(ConditionEffect(
             character_id=eff.character_id, combatant_id=eff.combatant_id, slug=slug, expiry_anchor=eff.expiry_anchor,
@@ -178,7 +185,7 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
     else:
         comb = await db.get(Combatant, eff.combatant_id)
         if not (comb.conditions or {}).get(eff.slug):
-            comb.conditions = {**(comb.conditions or {}), eff.slug: True}
+            comb.conditions = knocked_prone(comb, {**(comb.conditions or {}), eff.slug: True})
         target = ("combatant", eff.combatant_id)
     eff.pending = False
     enc = await db.get(Encounter, eff.encounter_id) if eff.encounter_id else None
