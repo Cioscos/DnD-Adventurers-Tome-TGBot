@@ -215,13 +215,20 @@ _SLOT_CONCENTRATION = {"major-image": ({"2014": 6, "2024": 4}, {}), "bestow-curs
                        "dominate-beast": ({}, {5: 100, 6: 600, 7: 4800, 8: 4800, 9: 4800}),
                        "dominate-person": ({}, {6: 100, 7: 600, 8: 4800, 9: 4800}),
                        "dominate-monster": ({}, {9: 4800})}
+# la riga senza srd_index (scritta a mano, homebrew, import vecchi) si riconosce dal nome it/en, come per gli effetti del lancio
+_SLOT_CONCENTRATION_NAMES = {n.lower(): k for k, names in {
+    "major-image": ("Immagine Maggiore", "Major Image"), "bestow-curse": ("Scagliare Maledizione", "Maledizione", "Bestow Curse"),
+    "dominate-beast": ("Dominare Bestie", "Dominate Beast"), "dominate-person": ("Dominare Persone", "Dominate Person"),
+    "dominate-monster": ("Dominare Mostri", "Dominate Monster")}.items() for n in names}
 
 
 def _slot_concentration(char: Character, spell: Spell, level: int) -> tuple[bool, int | None]:
     """Se il lancio a questo livello chiede concentrazione e per quanti round: quelli dello slot (la tabella sopra, Sortilegio
     e Marchio del Cacciatore dal catalogo degli effetti), altrimenti la durata scritta sulla riga."""
     edition = character_edition(char)
-    until, rounds = _SLOT_CONCENTRATION.get(spell.srd_index or "", ({}, {}))
+    key = spell.srd_index if spell.srd_index in _SLOT_CONCENTRATION else next(
+        (_SLOT_CONCENTRATION_NAMES[n] for p in (spell.name or "").split("/") if (n := p.strip().lower()) in _SLOT_CONCENTRATION_NAMES), "")
+    until, rounds = _SLOT_CONCENTRATION.get(key, ({}, {}))
     if level >= until.get(edition, 10):
         return False, None
     if level in rounds:

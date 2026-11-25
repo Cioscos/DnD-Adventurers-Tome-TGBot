@@ -2,6 +2,7 @@
 import pytest
 
 from tests.caccia.test_cb_regola_2014_incantesimi_d_f import _impara, _pg
+from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _dal_catalogo
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration.rules.test_2014_bard import _add_spell, _full, _roll_keys, _use
 from tests.integration.rules.test_2024_cleric_domains import _spell_rows, _table
@@ -58,3 +59,22 @@ async def test_lo_scudo_della_fede_della_benedizione_rilanciato_su_altri_lascia_
         assert (await client.post(f"/characters/{chierico}/turn/new")).status_code == 200
     as_user(PLAYER_ID)
     assert (await _full(client, eroe))["ac"] == ca  # il secondo lancio ha chiuso il primo
+
+
+
+@pytest.mark.caccia(id="CB-3914", fonte="2014 · Incantesimi · Immagine Maggiore (dal 6° livello senza concentrazione) · pag. 242",
+                    zona="regola:2014/incantesimi-G-L", voce="interazione",
+                    copre=["carta:2014/spells.md#Immagine Maggiore", "POST /characters/{char_id}/spells/{spell_id}/use"])
+@pytest.mark.parametrize("nome", ["Immagine Maggiore", "Major Image", "Immagine Maggiore / Major Image"])
+async def test_immagine_maggiore_scritta_a_mano_dal_sesto_livello_non_chiede_concentrazione(client, nome):
+    # la riga senza srd_index (scritta a mano, homebrew, import vecchi) si riconosce dal nome, come per gli effetti del lancio
+    cid = await _pg(client, "bard", 17)
+    silenziosa = await _impara(client, cid, "silent-image")
+    riga = {k: v for k, v in _dal_catalogo("major-image").items() if k != "srd_index"} | {"name": nome}
+    r = await client.post(f"/characters/{cid}/spells", json=riga)
+    assert r.status_code == 201, r.text
+    maggiore = r.json()["id"]
+    assert (await client.post(f"/characters/{cid}/spells/{silenziosa}/use", json={"slot_level": 1})).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{maggiore}/use", json={"slot_level": 6, "confirm": ["one_slot_per_turn"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["concentrating_spell_id"] == silenziosa  # quella su Immagine Silenziosa resta
