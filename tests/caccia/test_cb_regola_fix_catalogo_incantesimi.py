@@ -1,6 +1,8 @@
 """Controlli scritti dalla correzione del gruppo catalogo-incantesimi per i dubbi «Q-…» risolti come difetti."""
 import pytest
 
+from tests.integration._encounter_helpers import GM_ID, as_user
+
 HAIL = "spell:hail_of_thorns:hit"
 
 
@@ -42,3 +44,25 @@ async def test_grandine_di_spine_2024_non_vale_dopo_il_lancio_di_un_arma_da_misc
     assert (HAIL in await _opzioni(client, cid, pugnale, "thrown")) is dopo_il_lancio
     assert HAIL in await _opzioni(client, cid, dardo, "thrown")
     assert HAIL not in await _opzioni(client, cid, pugnale, "melee")
+
+
+@pytest.mark.caccia(id="CB-4072", fonte="2024 · Incantesimi · Eroismo · pag. 285; 2024 · Capitolo 1 · Punti Ferita Temporanei · pag. 29",
+                    zona="regola:2024/incantesimi-D-F", voce="edizioni",
+                    copre=["carta:2024/spells.md#Eroismo", "carta:2014/spells.md#Eroismo", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "PATCH /characters/{char_id}/concentration"])
+@pytest.mark.parametrize("modo", ["manual", "concentration"])
+@pytest.mark.parametrize("edizione, restano", [("2024", 3), ("2014", 0)])
+async def test_eroismo_2024_i_pf_temporanei_restano_quando_l_incantesimo_finisce(client, test_session_factory, edizione, restano, modo):
+    from tests.integration.rules.test_spell_effects_defenses import _cast, _sheet, _table
+    from tests.integration.rules.test_spell_effects_hp import _end_spell, _new_turn
+    eroe, chierico, eroismo = await _table(client, test_session_factory, "Heroism", "heroism", 1, hero_edition=edizione, caster_edition=edizione)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{chierico}/classes", json={"class_name": "bard", "level": 3, "hit_die": 8})).status_code == 201
+    assert (await client.patch(f"/characters/{chierico}/ability_scores/charisma", json={"value": 16})).status_code == 200  # +3
+    await _cast(client, chierico, eroismo, [eroe], level=1)
+    await _new_turn(client, eroe)
+    assert (await _sheet(client, eroe))["temp_hp"] == 3
+    await _end_spell(client, eroe, chierico, "heroism", modo)
+    # 2024: la carta non toglie i PF temporanei a fine incantesimo, durano fino a esaurimento o al Riposo Lungo (p.29).
+    # 2014: «quando l'incantesimo termina, il bersaglio perde i punti ferita temporanei rimanenti».
+    assert (await _sheet(client, eroe))["temp_hp"] == restano
