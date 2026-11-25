@@ -241,7 +241,10 @@ def _slot_concentration(char: Character, spell: Spell, level: int) -> tuple[bool
     found = spell_effect(edition, spell.srd_index, spell.name)
     if found and found[1].concentration and found[1].rounds_by_slot:
         return True, found[1].rounds_by_slot(level)
-    return True, parse_duration_rounds(spell.duration)
+    rounds = parse_duration_rounds(spell.duration)
+    if rounds == 1 and found and found[1].concentration:  # Colpo Accurato 2014 (pag. 222): serve nel turno dopo, il «Nuovo turno» non lo chiude
+        rounds = found[1].rounds or rounds
+    return True, rounds
 
 
 def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, extra: int) -> tuple[Any, int]:

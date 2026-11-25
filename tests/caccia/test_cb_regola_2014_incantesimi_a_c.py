@@ -109,7 +109,6 @@ async def test_cerchio_magico_dura_un_ora_in_piu_per_ogni_slot_oltre_il_terzo(cl
 @pytest.mark.caccia(id="CB-3215", fonte="2014 · Incantesimi · Colpo Accurato · pag. 222", zona="regola:2014/incantesimi-A-C", voce="regola",
                     copre=["carta:2014/spells.md#Colpo Accurato", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/rounds/tick", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-3215: difforme dal manuale, confermato")
 async def test_il_vantaggio_di_colpo_accurato_vale_ancora_nel_turno_successivo(client):
     cid = await _pg(client, "wizard", 1, intelligence=16)
     colpo = await _dal_catalogo(client, cid, "true-strike")
