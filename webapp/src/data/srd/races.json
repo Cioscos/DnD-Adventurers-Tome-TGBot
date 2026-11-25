@@ -413,6 +413,7 @@
    "ability_bonuses": {
     "cha": 2
    },
+   "ability_choices": 2,
    "size": "medium",
    "languages": [
     "common",

@@ -16,6 +16,8 @@ export interface SubraceEntry extends RaceGrants {
 export interface RaceEntry extends BaseEntry, RaceGrants {
   speed_ft: number
   ability_bonuses: Record<string, number>
+  /** Quante altre caratteristiche a scelta prendono +1 (Mezzelfo). */
+  ability_choices?: number
   senses: { type: string; range_ft: number }[]
   languages: string[]
   traits: RaceTrait[]
@@ -55,10 +57,16 @@ const LANGS: Record<string, LocalizedField> = {
 
 export const NOTE_MAX = 120
 
-/** Merge race + optional subrace into the payload accepted by POST /characters. */
-export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: Lang): SpeciesPayload {
-  const bonuses = { ...race.ability_bonuses }
+/** Aumenti di razza, sottorazza e caratteristiche scelte (`picks`: +1 ciascuna). */
+export function raceBonuses(race: RaceEntry | null, sub: SubraceEntry | null | undefined, picks: string[] = []): Record<string, number> {
+  const bonuses: Record<string, number> = { ...race?.ability_bonuses }
   for (const [k, v] of Object.entries(sub?.ability_bonuses ?? {})) bonuses[k] = (bonuses[k] ?? 0) + v
+  for (const k of picks) bonuses[k] = (bonuses[k] ?? 0) + 1
+  return bonuses
+}
+
+/** Merge race + optional subrace into the payload accepted by POST /characters. */
+export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: Lang, picks: string[] = []): SpeciesPayload {
   const senses = new Map<string, number>()
   for (const s of [...race.senses, ...(sub?.senses ?? [])]) {
     senses.set(s.type, Math.max(senses.get(s.type) ?? 0, s.range_ft))
@@ -76,7 +84,7 @@ export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: La
     speed_ft: sub?.speed_ft ?? race.speed_ft,
     senses: [...senses].map(([type, range_ft]) => ({ type, range_ft })),
     languages: langs.map((l) => (LANGS[l] ? localized(LANGS[l], lang).text : l)),
-    ability_bonuses: bonuses,
+    ability_bonuses: raceBonuses(race, sub, picks),
     roll_notes: notes,
     traits: [...race.traits, ...(sub?.traits ?? [])].map((tr) => ({
       name: localized(tr.name, lang).text,

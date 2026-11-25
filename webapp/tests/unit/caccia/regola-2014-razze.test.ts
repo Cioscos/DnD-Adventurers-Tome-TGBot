@@ -39,7 +39,7 @@ function voci(x: unknown): string[] {
 }
 
 /** Creazione 2014 dal wizard (chierico, razza dal catalogo, tutto il resto saltato): gli argomenti passati a create. */
-async function creaConRazza(nome: string, sottorazza: string | null): Promise<unknown[]> {
+async function creaConRazza(nome: string, sottorazza: string | null, scelte: string[] = []): Promise<unknown[]> {
   create.mockReset()
   create.mockResolvedValue({ id: 9 })
   const user = userEvent.setup()
@@ -56,6 +56,10 @@ async function creaConRazza(nome: string, sottorazza: string | null): Promise<un
   const altra = screen.queryByRole('button', { name: 'character.create.subrace_other' })
   if (sottorazza) await clic(sottorazza)
   else if (altra) await user.click(altra)
+  for (const c of scelte) {
+    expect(screen.getByRole('button', { name: 'common.next →' })).toBeDisabled()
+    await clic(`common.abilities.${c} +1`)
+  }
   await avanti()
   await clic(/dnd.classes.cleric/) // la classe viene dopo la specie (CB-4555)
   await clic('character.skills.history')
@@ -98,10 +102,9 @@ describe('caccia: regola 2014 razze', () => {
   })
 
   // caccia: {"id": "CB-3070", "fonte": "2014 · Razze · Mezzelfo: Carisma +2 e altri due punteggi a scelta +1 ciascuno · pag. 39", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "route:/"]}
-  it.fails('mezzelfo: oltre a Carisma +2 riceve +1 a due altre caratteristiche', () => {
-    const aumenti = buildSpecies(razza('half-elf'), null, 'it').ability_bonuses
-    const altri = Object.entries(aumenti).filter(([k, v]) => k !== 'cha' && v === 1)
-    expect([aumenti.cha, altri.length]).toEqual([2, 2])
+  it('mezzelfo: oltre a Carisma +2 riceve +1 a due altre caratteristiche', async () => {
+    const mandate = await creaConRazza('Mezzelfo', null, ['strength', 'dexterity'])
+    expect(mandate[3]).toMatchObject({ species: { ability_bonuses: { cha: 2, str: 1, dex: 1 } } })
   })
 
   // caccia: {"id": "CB-3071", "fonte": "2014 · Razze · Mezzelfo, Retaggio Fatato (pag. 39) e Gnomo, Astuzia Gnomesca (pag. 36-37): vantaggio a tiri salvezza, come le note di Elfo, Nano e Halfling", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Mezzelfo / Half-Elf (pag. 39)", "carta:2014/races.md#Gnomo / Gnome - tratti base (pag. 36-37)", "route:/"]}

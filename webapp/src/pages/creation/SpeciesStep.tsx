@@ -8,11 +8,12 @@ import Pressable from '@/components/ui/Pressable'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { localized, type Lang } from '@/lib/srd/catalog'
 import SpeciesChoices from '@/components/character/SpeciesChoices'
-import type { RaceEntry, Species2024Entry, SubraceEntry } from '@/lib/species'
+import { raceBonuses, type RaceEntry, type Species2024Entry, type SubraceEntry } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
-/** `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17: dove la razza ne ha, è obbligatoria). */
-export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null | undefined }
+/** `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17: dove la razza ne ha, è obbligatoria).
+ *  `picks`: le caratteristiche a scelta che prendono +1 (Mezzelfo, 2014 pag. 39). */
+export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null | undefined; picks?: string[] }
 export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
@@ -50,10 +51,10 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
   const [picking, setPicking] = useState(false)
-  const { race, sub } = choice
+  const { race, sub, picks = [] } = choice
+  const toPick = race?.ability_choices ?? 0
   const e24 = edition === '2024' ? species24?.entry ?? null : null
-  const bonuses: Record<string, number> = { ...race?.ability_bonuses }
-  for (const [k, v] of Object.entries(sub?.ability_bonuses ?? {})) bonuses[k] = (bonuses[k] ?? 0) + v
+  const bonuses = raceBonuses(race, sub, picks)
 
   return (
     <div className="space-y-3">
@@ -87,7 +88,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
           {[null, ...race.subraces].map((s) => (
             <Pressable
               key={s?.index ?? 'none'}
-              onClick={() => onChoice({ race, sub: s })}
+              onClick={() => onChoice({ ...choice, sub: s })}
               className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
                 ${sub !== undefined && (sub?.index ?? null) === (s?.index ?? null)
                   ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
@@ -95,6 +96,28 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
               {s ? localized(s.name, lang).text : t('character.create.subrace_other')}
             </Pressable>
           ))}
+        </div>
+      )}
+
+      {edition === '2014' && race && toPick > 0 && (
+        <div role="group" aria-label={t('character.create.ability_choices', { n: picks.length, max: toPick })}>
+          <p className="mb-1.5 text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim tabular-nums">
+            {t('character.create.ability_choices', { n: picks.length, max: toPick })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {Object.keys(ABBR).filter((k) => !(k in race.ability_bonuses)).map((k) => (
+              <Pressable
+                key={k}
+                aria-pressed={picks.includes(k)}
+                disabled={!picks.includes(k) && picks.length >= toPick}
+                onClick={() => onChoice({ ...choice, picks: picks.includes(k) ? picks.filter((p) => p !== k) : [...picks, k] })}
+                className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
+                  ${picks.includes(k) ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'} disabled:opacity-40`}
+              >
+                {t(`common.abilities.${ABBR[k]}`)} +1
+              </Pressable>
+            ))}
+          </div>
         </div>
       )}
 

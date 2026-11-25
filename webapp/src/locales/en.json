@@ -2591,6 +2591,7 @@
       }
     },
     "create": {
+      "ability_choices": "Other abilities +1: {{n}}/{{max}}",
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
       "step_class_subtitle": "For {{name}} · Step 2/3",

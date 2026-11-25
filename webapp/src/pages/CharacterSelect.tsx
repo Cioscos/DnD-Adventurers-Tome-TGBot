@@ -147,7 +147,7 @@ export default function CharacterSelect() {
   const wealth = wealthPick === true
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
-  const speciesPayload = species.race ? buildSpecies(species.race, species.sub ?? null, lang) : null
+  const speciesPayload = species.race ? buildSpecies(species.race, species.sub ?? null, lang, species.picks) : null
   const scoreBonuses: Record<string, number> = (is2024 ? bg24?.increases : speciesPayload?.ability_bonuses) ?? {}
 
   const charactersQuery = useQuery({
@@ -780,7 +780,8 @@ export default function CharacterSelect() {
                 onPrimary={goNext}
                 primaryDisabled={is2024
                   ? !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0
-                  : !!species.race && species.race.subraces.length > 0 && species.sub === undefined}
+                  : !!species.race && ((species.race.subraces.length > 0 && species.sub === undefined)
+                    || (species.picks?.length ?? 0) !== (species.race.ability_choices ?? 0))}
                 primaryHaptic="medium"
               />
             </m.div>

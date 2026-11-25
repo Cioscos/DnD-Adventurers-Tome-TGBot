@@ -2590,6 +2590,7 @@
       }
     },
     "create": {
+      "ability_choices": "Altre caratteristiche +1: {{n}}/{{max}}",
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
       "step_class_subtitle": "Per {{name}} · Passo 2/3",
