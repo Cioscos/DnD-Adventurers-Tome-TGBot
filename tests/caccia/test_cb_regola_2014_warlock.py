@@ -17,7 +17,6 @@ LUCK = "warlock.dark_ones_own_luck"
                     copre=["carta:2014/classes/warlock.md#Fortuna dell'Oscuro / Dark One's Own Luck (Immondo 6, pag. 117)",
                            "POST /characters/{char_id}/last-roll/options"])
 @pytest.mark.parametrize("tiro", ["initiative", "death_save"])
-@pytest.mark.xfail(strict=True, reason="CB-2061: difforme dal manuale, confermato")
 async def test_fortuna_dell_oscuro_vale_su_iniziativa_e_ts_contro_morte(client, tiro):
     cid = await _warlock(client, 6, "fiend", charisma=16)
     if tiro == "initiative":

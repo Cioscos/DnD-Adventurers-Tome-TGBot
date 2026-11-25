@@ -203,7 +203,7 @@ def _blessing_value(ctx: RuleContext) -> int:
 BLESSING_USE = OnUse(cost=0, temp_hp=lambda c, _rolled: _blessing_value(c))
 
 DARK_LUCK = RollOptionSpec(
-    key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save"), cost=Cost(feature_key=LUCK),
+    key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save", "death_save", "initiative"), cost=Cost(feature_key=LUCK),
     extra_dice=lambda _c, _i: "1d10",
     label={"it": "Fortuna dell'Oscuro: spendi l'uso e somma 1d10 al tiro", "en": "Dark One's Own Luck: spend the use and add 1d10 to the roll"})
 
