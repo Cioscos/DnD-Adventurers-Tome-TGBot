@@ -1,13 +1,19 @@
 """Controlli delle revisioni delle correzioni regole 2026-11-24: lo stesso errore trovato altrove."""
 import pytest
 
-from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg
+from tests.caccia.test_cb_regola_2014_incantesimi_g_l import _pg, _scheda
+from tests.caccia.test_cb_regola_2024_incantesimi_a_c import _dal_catalogo, _pg as _pg24
+from tests.caccia.test_cb_regola_2024_paladin import _seduti
+from tests.caccia.test_cb_regola_2024_rogue import _ladro
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
 from tests.integration.rules.test_2014_bard import _roll_keys, _states, _use
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_sorcerer_metamagic import TWINNED, _caster
 from tests.integration.rules.test_2014_wizard import _wizard
 from tests.integration.rules.test_2014_wizard_illusion_evocation import _illusion
 from tests.integration.rules.test_2024_cleric_domains import _dom, _spell_rows
-from tests.integration.test_magic_items import _item
+from tests.integration.rules.test_2024_druid_circles import _circle
+from tests.integration.rules.test_2024_paladin_oaths import _oath
 from tests.integration.test_magic_items import _item
 
 
@@ -95,3 +101,14 @@ async def test_riprendere_la_concentrazione_nel_turno_del_lancio_tiene_lo_slot(c
     assert r.status_code == 200, r.text
     s = r.json()["settings"]
     assert (s["concentration_rounds_left"], s["concentration_level"]) == (600, 7)
+
+
+@pytest.mark.caccia(id="CB-4706", fonte="2024 · Incantesimi · Evoca Fatato (3d12 + modificatore da incantatore) · pag. 255", zona="regola:2024/incantesimi-A-C",
+                    voce="regola", copre=["carta:2024/spells.md#Evoca Fatato", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_l_attacco_dello_spirito_di_evoca_fatato_somma_il_modificatore(client, dadi):
+    cid = await _pg24(client, "druid", 11, wisdom=16)  # Saggezza +3
+    spirito = await _dal_catalogo(client, cid, "conjure-fey")
+    dadi(4, 5, 6)
+    r = await client.post(f"/characters/{cid}/spells/{spirito['id']}/roll_damage", json={"casting_level": 6})
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == 15 + 3

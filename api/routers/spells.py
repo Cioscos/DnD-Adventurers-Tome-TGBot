@@ -903,8 +903,9 @@ _UPCAST = {
     ("flame-strike", "2024"): _Upcast(both=True),  # +1d6 fuoco e +1d6 radiosi per livello (pag. 275)
     ("jallarzis-storm-of-radiance", "2024"): _Upcast(both=True),  # +1d10 radiosi e +1d10 da tuono per livello (pag. 289)
 }
-# Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
-_ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}
+# Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 255, 275, 302, 319-320)
+_ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024"),
+                   ("conjure-fey", "2024")}
 # Tipo del danno deciso da una scelta del lancio che non è «damage_type»: Scudo di Fuoco caldo fuoco, freddo freddo (2014 pag. 275; 2024 pag. 274)
 _TYPE_BY_CHOICE = {"fire_shield": ("shield", {"warm": "fire", "cold": "cold"})}
 
