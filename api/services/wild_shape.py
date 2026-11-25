@@ -110,7 +110,7 @@ def start_form(char: Character, form: Companion, grant: bool = True) -> None:
                  if isinstance(sb.get("abilities"), dict) and short in sb["abilities"]}
     own_hp = limits is None or limits.own_hp
     # For, Des e Cos sono quelle della bestia in entrambe le edizioni (2014 pag. 66, 2024 pag. 81)
-    data = {"companion_id": form.id, "abilities": abilities, "mode": "replace", "own_hp": own_hp}
+    data = {"companion_id": form.id, "abilities": abilities, "own_hp": own_hp}
     if limits is not None:  # il druido acquisisce le competenze della bestia; vale il bonus del profilo se è più alto
         data["skills"] = _numbers(sb.get("skills"), SKILL_ABILITY_MAP)
         data["saves"] = {_ABILITY_FULL[k]: v for k, v in _numbers(sb.get("saves"), _ABILITY_FULL).items()}

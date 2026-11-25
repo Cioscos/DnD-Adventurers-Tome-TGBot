@@ -1,6 +1,9 @@
 """Controlli scritti dalla correzione del gruppo compagni-forme (dubbi «Q-…» risolti come difetti)."""
+from types import SimpleNamespace
+
 import pytest
 
+from core.game.stats import roll_ability_mod
 from tests.integration.rules.test_2014_bard import _full
 from tests.integration.rules.test_2014_druid import _activate, _beast, _form
 from tests.integration.rules.test_2014_ranger_beast import _companion, _master
@@ -67,3 +70,12 @@ async def test_i_dadi_vita_della_bestia_primordiale_salgono_col_livello(client, 
     assert r.status_code == 200, r.text
     assert r.json()["hit_dice_left"] == 0
 
+
+@pytest.mark.caccia(id="CB-4354", fonte="2024 · Druido · Regole della Forma Selvatica: Forza, Destrezza e Costituzione sono quelle della Bestia · pag. 81",
+                    zona="regola:2024/druid", voce="regola",
+                    copre=["carta:2024/classes/druid.md#Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)"])
+def test_una_forma_2024_gia_salvata_col_massimo_usa_la_forza_della_bestia():
+    """Lo stato salvato prima della correzione porta mode «max»: la Forza resta comunque quella della Bestia."""
+    form = {"key": "wild_shape", "data": {"abilities": {"strength": 10}, "mode": "max", "own_hp": False}}
+    char = SimpleNamespace(ability_scores=[SimpleNamespace(name="strength", value=18)], items=[], active_states=[form])
+    assert roll_ability_mod(char, "strength") == 0

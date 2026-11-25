@@ -22,7 +22,7 @@ def jack_of_all_trades_part(char: Character) -> int:
 
 
 def _form_proficiencies(char: Character, kind: str) -> dict:
-    """Competenze della bestia salvate con la Forma Selvatica (2014): ``kind`` = ``skills`` o ``saves``. Vuoto se mancano."""
+    """Competenze della bestia salvate con la Forma Selvatica: ``kind`` = ``skills`` o ``saves``. Vuoto se mancano."""
     form = next((s for s in char.active_states or [] if s.get("key") == "wild_shape"), None)
     found = ((form or {}).get("data") or {}).get(kind)
     return found if isinstance(found, dict) else {}

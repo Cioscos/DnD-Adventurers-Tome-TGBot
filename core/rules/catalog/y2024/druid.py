@@ -774,8 +774,10 @@ CLASS_FEATURES = (
             "bonus_action", uses=Uses(table={2: 2, 6: 3, 17: 4}), restoration="long_rest", short_rest_recovers=1),
     feature("wild_shape_rules", CK, ED, 2, "Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)",
             ("Regole della Forma Selvatica", "Rules While Shape-Shifted"),
-            ("PF temporanei pari al livello da druido; PF, Dadi Vita, Int, Sag e Car restano tuoi; vale il modificatore più alto fra druido e Bestia.",
-             "Temporary HP equal to your druid level; HP, Hit Dice, Int, Wis and Cha stay yours; the higher modifier of druid and Beast applies."),
+            ("PF temporanei pari al livello da druido; For, Des e Cos sono della Bestia, mentre PF, Dadi Vita, Int, Sag e Car restano tuoi. "
+             "Le tue competenze si sommano a quelle della Bestia: per prove e TS vale il modificatore più alto fra il tuo e quello della Bestia.",
+             "Temporary HP equal to your druid level; Str, Dex and Con are the Beast's, while HP, Hit Dice, Int, Wis and Cha stay yours. "
+             "Your proficiencies add to the Beast's: for checks and saves the higher of your modifier and the Beast's applies."),
             no_row=True, covered_by="api/services/wild_shape.py (start_form), core/game/stats.py e core/rules/forms.py; "
                                     "test_wild_shape_is_a_bonus_action_gives_temporary_hp_equal_to_the_level_and_keeps_the_real_hp"),
     feature("wild_companion", CK, ED, 2, "Compagno Selvatico / Wild Companion (Druido 2, pag. 81)", ("Compagno Selvatico", "Wild Companion"),
