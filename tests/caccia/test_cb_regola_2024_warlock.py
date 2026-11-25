@@ -127,7 +127,6 @@ async def test_arcanum_mistico_2024_si_sceglie_dalla_lista_del_warlock(client):
                     voce="edizioni", copre=["carta:2024/classes/warlock.md#Patto della Lama / Pact of the Blade (Suppliche Occulte, pag. 156)",
                                             "POST /characters/{char_id}/features/{feature_key}/use"])
 @pytest.mark.parametrize("forma,dado,versatile", [("trident", "1d8", "1d10"), ("lance", "1d10", None), ("war_pick", "1d8", "1d10")])
-@pytest.mark.xfail(strict=True, reason="CB-2678: difforme dal manuale, confermato")
 async def test_l_arma_evocata_dal_patto_2024_ha_i_dadi_delle_armi_2024(client, forma, dado, versatile):
     cid = await _caster24(client, 3, BLADE)
     arma = await _blade(client, cid, forma)

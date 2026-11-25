@@ -14,6 +14,7 @@ from core.data.damage_types import DAMAGE_TYPES
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014 import warlock_invocations as inv
 from core.rules.catalog.y2014.warlock_invocations import BOON_GROUP, INVOCATIONS, PACT_WEAPON, PREREQUISITES, is_blast
+from core.rules.edition import character_edition
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses, UseToggle,
 )
@@ -88,6 +89,10 @@ PACT_WEAPONS: dict[str, tuple[str, str, tuple[str, ...], str | None]] = {
     "trident": ("1d6", "piercing", ("thrown", "versatile"), "1d8"), "war_pick": ("1d8", "piercing", (), None),
     "warhammer": ("1d8", "bludgeoning", ("versatile",), "1d10"), "whip": ("1d4", "slashing", ("finesse", "reach"), None),
 }
+# Il Patto della Lama 2024 usa la tabella delle armi 2024 (pag. 215): cambiano solo queste tre
+PACT_WEAPONS_2024 = {**PACT_WEAPONS, "lance": ("1d10", "piercing", ("heavy", "reach", "two-handed"), None),
+                     "trident": ("1d8", "piercing", ("thrown", "versatile"), "1d10"),
+                     "war_pick": ("1d8", "piercing", ("versatile",), "1d10")}
 
 
 def _weapon_label(key: str) -> dict[str, str]:
@@ -100,7 +105,8 @@ def _create_pact_weapon(ctx: RuleContext, params: dict) -> None:
     """Crea l'arma del patto in mano: l'arma di prima del patto (se c'era) scompare, quella in mano torna nello zaino.
     Competente (nessuna categoria) e magica (modificatore ``magic_weapon`` sull'oggetto)."""
     from core.db.models import EquipmentSlot, Item  # import locale: i modelli non si importano dal catalogo
-    dice, dtype, props, versatile = PACT_WEAPONS[params["weapon"]]
+    table = PACT_WEAPONS_2024 if character_edition(ctx.char) == "2024" else PACT_WEAPONS
+    dice, dtype, props, versatile = table[params["weapon"]]
     label = _weapon_label(params["weapon"])
     char = ctx.char
     for item in [i for i in char.items if _is_pact(i)]:
