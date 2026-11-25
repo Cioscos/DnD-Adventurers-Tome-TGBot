@@ -5,6 +5,7 @@ Ogni stato ``spell:<chiave>`` sul bersaglio non ha durata propria: la scandisce 
 della richiesta (``api.services.effects``) toglie loro lo stato."""
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Collection
 
@@ -23,6 +24,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.catalog.y2014.sorcerer import EXTENDED_KEY, MAX_DURATION_ROUNDS, TWINNED_KEY
 from core.rules.edition import character_edition
 from core.game.stats import effective_ability_mod
+from core.rules.spell_healing import healing_spec
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
@@ -300,6 +302,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     inflicts = any(c.key == "damage_type" and c.inflicts for c in variant.choices)
     _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
     _remember_cast_type(caster, effect.key + UPCAST_SUFFIX, chosen.get("upcast_type"))
+    if hasattr(spell, "class_id") and healing_spec(spell.srd_index, character_edition(caster)) is not None:
+        variant = replace(variant, heal=None)  # la cura la tira la «Cura» dell'incantesimo (Rigenerazione); un oggetto non ce l'ha
     concentration = variant.concentration and not no_concentration
     rounds = variant.duration(slot_level) if lasts is None else lasts.get("rounds")
     if EXTENDED_KEY in options and rounds is not None:

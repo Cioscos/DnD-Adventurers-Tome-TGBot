@@ -58,3 +58,29 @@ async def test_santuario_2014_finisce_quando_il_protetto_attacca(client, test_se
     assert r.status_code == 200, r.text
     # «Termina se la creatura protetta attacca o lancia un incantesimo su un nemico»
     assert not _ha(await _sheet(client, eroe), "spell:sanctuary")
+
+
+@pytest.mark.caccia(id="CB-4763", fonte="2014 · Incantesimi · Rigenerazione · pag. 270", zona="regola:2014/incantesimi-M-R", voce="regola",
+                    copre=["carta:2014/spells.md#Rigenerazione", "POST /characters/{char_id}/items/{item_id}/cast",
+                           "POST /characters/{char_id}/spells/{spell_id}/use"])
+@pytest.mark.parametrize("come", ["oggetto", "riga_senza_indice", "riga_del_catalogo"])
+async def test_rigenerazione_senza_tiro_di_cura_da_comunque_i_4d8_piu_15(client, dadi, come):
+    cid, classe = await _pg(client, "cleric", 13)
+    for op, valore in (("set_max", 100), ("set_current", 10)):
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": valore})).status_code == 200
+    if come != "riga_del_catalogo":
+        dadi(5, 5, 5, 5)
+    if come == "oggetto":
+        r = await client.post(f"/characters/{cid}/items", json={"name": "Verga", "item_type": "generic", "item_metadata": {
+            "charges": {"max": 5, "current": 5}, "granted_spells": [{"name": "Rigenerazione", "srd_index": "regenerate", "level": 7, "charges_cost": 1}]}})
+        assert r.status_code == 201, r.text
+        r = await client.post(f"/characters/{cid}/items/{r.json()['items'][-1]['id']}/cast", json={"spell_index": 0})
+    else:
+        r = await client.post(f"/characters/{cid}/spells", json={"name": "Rigenerazione", "level": 7, "class_id": classe,
+                                                                **({"srd_index": "regenerate"} if come == "riga_del_catalogo" else {})})
+        assert r.status_code == 201, r.text
+        r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"slot_level": 7})
+    assert r.status_code == 200, r.text
+    # 4d8 + 15 subito; la riga del catalogo li tira dalla «Cura» dell'incantesimo, non anche dal lancio (CB-3363)
+    attesi = 10 if come == "riga_del_catalogo" else 45
+    assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == attesi
