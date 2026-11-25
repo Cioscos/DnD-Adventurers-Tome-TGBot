@@ -9,10 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from core.data.spell_slots import caster_kind
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition, class_key
+from core.rules.pact_casts import pact_cast
 from core.rules.schools import normalize_school
-from core.rules.spellcasting import slots_for
+from core.rules.spellcasting import caster_ability, slots_for
 
 MODES = ("copy", "backup", "retranscribe")  # retranscribe: il libro è andato perso, si ritrascrive un incantesimo preparato
 _HOURS = {"copy": 2, "retranscribe": 1, "backup": 1}
@@ -50,9 +52,10 @@ def copy_cost(char: Any, level: int, school: str | None, mode: str = "copy") -> 
 
 
 def top_slot_level(char: Any, row: Any) -> int:
-    """Livello più alto che la classe lancia secondo la sua tabella: un incantesimo si prepara o si copia solo fino a lì."""
-    regular = slots_for(character_edition(char), [row]).regular
-    return max((level for level, total in regular.items() if total > 0), default=0)
+    """Livello più alto che la classe lancia secondo la sua tabella (il Warlock: il livello degli slot del Patto):
+    un incantesimo si prepara o si copia solo fino a lì."""
+    table = slots_for(character_edition(char), [row])
+    return max((level for level, total in {**table.regular, **table.pact}.items() if total > 0), default=0)
 
 
 def book_refusal(char: Any, spell: Any, mode: str) -> tuple[int, str] | None:
@@ -77,13 +80,25 @@ def book_refusal(char: Any, spell: Any, mode: str) -> tuple[int, str] | None:
     return None
 
 
+def _spell_row(char: Any, spell: Any) -> Any | None:
+    """La classe dell'incantesimo: quella assegnata, o l'unico incantatore se non è assegnato."""
+    if spell.class_id is not None:
+        return next((c for c in char.classes if c.id == spell.class_id), None)
+    casters = [c for c in char.classes if caster_ability(c)]
+    return casters[0] if len(casters) == 1 else None
+
+
 def prepare_refusal(char: Any, spell: Any) -> tuple[int, str] | None:
-    """Perché un incantesimo del Mago non si può preparare: fuori dal libro, o di un livello per cui non ha slot."""
-    row = wizard_row(char, spell)
-    if row is None or spell.level < 1 or spell.always_prepared:
+    """Perché un incantesimo non si può preparare: del Mago fuori dal libro; di un livello per cui la sua classe, come se
+    fosse l'unica, non ha slot (le carte Incantesimi di ogni classe e il multiclasse). Un Arcanum Mistico non è fra i preparati."""
+    if spell.level < 1 or spell.always_prepared:
         return None
-    if not spell.in_spellbook:
+    row = wizard_row(char, spell)
+    if row is not None and not spell.in_spellbook:
         return 409, "not_in_spellbook"
+    row = row or _spell_row(char, spell)
+    if row is None or caster_kind(row, character_edition(char)) is None or pact_cast(char, spell) is not None:
+        return None  # classe custom o che non incanta: nessuna tabella da cui leggere gli slot
     if spell.level > top_slot_level(char, row):
         return 422, "spell_above_slots"
     return None

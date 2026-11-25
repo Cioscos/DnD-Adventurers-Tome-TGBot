@@ -1,8 +1,6 @@
 """Incantesimi sui punti ferita: PF temporanei, CA impostata, Interdizione alla Morte, Legame di Protezione, rigenerazione."""
 from __future__ import annotations
 
-from dataclasses import replace
-
 from core.game.stats import effective_ability_mod
 from core.rules.catalog.spells.defenses import HOUR, both, txt
 from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant, roll
@@ -72,17 +70,18 @@ _DEATH_WARD = SpellVariant(
 # --- Legame di Protezione --------------------------------------------------------------------------------------------
 _WARDING_BOND = SpellVariant(
     modifiers=lambda d: (Modifier("ac", 1), Modifier("save", 1), Modifier("resistance:all", 1)),
-    shares_damage=True, clock_ends_on=("unconscious",), rounds=HOUR,
+    shares_damage=True, not_self=True, clock_ends_on=("unconscious",), rounds=HOUR,
     text=txt("Chi lancia subisce lo stesso danno del bersaglio (l'app lo scrive sulla sua scheda) e l'incantesimo finisce se scende a 0 PF. "
              "La distanza (18 m) la controlla il GM. Il danno si gira solo dai danni sulla scheda (non da quelli di altre vie, come le azioni homebrew).",
              "The caster takes the same damage as the target (the app writes it on their sheet) and the spell ends if they drop to 0 HP. "
              "The GM checks the distance (60 ft). The damage is shared only from damage written on the sheet (not from other paths, like homebrew actions)."))
 
 # --- Rigenerazione e cure nel tempo -----------------------------------------------------------------------------------
+# I 4d8+15 iniziali li tira e applica la «Cura» dell'incantesimo (tabella delle cure, con Discepolo della Vita): qui darli di nuovo li raddoppierebbe
 _REGENERATE = SpellVariant(
-    heal=lambda d: roll(4, 8, 15), turn_heal=lambda d, c: 1, rounds=HOUR,
-    text=txt("4d8+15 PF subito e 1 PF a inizio di ogni tuo turno (automatici). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
-             "4d8+15 HP now and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
+    turn_heal=lambda d, c: 1, rounds=HOUR,
+    text=txt("4d8+15 PF subito (li tira «Cura» dell'incantesimo) e 1 PF a inizio di ogni tuo turno (automatico). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
+             "4d8+15 HP now (the spell's healing roll rolls them) and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
 _VITALITY_TEXT = txt("2d6 PF a una creatura nell'aura: usa «Cura» sulla scheda del beneficiario (2014 con un'azione bonus a ogni tuo turno; "
                      "2024 alla creazione e a inizio di ogni tuo turno).",
                      "2d6 HP to a creature in the aura: use Heal on the recipient's sheet (2014 with a bonus action on each of your turns; "
@@ -109,8 +108,7 @@ SPELLS: tuple[SpellEffect, ...] = (
                 SpellTarget("allies", lambda slot: 6), {"2024": _FORTIFY}),
     SpellEffect("death_ward", ("death-ward",), ("Interdizione alla Morte", "Death Ward"), SpellTarget("ally"), both(_DEATH_WARD)),
     SpellEffect("warding_bond", ("warding-bond",), ("Vincolo di Interdizione", "Legame di Protezione", "Warding Bond"),
-                # 2024 p.340: «un'altra creatura consenziente», chi lancia non è un bersaglio (il 2014 dice «una creatura consenziente»)
-                SpellTarget("ally"), {"2014": _WARDING_BOND, "2024": replace(_WARDING_BOND, not_self=True)}),
+                SpellTarget("ally"), both(_WARDING_BOND)),
     SpellEffect("regenerate", ("regenerate",), ("Rigenerazione", "Regenerate"), SpellTarget("ally"), both(_REGENERATE)),
     SpellEffect("prayer_of_healing", ("prayer-of-healing",), ("Preghiera di Guarigione", "Prayer of Healing"),
                 SpellTarget("allies", lambda _s: 5), {"2024": _PRAYER_OF_HEALING}),

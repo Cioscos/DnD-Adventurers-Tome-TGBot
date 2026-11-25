@@ -236,14 +236,14 @@ export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
   /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
   weapon_choice?: boolean
-  /** Punizione: il danno lo dà l'opzione al colpo, il lancio non tira i dadi dell'incantesimo. */
+  /** Il danno lo dà l'opzione all'attacco (punizione, Manto del Crociato, Favore Divino): il lancio non tira i dadi dell'incantesimo. */
   hit_damage?: boolean
   /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
   weapon_kinds?: string[]
   /** Il tipo dei dadi in più dello slot più alto scelto all'ultimo lancio (Colpo Infuocato, Fame di Hadar); il server lo conserva. */
   cast_upcast_type?: string | null
   max_targets_by_slot: Record<string, number>
-  /** Solo su un'altra creatura: il foglio dei bersagli non offre «te stesso» (Legame di Protezione 2024). */
+  /** Solo su un'altra creatura: il foglio dei bersagli non offre «te stesso» (Vincolo di Interdizione). */
   not_self?: boolean
   /** `when`: si chiede solo se la scelta `[chiave, valore]` è già stata fatta (il tipo delle Rune Esplosive del Glifo). */
   choices: { key: string; label: { it: string; en: string }; options: string[]; when?: [string, string] | null }[]

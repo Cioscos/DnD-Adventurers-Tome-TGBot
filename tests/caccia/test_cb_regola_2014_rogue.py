@@ -73,7 +73,6 @@ async def _mano_magica(client, cid):
                            "carta:2014/general.md#Incantesimi / Spellcasting (multiclasse) (pag. 164)",
                            "POST /characters/{char_id}/classes", "GET /characters/{char_id}"])
 @pytest.mark.parametrize("livello, altra, atteso", [(4, "paladin", {1: 3}), (7, "ranger", {1: 4, 2: 2})])
-@pytest.mark.xfail(strict=True, reason="CB-1961: difforme dal manuale, confermato")
 async def test_mistificatore_con_un_paladino_o_ranger_di_1_livello_usa_la_propria_tabella(client, livello, altra, atteso):
     cid = await _ladro(client, livello, "arcane_trickster")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": altra, "level": 1, "hit_die": 10})

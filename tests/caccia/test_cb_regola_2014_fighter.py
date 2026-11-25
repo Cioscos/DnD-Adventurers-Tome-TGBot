@@ -84,7 +84,6 @@ async def _manovre(client, cid, *scelte) -> None:
 @pytest.mark.caccia(id="CB-1761", fonte="2014 · Guerriero · Incantesimi del Cavaliere Mistico · pag. 75; Multiclasse, Incantesimi · pag. 164; Paladino e Ranger · Incantesimi dal 2° livello · pag. 97, 104", zona="regola:2014/fighter", voce="interazione",
                     copre=["carta:2014/classes/fighter.md#Incantesimi / Eldritch Knight Spellcasting (Cavaliere Mistico 3, pag. 75)", "carta:2014/classes/fighter.md#Multiclasse: Guerriero / Multiclassing: Fighter (Regole opzionali, pag. 163)", "POST /characters/{char_id}/classes"])
 @pytest.mark.parametrize("altra", ["paladin", "ranger"])
-@pytest.mark.xfail(strict=True, reason="CB-1761: difforme dal manuale, confermato")
 async def test_un_paladino_o_ranger_di_1_livello_non_cambia_gli_slot_del_cavaliere_mistico(client, altra):
     cid = await _guerriero(client, 7, "eldritch_knight")
     assert await _slot(client, cid) == {1: 4, 2: 2}

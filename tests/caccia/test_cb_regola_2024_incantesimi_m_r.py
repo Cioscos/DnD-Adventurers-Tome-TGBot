@@ -126,8 +126,10 @@ async def test_maledizione_con_slot_alto_non_richiede_concentrazione(client, slo
                     copre=["carta:2024/spells.md#Malocchio", "carta:2024/spells.md#Marchio del cacciatore",
                            "carta:2024/spells.md#Mantello del Crociato", "carta:2024/spells.md#Maledizione",
                            "carta:2024/spells.md#Porta Dimensionale", "carta:2024/spells.md#Ragnatela", "GET /characters/{char_id}/spells"])
-@pytest.mark.parametrize("indice", ["hex", "hunters-mark", "crusaders-mantle", "bestow-curse", "dimension-door", "web"])
-@pytest.mark.xfail(strict=True, reason="CB-3815: difforme dal manuale, confermato")
+# Malocchio, Marchio del Cacciatore e Mantello del Crociato: il danno arriva dall'opzione all'attacco (hit_damage), corretti
+@pytest.mark.parametrize("indice", ["hex", "hunters-mark", "crusaders-mantle", *(
+    pytest.param(i, marks=pytest.mark.xfail(strict=True, reason="CB-3815: difforme dal manuale, confermato"))
+    for i in ("bestow-curse", "dimension-door", "web"))])
 async def test_incantesimi_senza_danno_al_lancio_non_aprono_il_tiro_di_danno(client, indice):
     cid = await _pg(client)
     await _dal_catalogo(client, cid, indice)
@@ -141,7 +143,6 @@ async def test_incantesimi_senza_danno_al_lancio_non_aprono_il_tiro_di_danno(cli
 @pytest.mark.caccia(id="CB-3816", fonte="2024 · Incantesimi · Preveggenza (termina se lanci di nuovo l'incantesimo) · pag. 276",
                     zona="regola:2024/incantesimi-M-R", voce="edizioni",
                     copre=["carta:2024/spells.md#Preveggenza", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3816: difforme dal manuale, confermato")
 async def test_preveggenza_2024_lanciata_di_nuovo_finisce_sul_primo_bersaglio(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(GM_ID)

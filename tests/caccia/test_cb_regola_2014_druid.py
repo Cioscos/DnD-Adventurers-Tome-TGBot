@@ -59,7 +59,6 @@ async def test_il_rifugio_della_natura_usa_la_cd_degli_incantesimi_del_druido(cl
                     zona="regola:2014/druid", voce="limiti",
                     copre=["carta:2014/classes/druid.md#Incantesimi / Spellcasting (Druido 1, pag. 66)", "POST /characters/{char_id}/spells"])
 @pytest.mark.parametrize("livello_druido, livello_incantesimo", [(1, 2), (2, 2), (4, 3), (16, 9)])
-@pytest.mark.xfail(strict=True, reason="CB-1713: difforme dal manuale, confermato")
 async def test_il_druido_non_prepara_incantesimi_di_un_livello_senza_slot(client, livello_druido, livello_incantesimo):
     cid = await _druid(client, livello_druido, wisdom=18)  # posto libero fra i preparati
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Incantesimo alto", "level": livello_incantesimo,

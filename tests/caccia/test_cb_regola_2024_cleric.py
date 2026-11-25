@@ -126,7 +126,6 @@ async def test_guaritore_benedetto_2024_non_vale_se_l_unico_bersaglio_e_il_chier
                     copre=["carta:2024/classes/cleric.md#Incantesimi / Spellcasting (Chierico 1, pag. 69)",
                            "POST /characters/{char_id}/spells"])
 @pytest.mark.parametrize("livello_chierico, livello_incantesimo", [(1, 2), (4, 3), (16, 9)])
-@pytest.mark.xfail(strict=True, reason="CB-2266: difforme dal manuale, confermato")
 async def test_il_chierico_2024_non_prepara_incantesimi_di_un_livello_senza_slot(client, livello_chierico, livello_incantesimo):
     cid = await _cleric24(client, livello_chierico, wisdom=16)  # posto libero fra i preparati
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Incantesimo alto", "level": livello_incantesimo,
