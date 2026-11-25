@@ -43,7 +43,6 @@ LUPO = {**_beast(0.25), "abilities": {"str": 12, "dex": 15, "con": 12, "int": 3,
                     voce="regola", copre=["carta:2024/classes/druid.md#Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)",
                                           "POST /characters/{char_id}/skills/{skill_name}/roll",
                                           "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2311: difforme dal manuale, confermato")
 async def test_in_forma_2024_valgono_i_bonus_della_bestia_se_piu_alti(client):
     cid = await _druid24(client, 4)  # Destrezza e Costituzione 10, nessuna competenza in Furtività né nel TS di Costituzione
     assert (await _activate(client, cid, await _form(client, cid, LUPO))).status_code == 200

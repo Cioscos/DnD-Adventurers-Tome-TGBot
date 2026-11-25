@@ -104,8 +104,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         toast.error(t('character.extras.beast.no_order'))
       } else if (code === 'turn_slot_used') {
         toast.error(t('character.attack.bonus_used'))
-      } else if (code === 'companion_down') {
-        toast.error(t('character.extras.beast.errors.companion_down'))
+      } else if (code === 'companion_down' || code === 'beast_reaction_used' || code === 'beast_acted') {
+        toast.error(t(`character.extras.beast.errors.${code}`))
       } else {
         notifyMutationError(err)
       }
@@ -113,7 +113,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   })
 
   // Signore delle Bestie: i Dadi Vita del profilo della bestia, spesi in un riposo breve
-  const isBeast = comp.feature_key === 'ranger.rangers_companion'  // i Dadi Vita sono del 2014: la bestia primordiale 2024 non li spende
+  const isBeast = comp.feature_key === 'ranger.rangers_companion'
+  const spendsHitDice = isBeast || comp.feature_key === 'ranger.primal_companion'  // anche la bestia primordiale 2024 ha Dadi Vita (p.123)
   const hitDice = useMutation({
     mutationFn: () => api.companions.hitDice(charId, comp.id, 1),
     onSuccess: (r) => {
@@ -215,7 +216,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       )}
       </>}
 
-      {isBeast && comp.current_hp > 0 && hdTotal > 0 && (
+      {spendsHitDice && comp.current_hp > 0 && hdTotal > 0 && (
         <Button variant="secondary" fullWidth className="min-h-11" disabled={comp.current_hp >= comp.max_hp || hdLeft === 0}
           loading={hitDice.isPending} onClick={() => hitDice.mutate()}>
           {t('character.extras.beast.hit_dice')} ({hdLeft}/{hdTotal})

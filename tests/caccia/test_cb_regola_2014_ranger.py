@@ -94,7 +94,6 @@ async def test_l_attacco_della_bestia_non_prende_le_opzioni_d_attacco_del_ranger
                            "POST /characters/{char_id}/companions"])
 @pytest.mark.parametrize("cr,size,kind", [(0.5, "Medium", "beast"), (2, "Large", "beast"), (0.25, "Large", "beast"),
                                           (0.25, "Medium", "monstrosity")])
-@pytest.mark.xfail(strict=True, reason="CB-1913: difforme dal manuale, confermato")
 async def test_la_bestia_compagna_rispetta_taglia_grado_di_sfida_e_tipo(client, cr, size, kind):
     cid = await _master(client, 3)
     sb = beast(cr=cr, type_=kind, dex=15, con=10)
@@ -184,7 +183,6 @@ async def test_devastatore_dell_orda_solo_con_la_stessa_arma(client):
                     copre=["carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)",
                            "POST /characters/{char_id}/companions/{comp_id}/attack"])
 @pytest.mark.parametrize("way", ["reaction", "autonomous"])
-@pytest.mark.xfail(strict=True, reason="CB-1918: difforme dal manuale, confermato")
 async def test_la_bestia_senza_ordini_non_attacca_senza_limite(client, way):
     cid, comp = await _beast(client, 3)  # pantera senza Multiattacco
     if way == "autonomous":

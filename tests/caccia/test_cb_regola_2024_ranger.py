@@ -104,7 +104,6 @@ async def test_l_opzione_del_cacciatore_non_si_cambia_due_volte_senza_riposo(cli
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)",
                            "carta:2024/general.md#Long Rest (Riposo Lungo) (pag. 370-371)", "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2515: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_ferita_guarisce_col_riposo_lungo(client):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)
@@ -119,7 +118,6 @@ async def test_la_bestia_primordiale_ferita_guarisce_col_riposo_lungo(client):
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Bestia della Terra / Beast of the Land (Signore delle Bestie 3, pag. 123)",
                            "carta:2024/general.md#Short Rest (Riposo Breve) (pag. 373)", "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
-@pytest.mark.xfail(strict=True, reason="CB-2516: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_spende_i_suoi_dadi_vita(client, dadi):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)
@@ -170,7 +168,6 @@ async def test_un_ranger_incapacitato_non_usa_azioni_azioni_bonus_ne_reazioni(cl
                     copre=["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)",
                            "POST /characters/{char_id}/companions/{comp_id}/attack"])
 @pytest.mark.parametrize("way", ["reaction", "autonomous"])
-@pytest.mark.xfail(strict=True, reason="CB-2519: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_senza_ordini_non_attacca_senza_limite(client, way):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)

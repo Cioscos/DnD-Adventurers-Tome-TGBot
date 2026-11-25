@@ -135,7 +135,6 @@ async def test_furia_divina_solo_nel_proprio_turno(client, test_session_factory,
                     copre=["carta:2024/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 51)",
                            "carta:2024/classes/druid.md#Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)",
                            "POST /characters/{char_id}/companions/{comp_id}/attack", "POST /characters/{char_id}/turn/new"])
-@pytest.mark.xfail(strict=True, reason="CB-2166: difforme dal manuale, confermato")
 async def test_il_tiro_per_colpire_della_forma_selvatica_prolunga_l_ira(client):
     cid = await _druid24(client, 2)
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "barbarian", "level": 2, "hit_die": 12})

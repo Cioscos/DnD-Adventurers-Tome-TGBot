@@ -1577,6 +1577,8 @@
           "beast_attacked": "La bestia ha già attaccato in questo turno: l'ordine in azione bonus non vale.",
           "beast_not_attacking": "Hai già ordinato qualcosa in azione bonus: in questo turno la bestia non attacca.",
           "companion_down": "La bestia è a 0 PF.",
+          "beast_reaction_used": "La bestia ha già usato la sua reazione in questo round.",
+          "beast_acted": "La bestia ha già usato la sua azione in questo turno.",
           "incapacitated": "Incapacitato: non puoi dare ordini, la bestia agisce da sola.",
           "feature_unavailable": "Questo ordine non è disponibile."
         },
@@ -1591,10 +1593,11 @@
           "companion_down": "La bestia è a 0 PF."
         },
         "form_label": "Compagno del Ranger (Signore delle Bestie)",
-        "form_hint": "PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
+        "form_hint": "Una bestia Media o più piccola, GS 1/4 o meno. PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
         "form_errors": {
           "companion_exists": "Hai già una bestia viva: una nuova solo quando muore.",
-          "feature_unavailable": "Serve l'archetipo Signore delle Bestie."
+          "feature_unavailable": "Serve l'archetipo Signore delle Bestie.",
+          "beast_not_allowed": "La bestia del ranger dev'essere una bestia Media o più piccola, GS 1/4 o meno: aggiungila come compagno semplice."
         }
       },
       "title": "Extra",

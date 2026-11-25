@@ -210,14 +210,13 @@ def effective_ability_mod(char, ability: str) -> int:
 
 def roll_ability_mod(char, ability: str) -> int:
     """Modificatore per prove, TS, iniziativa e attacchi: in Forma Selvatica Forza, Destrezza e Costituzione
-    sono quelli della bestia (2014) o il più alto fra druido e bestia (2024). Non serve a PF né CA."""
+    sono quelli della bestia (2014 pag. 66, 2024 pag. 81). Non serve a PF né CA."""
     mod = effective_ability_mod(char, ability)
     form = next((s for s in char.active_states or [] if s.get("key") == "wild_shape"), None)
     score = ((form or {}).get("data") or {}).get("abilities", {}).get(ability)
     if score is None:
         return mod
-    beast = (score - 10) // 2
-    return max(mod, beast) if form["data"].get("mode") == "max" else beast
+    return (score - 10) // 2  # anche negli stati 2024 salvati col vecchio mode «max»
 
 
 def _worn(char, item_type: str):
