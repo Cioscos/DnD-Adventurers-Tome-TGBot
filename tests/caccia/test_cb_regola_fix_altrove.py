@@ -112,3 +112,18 @@ async def test_l_attacco_dello_spirito_di_evoca_fatato_somma_il_modificatore(cli
     r = await client.post(f"/characters/{cid}/spells/{spirito['id']}/roll_damage", json={"casting_level": 6})
     assert r.status_code == 200, r.text
     assert r.json()["total"] == 15 + 3
+
+
+@pytest.mark.caccia(id="CB-4707", fonte="2014 · Combattimento · Tiri per i Danni (mai sotto 0) · pag. 196; Stregone · Incantesimo Raddoppiato · pag. 110",
+                    zona="regola:2014/sorcerer", voce="limiti",
+                    copre=["carta:2014/classes/sorcerer.md#Incantesimo Raddoppiato / Twinned Spell (Stregone 3, pag. 110)",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_il_danno_del_secondo_bersaglio_di_raddoppiato_non_scende_sotto_zero(client, dadi):
+    cid = await _caster(client, 10, "twinned")
+    raggio = await _spell(client, cid, "Raggio debole", 0, attack_save="ATK", damage_dice="1d4-3", damage_type="cold", range_area="18 m")
+    dadi(10, 10, 1, 1, 1, 1)  # i due tiri per colpire, poi 2d4-3 per ciascun bersaglio (trucchetto al 10° livello)
+    r = await client.post(f"/characters/{cid}/spells/{raggio}/attack", json={"cast_options": [TWINNED], "cast_option_inputs": {}})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/spells/{raggio}/roll_damage", json={})
+    assert r.status_code == 200, r.text
+    assert (r.json()["total"], r.json()["twinned_damage"]["total"]) == (0, 0)

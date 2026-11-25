@@ -1242,7 +1242,7 @@ def _twinned_damage(char: Character, spell: Spell, count: int, sides: int, bonus
         return None
     rolls = [random.randint(1, sides) for _ in range(count * (2 if twin.get("is_critical") else 1))]
     record_dice(char, [(f"d{sides}", v) for v in rolls])
-    return {"rolls": rolls, "total": sum(rolls) + bonus}
+    return {"rolls": rolls, "total": max(0, sum(rolls) + bonus)}
 
 
 @router.post("/{char_id}/spells/{spell_id}/roll_healing", response_model=RollHealingResult)
