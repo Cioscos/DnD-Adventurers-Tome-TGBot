@@ -148,7 +148,6 @@ async def test_una_manovra_si_sostituisce_solo_quando_se_ne_imparano_di_nuove(cl
     ("battle_master", 3, "fighter.maneuver_trip"), ("battle_master", 3, "fighter.maneuver_precision"),
     ("battle_master", 3, "fighter.maneuver_lunging"), ("battle_master", 3, "fighter.maneuver_sweeping"),
     ("eldritch_knight", 10, "fighter.eldritch_strike")])
-@pytest.mark.xfail(strict=True, reason="CB-1766: difforme dal manuale, confermato")
 async def test_le_opzioni_di_un_attacco_con_arma_valgono_anche_per_il_colpo_senz_armi(client, sottoclasse, livello, opzione):
     cid = await _guerriero(client, livello, sottoclasse)
     if sottoclasse == "battle_master":
