@@ -144,7 +144,6 @@ async def test_ladro_di_incantesimi_mostra_la_cd_degli_incantesimi(client):
                     copre=["carta:2014/classes/rogue.md#Inafferrabile / Elusive (Ladro 18, pag. 78)",
                            "PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}", "POST /sessions/{session_id}/encounter/start",
                            "GET /sessions/{session_id}/live"])
-@pytest.mark.xfail(strict=True, reason="CB-1965: difforme dal manuale, confermato")
 async def test_inafferrabile_resta_visibile_nel_turno_della_sorpresa(client, test_session_factory):
     sid, _cid, live = await _reflexes_encounter(client, test_session_factory, surprised=True, level=18, subclass="Assassino")
     assert live["round"] == 1

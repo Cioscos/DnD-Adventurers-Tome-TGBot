@@ -17,7 +17,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from api.services.rules_states import GENERIC_STATE_NAME
 from core.rules.catalog import active_features
 from core.rules.spell_effects import SPELL_STATE_PREFIX
-from core.rules.modifiers import is_incapacitated
+from core.rules.modifiers import INCAPACITATING
 from core.rules.states import is_conscious
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_score
@@ -52,7 +52,8 @@ def public_states(char: Character, lang: str = "it", *, gm: bool = False) -> lis
                              text=spec.summary.get(lang) or spec.summary["it"])
             for key in (state.get("data") or {}).get("others") or []
             if (spec := specs.get(key)) is not None and not (spec.needs_conscious and not is_conscious(char))
-            and not (spec.suspended_when_incapacitated and is_incapacitated(char))
+            # la condizione Incapacitato, non la sorpresa 2014 (p.189 e 291): Inafferrabile vale anche nel turno della sorpresa
+            and not (spec.suspended_when_incapacitated and any((char.conditions or {}).get(c) for c in INCAPACITATING))
         ]
         owner = specs.get(state.get("feature_key"))
         if others:
