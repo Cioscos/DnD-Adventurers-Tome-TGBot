@@ -6,6 +6,9 @@ from tests.integration.rules.test_2024_barbarian import _barbarian, _new_turn, _
 from tests.integration.rules.test_2024_barbarian_paths import _use
 from tests.integration.rules.test_2024_barbarian_strike import _damage, _deferred
 from tests.integration.rules.test_2024_bard import _bard24
+from tests.integration.rules.test_2014_monk_ki import _ki, _states
+from tests.integration.rules.test_2014_bard import _use as _use_feature
+from tests.integration.rules.test_2024_monk import _monk24
 
 RAGE = "barbarian.rage"
 RECKLESS = "barbarian.reckless_attack"
@@ -55,3 +58,17 @@ async def test_segreti_magici_2024_e_un_permesso_non_una_scelta_da_fare(client, 
     full = (await client.get(f"/characters/{cid}")).json()
     assert "bard.magical_secrets" in {a["feature_key"] for a in full["abilities"]}
     assert not [c for c in full["pending_choices"] if c.get("group") == "magical_secrets"],         "i nuovi preparati possono venire dalle quattro liste: nessuna scelta obbligatoria"
+
+
+@pytest.mark.caccia(id="CB-4474", fonte="2024 · Monaco · Difesa Superiore · pag. 103", zona="regola:2024/monk", voce="ripetizione",
+                    copre=["carta:2024/classes/monk.md#Difesa Superiore / Superior Defense (Monaco 18, pag. 103)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_difesa_superiore_una_volta_per_turno_e_si_rinnova_a_un_turno_successivo(client):
+    cid = await _monk24(client, 18)
+    assert (await _use_feature(client, cid, "monk.superior_defense")).status_code == 200
+    assert (await _use_feature(client, cid, "monk.superior_defense")).status_code == 409, "un turno ha un solo inizio"
+    await _new_turn(client, cid)
+    r = await _use_feature(client, cid, "monk.superior_defense")
+    assert r.status_code == 200, "a inizio di un turno successivo si può spendere di nuovo e il minuto riparte"
+    assert await _ki(client, cid) == 18 - 6
+    assert (await _states(client, cid))["superior_defense"]["rounds_left"] == 10

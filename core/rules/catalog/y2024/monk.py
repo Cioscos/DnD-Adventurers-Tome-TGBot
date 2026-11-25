@@ -372,7 +372,9 @@ BASE_ROWS = (
             ("Difesa Superiore", "Superior Defense"),
             ("A inizio turno, 3 punti: per 1 minuto resistenza a ogni danno tranne la forza. Finisce se sei incapacitato.",
              "At the start of your turn, 3 points: for 1 minute resistance to all damage except Force. It ends if you are incapacitated."),
-            "special", on_use=OnUse(cost=3, spends=KI, state=StateSpec(SUPERIOR_STATE, rounds=10, ends_on=("incapacitated", "manual"))),
+            # a inizio turno: una volta per turno, e a un turno successivo si rinnova il minuto
+            "special", on_use=OnUse(cost=3, spends=KI, once_per_turn=True,
+                                    state=StateSpec(SUPERIOR_STATE, rounds=10, ends_on=("incapacitated", "manual"))),
             modifiers=tuple(Modifier(f"resistance:{t}", 1, when=lambda c: state_on(c, SUPERIOR_STATE), source=f"feature:{CK}.superior_defense")
                             for t in DAMAGE_TYPES if t != "force")),
     feature("epic_boon", CK, ED, 19, "Dono Epico / Epic Boon (Monaco 19, pag. 103)", ("Dono Epico", "Epic Boon"),

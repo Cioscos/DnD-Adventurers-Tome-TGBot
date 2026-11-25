@@ -127,7 +127,6 @@ async def test_un_effetto_che_finisce_da_incapacitato_non_parte_da_incapacitato(
 @pytest.mark.caccia(id="CB-2415", fonte="2024 · Monaco · Difesa Superiore · pag. 103", zona="regola:2024/monk", voce="ripetizione",
                     copre=["carta:2024/classes/monk.md#Difesa Superiore / Superior Defense (Monaco 18, pag. 103)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2415: difforme dal manuale, confermato")
 async def test_difesa_superiore_ripetuta_non_spende_altri_tre_punti(client):
     # Si attiva a inizio turno per 1 minuto: un secondo invio con lo stato già attivo non costa altri 3 punti
     cid = await _monk24(client, 18)
