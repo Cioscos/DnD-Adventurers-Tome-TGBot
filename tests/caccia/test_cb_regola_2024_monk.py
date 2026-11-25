@@ -142,7 +142,6 @@ async def test_difesa_superiore_ripetuta_non_spende_altri_tre_punti(client):
                            "carta:2024/general.md#Unarmed Strike (Colpo Senz'Armi) (pag. 377)",
                            "POST /characters/{char_id}/attack/unarmed"])
 @pytest.mark.parametrize("via", ["arti_marziali", "raffica"])
-@pytest.mark.xfail(strict=True, reason="CB-2416: difforme dal manuale, confermato")
 async def test_afferrare_o_spingere_con_l_azione_bonus_del_monaco_non_consuma_l_azione_attacco(client, via):
     # Il colpo senz'armi dell'azione bonus e quelli della Raffica possono essere Afferrare o Spingere: non sono attacchi dell'azione Attacco
     cid = await _monk24(client, 2, dexterity=16)

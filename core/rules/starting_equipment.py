@@ -73,6 +73,27 @@ GENERIC: dict[str, tuple[str, str, str]] = {
     "gaming-set": ("tool", "Set da gioco a scelta", "Gaming set of choice"),
 }
 
+# Peso in lb per unità delle voci con un peso unico stampato, uguale nelle due edizioni (2014 pag. 145, 150, 154; 2024
+# pag. 219-223; libro degli incantesimi 2024 pag. 165). Le altre restano 0: pacchetti 2014 (non scomposti), focus, simbolo sacro
+# e segnaposti «a scelta», il cui peso dipende da ciò che il giocatore sceglie.
+_WEIGHT_LB: dict[str, float] = {
+    "wooden-shield": 6, "arrows": 0.05, "bolts": 0.075, "quiver": 1, "component-pouch": 2, "lute": 2,
+    "thieves-tools": 1, "herbalism-kit": 3, "spellbook": 3, "occult-book": 5, "robe": 4,
+    "book-prayers": 5, "book-philosophy": 5, "book-history": 5, "pouch": 1, "travelers-clothes": 4, "fine-clothes": 6,
+    "costume": 4, "crowbar": 5, "mirror": 0.5, "healers-kit": 3, "iron-pot": 10, "shovel": 5, "hooded-lantern": 2,
+    "manacles": 6, "bedroll": 7, "tent": 20, "lamp": 1, "oil": 1,
+    "rope": 5,  # solo nei background 2024: la corda del 2024 (la canapa 2014 pesa 10)
+}
+# 2024 pag. 223: le dotazioni hanno un peso stampato. Il 2014 (pag. 151) dà solo costo e contenuto: lì restano 0.
+_PACK_WEIGHT_LB_2024: dict[str, float] = {
+    "burglar-pack": 42, "diplomat-pack": 39, "dungeoneer-pack": 55, "entertainer-pack": 58.5, "explorer-pack": 55,
+    "priest-pack": 29, "scholar-pack": 22,
+}
+
+# 2014, Chierico (pag. 57): martello da guerra e cotta di maglia «solo se competente». La competenza dipende da dominio,
+# specie e talento: l'etichetta lo dice e la scelta resta al giocatore.
+_IF_PROFICIENT: dict[tuple[str, str], tuple[str, ...]] = {("2014", "cleric"): ("warhammer", "chain-mail")}
+
 _E, _D = "explorer-pack", "dungeoneer-pack"
 _S, _SM, _M, _MM = "simple-weapon", "simple-melee", "martial-weapon", "martial-melee"
 _WEAPON_CHOICES = (_S, _SM, _M, _MM)
@@ -157,13 +178,15 @@ def _parse(alt: str) -> tuple[list[tuple[str, int]], int]:
     return items, gold
 
 
-def _item(key: str, qty: int, lang: str) -> dict[str, Any]:
+def _item(key: str, qty: int, lang: str, edition: str) -> dict[str, Any]:
     """Riga di inventario: dati dell'SRD per armi e armature, oggetto generico per il resto."""
     if key in GENERIC or key in TOOLS:
         kind, it, en = GENERIC[key] if key in GENERIC else ("tool", TOOLS[key].it, TOOLS[key].en)
         # U8: l'arma «a scelta» porta la categoria: l'inventario la fa sostituire con un'arma del catalogo
         meta = {"ac_bonus": 2} if kind == "shield" else {"choice": key} if key in _WEAPON_CHOICES else None
-        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty, "weight": 0.0, "item_metadata": meta}
+        weight = _PACK_WEIGHT_LB_2024.get(key, 0) if edition == "2024" else 0
+        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty,
+                "weight": float(_WEIGHT_LB.get(key, weight)), "item_metadata": meta}
     e = _srd()[key]
     meta: dict[str, Any] = {"srd_index": key}
     if e.get("armor_type") == "shield":
@@ -194,15 +217,19 @@ def starting_groups(edition: str, class_key: str) -> Groups:
 def describe(edition: str, class_key: str, lang: str) -> list[list[str]]:
     """Etichette delle alternative di ogni gruppo, nella lingua richiesta."""
     out: list[list[str]] = []
+    conditional = _IF_PROFICIENT.get(("2024" if edition == "2024" else "2014", class_key), ())
     for group in starting_groups(edition, class_key):
         labels = []
         for alt in group:
             items, gold = _parse(alt)
             parts = [f"{r['quantity']}x {r['name']}" if r["quantity"] > 1 else r["name"]
-                     for r in (_item(k, q, lang) for k, q in items)]
+                     for r in (_item(k, q, lang, edition) for k, q in items)]
             if gold:
                 parts.append(f"{gold} mo" if lang == "it" else f"{gold} gp")
-            labels.append(", ".join(parts))
+            label = ", ".join(parts)
+            if alt in conditional:
+                label += " (solo se competente)" if lang == "it" else " (only if proficient)"
+            labels.append(label)
         out.append(labels)
     return out
 
@@ -212,22 +239,22 @@ def resolve(edition: str, class_key: str, picks: list[int], lang: str) -> tuple[
     groups = starting_groups(edition, class_key)
     if not groups or len(picks) != len(groups) or any(not 0 <= p < len(g) for p, g in zip(picks, groups)):
         raise ValueError("invalid_starting_equipment")
-    return _rows([group[pick] for pick, group in zip(picks, groups)], lang)
+    return _rows([group[pick] for pick, group in zip(picks, groups)], lang, edition)
 
 
 def resolve_package(alt: str, lang: str) -> tuple[list[dict[str, Any]], int]:
     """Una stringa di pacchetto (es. quello di un background 2024) -> righe di inventario e oro."""
-    return _rows([alt], lang)
+    return _rows([alt], lang, "2024")
 
 
-def _rows(alts: list[str], lang: str) -> tuple[list[dict[str, Any]], int]:
+def _rows(alts: list[str], lang: str, edition: str) -> tuple[list[dict[str, Any]], int]:
     rows: list[dict[str, Any]] = []
     total_gold = 0
     for alt in alts:
         items, gold = _parse(alt)
         total_gold += gold
         for key, qty in items:
-            row = _item(key, qty, lang)
+            row = _item(key, qty, lang, edition)
             # Stessa riga da gruppi diversi (due pugnali): una riga sola, quantita' sommata.
             same = next((r for r in rows if r["name"] == row["name"] and r["item_metadata"] == row["item_metadata"]), None)
             if same:

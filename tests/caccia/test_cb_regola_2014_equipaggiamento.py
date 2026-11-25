@@ -40,7 +40,6 @@ async def _scheda(client, cid) -> dict:
                     zona="regola:2014/equipaggiamento", voce="interazione",
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3161: difforme dal manuale, confermato")
 async def test_lancia_lanciata_a_due_mani_non_usa_il_dado_versatile(client, dadi):
     cid = await _pg(client, strength=14)
     lancia = await _oggetto(client, cid, "Lancia", "weapon", item_metadata={
@@ -59,7 +58,6 @@ async def test_lancia_lanciata_a_due_mani_non_usa_il_dado_versatile(client, dadi
                     copre=["carta:2014/equipment.md#Armi / Weapons (pag. 149)",
                            "carta:2014/equipment.md#Armi Speciali / Special Weapons (pag. 148)",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3162: difforme dal manuale, confermato")
 async def test_la_rete_del_catalogo_non_infligge_danni(client, dadi):
     cid = await _pg(client, dexterity=16)
     # i metadati che il catalogo SRD dà alla Rete: nessun dado di danno
@@ -77,7 +75,6 @@ async def test_la_rete_del_catalogo_non_infligge_danni(client, dadi):
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "carta:2014/equipment.md#Regole",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3163: difforme dal manuale, confermato")
 async def test_non_si_attacca_con_un_arma_a_due_mani_imbracciando_lo_scudo(client, dadi):
     cid = await _pg(client, strength=16)
     scudo = await _oggetto(client, cid, "Scudo", "shield", item_metadata={"ac_bonus": 2})
@@ -95,7 +92,6 @@ async def test_non_si_attacca_con_un_arma_a_due_mani_imbracciando_lo_scudo(clien
                     zona="regola:2014/equipaggiamento", voce="interazione",
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "PATCH /characters/{char_id}/items/{item_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-3164: difforme dal manuale, confermato")
 async def test_un_arma_a_due_mani_nella_mano_secondaria_non_convive_con_un_arma_nella_principale(client):
     cid = await _pg(client, strength=16)
     spada = await _oggetto(client, cid, "Spada lunga", "weapon", item_metadata={
@@ -115,7 +111,6 @@ async def test_un_arma_a_due_mani_nella_mano_secondaria_non_convive_con_un_arma_
                     copre=["carta:2014/equipment.md#Regole",
                            "carta:2014/equipment.md#Armature / Armor (pag. 145)",
                            "PATCH /characters/{char_id}/items/{item_id}", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-3165: difforme dal manuale, confermato")
 async def test_correggere_il_bonus_dello_scudo_imbracciato_cambia_la_ca(client):
     cid = await _pg(client, "fighter", 1, dexterity=10)
     scudo = await _oggetto(client, cid, "Scudo", "shield", item_metadata={"ac_bonus": 2})

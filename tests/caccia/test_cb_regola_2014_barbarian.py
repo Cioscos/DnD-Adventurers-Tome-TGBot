@@ -82,7 +82,6 @@ async def test_la_frenesia_non_si_sceglie_prima_del_terzo_livello(client):
 @pytest.mark.caccia(id="CB-1564", fonte="2014 · Barbaro · Ira · pag. 48", zona="regola:2014/barbarian", voce="regola",
                     copre=["carta:2014/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 48)",
                            "POST /characters/{char_id}/items/{item_id}/cast"])
-@pytest.mark.xfail(strict=True, reason="CB-1564: difforme dal manuale, confermato")
 async def test_in_ira_non_si_lancia_un_incantesimo_da_un_oggetto(client):
     cid = await _barbarian(client, 3)
     incantesimo = {"name": "Raggio Fantasma", "level": 2, "charges_cost": 1, "is_concentration": True,

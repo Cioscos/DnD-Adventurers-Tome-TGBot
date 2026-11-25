@@ -6,6 +6,7 @@ import json
 import random
 import re
 import uuid
+from dataclasses import replace
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -72,6 +73,8 @@ from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, option_names, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.spell_effects import enchanted_weapon
+from core.rules.spellcasting import _armor_block
+from core.rules.states import casting_blocked_by
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 from api.services.character_load import get_owned_full
 from api.services.dice_notation import DICE_RE, roll_dice
@@ -164,15 +167,14 @@ def _check_attunement_limit(char, item, new_meta: dict | None, name: str) -> Non
 
 
 def _check_hands(char, item, slot: EquipmentSlot | None) -> None:
-    """422 when equipping ``item`` in ``slot`` would put a two-handed weapon next to an occupied off hand."""
-    others = [i for i in char.items if i.id != item.id and i.is_equipped]
-    if slot == EquipmentSlot.MAIN_HAND and has_property(item, "two_handed"):
-        busy = any(i.equipment_slot == EquipmentSlot.OFF_HAND for i in others)
-    elif slot == EquipmentSlot.OFF_HAND:
-        busy = any(i.equipment_slot == EquipmentSlot.MAIN_HAND and has_property(i, "two_handed") for i in others)
-    else:
+    """422 when equipping ``item`` in ``slot`` would put a two-handed weapon next to an occupied other hand.
+
+    Un'arma a due mani occupa entrambe le mani, in qualunque delle due sia (2014 pag. 147, Due Mani)."""
+    hands = {EquipmentSlot.MAIN_HAND: EquipmentSlot.OFF_HAND, EquipmentSlot.OFF_HAND: EquipmentSlot.MAIN_HAND}
+    if slot not in hands:
         return
-    if busy:
+    held = [i for i in char.items if i.id != item.id and i.is_equipped and i.equipment_slot == hands[slot]]
+    if any(has_property(item, "two_handed") or has_property(i, "two_handed") for i in held):
         raise HTTPException(status_code=422, detail="hands_conflict")
 
 
@@ -314,7 +316,8 @@ async def update_item(
         if not item.is_equipped:
             item.equipment_slot = None
 
-    if "is_equipped" in data or "equipment_slot" in data:
+    # Anche il bonus o il tipo corretto di uno scudo già imbracciato vale subito per la CA (2014 pag. 144-145).
+    if "is_equipped" in data or "equipment_slot" in data or (item.is_equipped and {"item_metadata", "item_type"} & data.keys()):
         apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
@@ -597,10 +600,12 @@ def _settle_attack(
     Un 1 naturale non ha danno da aspettare, a meno che un'opzione dopo il tiro possa ancora cambiarlo."""
     pending = None
     item_id = item.id if item else None
-    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand,
-                           confirmed=tuple(opts.keys))
-    if body and body.defer_damage and (
-            not result.is_fumble or any(o.spec.phase == "after_roll" for o in roll_options_for(context))):
+    # Il d20 appena tirato: ``last_roll`` è già stato cancellato dalle opzioni e non è ancora riscritto (Fortuna sull'1).
+    context = replace(roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip,
+                                   offhand=offhand, confirmed=tuple(opts.keys)), natural_d20=result.to_hit_die)
+    # Un 1 ritirabile si tiene anche senza defer_damage: prima del tiro il client non sapeva che sarebbe servito.
+    rerollable = result.is_fumble and any(o.spec.phase == "after_roll" for o in roll_options_for(context))
+    if (body and body.defer_damage and not result.is_fumble) or rerollable:
         result.attack_id = uuid.uuid4().hex
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
                    "attack_mode": attack_mode, "grip": grip, "offhand": offhand,
@@ -676,7 +681,8 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             result.rerolled = rerolled or None
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
             extra_rolls, extra_total, result.damage_total = option_damage(
-                char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
+                char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus),
+                _option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
             option_dice = pairs(before.rolled_dice)
         if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
             block = block.model_copy(update={"extra_rolls": extra_rolls, "extra_total": extra_total,
@@ -714,6 +720,12 @@ def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: I
     return {"second_die": outcome.kept, "second_total": outcome.kept + bonus}
 
 
+def _option_reroll(char: Character, item: Item | None, ability: str, attack_mode: str | None, grip: str, offhand: bool) -> int:
+    """Soglia di ritiro dei dadi che le opzioni aggiungono a un attacco con un'arma (Combattere con Armi Possenti 2014)."""
+    return modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip,
+                         offhand=offhand).damage_reroll if item else 0
+
+
 def _base_damage(
     char: Character, item: Item | None, damage_dice_str: str, ability: str, ability_mod: int, magic_bonus: int,
     is_critical: bool, attack_mode: str | None = None, grip: str = "one", offhand: bool = False,
@@ -724,23 +736,31 @@ def _base_damage(
     ``attack_mode``, ``grip``, ``offhand``: i privilegi che valgono solo in certe condizioni (Ira e Critico Brutale in
     mischia, Duellare con una mano, Combattere con Due Armi con l'altra) li leggono dal contesto. ``rerolled`` riceve
     ``[vecchio, nuovo]`` per ogni dado che un privilegio ha fatto ritirare (Combattere con Armi Possenti)."""
+    if not damage_dice_str:  # arma senza danni (Rete): né dadi né caratteristica
+        return [0], 0
     dice_bonus = 0
     applied = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
     if damage_dice_str == "1":
         damage_rolls = [1]
     else:
-        damage_rolls, dice_bonus = roll_dice(damage_dice_str)
+        def weapon_dice() -> tuple[list[int], int]:
+            rolls, bonus = roll_dice(damage_dice_str)
+            if is_critical:
+                rolls = rolls + roll_dice(damage_dice_str)[0]
+                # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
+                if applied.crit_dice and (die := DICE_RE.match(damage_dice_str.strip())):
+                    rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
+            return rolls, bonus
+
+        damage_rolls, dice_bonus = weapon_dice()
         twice = item is not None and any(spec.weapon_damage_twice is True or (spec.weapon_damage_twice == "melee" and attack_mode not in ("ranged", "thrown"))
                                          for spec, _row in active_features(char))
-        if twice and mark_once(char, "weapon_damage_twice"):  # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore
-            again = roll_dice(damage_dice_str)[0]
+        # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore; al critico sono tutti i dadi dell'arma
+        # del tiro, anche quelli in più (2014 pag. 165 con i Colpi Critici di pag. 196)
+        if twice and mark_once(char, "weapon_damage_twice"):
+            again = weapon_dice()[0]
             if sum(again) > sum(damage_rolls):
                 damage_rolls = again
-        if is_critical:
-            damage_rolls = damage_rolls + roll_dice(damage_dice_str)[0]
-            # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
-            if applied.crit_dice and (die := DICE_RE.match(damage_dice_str.strip())):
-                damage_rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
         if applied.damage_reroll and (die := DICE_RE.match(damage_dice_str.strip())):
             for i, value in enumerate(damage_rolls):  # una volta sola: il nuovo risultato vale anche se è ancora basso
                 if value <= applied.damage_reroll:
@@ -787,7 +807,9 @@ async def deferred_attack_damage(
     if opts.self_heal:  # Succhiavita: il Dado Vita speso dall'opzione cura nello stesso uso, con lo storico dei PF
         result.self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
     second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
-    rolls, extra, result.damage_total = option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
+    rolls, extra, result.damage_total = option_damage(
+        char, opts, result.is_critical, result.damage_total + opts.bonus,
+        _option_reroll(char, item, pending["ability"], pending["attack_mode"], pending["grip"], bool(pending.get("offhand"))))
     result.damage_bonus += opts.bonus
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
@@ -823,13 +845,15 @@ async def attack_with_weapon(
     refuse_if_incapacitated(char)
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice") or "1d4"  # anche vuota o nulla
     properties: list[str] = meta.get("properties", [])
     magic_bonus = weapon_magic_bonus(item)
 
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
-    grip = body.grip if body else "one"
+    # Senza notazione (anche vuota o nulla) 1d4, salvo un'arma Speciale: la Rete non ha danni (2014 pag. 148-149).
+    damage_dice_str: str = meta.get("damage_dice") or ("" if has_prop("special") else "1d4")
     attack_mode = body.attack_mode if body else "melee"
+    # L'impugnatura a due mani di Versatile vale in mischia (2014 pag. 147): lanciata o con l'altra mano è a una mano.
+    grip = body.grip if body and attack_mode == "melee" else "one"
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
@@ -858,12 +882,14 @@ async def attack_with_weapon(
         # Un attacco dell'azione segnato a mano non dice con quale arma è stato fatto: quello vale.
         if len(used) >= turn["action_attacks"] and not any(opens and weapon_id != item.id for weapon_id, opens in used):
             raise HTTPException(status_code=409, detail={"code": "offhand_needs_light_attack"})
-    if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
-        if any(
-            i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
-            for i in char.items
-        ):
-            raise HTTPException(status_code=422, detail="off_hand_occupied")
+    versatile_two = grip == "two" and has_prop("versatile") and meta.get("versatile_dice")
+    # Due Mani: l'arma va impugnata a due mani per attaccare (2014 pag. 147), come una Versatile impugnata così.
+    if (versatile_two or has_property(item, "two_handed")) and any(
+        i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
+        for i in char.items
+    ):
+        raise HTTPException(status_code=422, detail="off_hand_occupied")
+    if versatile_two:
         damage_dice_str = meta["versatile_dice"]
     if attack_mode == "thrown" and not has_prop("thrown"):
         raise HTTPException(status_code=422, detail="weapon_not_thrown")
@@ -911,7 +937,8 @@ async def attack_with_weapon(
             char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical, resolved_mode, grip, offhand,
             rerolled)
         option_rolls, option_total, damage_total = option_damage(
-            char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
+            char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus),
+            _option_reroll(char, item, ability, resolved_mode, grip, offhand))
 
     result_str = (
         f"Attacco {item.name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
@@ -1015,14 +1042,19 @@ async def attack_with_weapon(
 # Unarmed strike
 # ---------------------------------------------------------------------------
 
-def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int) -> WeaponAttackResult:
-    """Afferrare o Spingere 2024: niente tiro per colpire, il bersaglio fa un TS su Forza o Destrezza contro ``dc``."""
+def _unarmed_effect(session: AsyncSession, char: Character, body: AttackSubmission, dc: int) -> WeaponAttackResult:
+    """Afferrare o Spingere 2024: niente tiro per colpire, il bersaglio fa un TS su Forza o Destrezza contro ``dc``.
+
+    Anche il colpo bonus di Arti Marziali o un colpo della Raffica (2024 pag. 101-102, Colpo Senz'Armi pag. 377): si pagano
+    solo le opzioni con uno slot proprio, le altre riguardano un tiro per colpire che qui non c'è."""
     if character_edition(char) != "2024":
         raise HTTPException(status_code=422, detail="unarmed_effect_2024_only")
-    use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
+    effect = body.effect
+    body = body.model_copy(update={"options": [k for k in body.options if uses_own_slot(char, [k])]})
+    use_options(session, char, "attack", body, attack_mode="melee", grip="one")  # è un tiro nuovo: il precedente non si ritocca più
     _set_pending_attack(char, None)
-    spend(char, "attack")
-    _note_action_weapon(char, None, None)
+    spend(char, "attack", own_slot=_own_slot_attack(char, body))
+    _note_action_weapon(char, None, body)
     add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
     return WeaponAttackResult(
         weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
@@ -1053,7 +1085,7 @@ async def attack_unarmed(
             ability_mod, ability = dex_mod, "dexterity"
     pb = char.proficiency_bonus
     if body and body.effect != "damage":
-        return _unarmed_effect(session, char, body.effect, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
+        return _unarmed_effect(session, char, body, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
 
     if body and body.with_inspiration:
         spend_inspiration_attack(char)
@@ -1155,6 +1187,7 @@ class ItemCast(BaseModel):
     spell_index: int = Field(ge=0)
     targets: list[int] | None = Field(None, max_length=20)  # come in /spells/{id}/use
     choices: dict[str, str] | None = None
+    confirm: list[str] | None = Field(None, max_length=10)  # regole violate confermate, come in /spells/{id}/use
 
 
 async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
@@ -1219,6 +1252,7 @@ async def cast_from_item(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
+    refuse_if_incapacitated(char)  # lanciare da un oggetto è un'azione (2024 Incapacitato pag. 369, Magia pag. 371)
     item = await _get_item(session, char_id, item_id)
     meta = item_meta(item)
     granted = meta.get("granted_spells") or []
@@ -1227,6 +1261,11 @@ async def cast_from_item(
     spell = granted[body.spell_index]
     if meta.get("requires_attunement") and not meta.get("attuned"):
         raise HTTPException(status_code=409, detail="attunement_required")
+    # È un lancio come da /spells/{id}/use: l'armatura senza addestramento (2024 pag. 361) e l'Ira (2014 pag. 48) si
+    # confermano. Il resto di cast_warnings non vale qui: niente slot, componenti né tempo di lancio dell'oggetto.
+    warnings = (["armor"] if _armor_block(char) else []) + (["state_blocks_casting"] if casting_blocked_by(char) else [])
+    if missing := [w for w in warnings if w not in (body.confirm or [])]:
+        raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
     fx_spell = item_spell(spell)
     fx_level = max(fx_spell.level, int(spell.get("slot_level") or 0))  # l'oggetto può lanciarlo a un livello più alto
     resolved = await validate_spell_targets(session, char, fx_spell, fx_level, body.targets, body.choices)  # prima di spendere
@@ -1293,7 +1332,8 @@ async def cast_from_scroll(
     it = lang != "en"
     ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato." if it else f"{item.name}: level {level} spell cast."
     if level >= 2:
-        die = random.randint(1, 20)
+        # una prova di Arcano vera: Dote Affidabile, vantaggio e svantaggio valgono come nella prova dalla scheda
+        die = resolve_applied("normal", None, None, modifiers_for(char, "skill", skill="arcana", ability="intelligence")).kept
         total = die + await check_bonus(session, char, "intelligence", "arcana")
         ok = total >= 10 + level
         text = ((f"Arcano {die} → {total} contro CD {10 + level}: " if it else f"Arcana {die} → {total} against DC {10 + level}: ")

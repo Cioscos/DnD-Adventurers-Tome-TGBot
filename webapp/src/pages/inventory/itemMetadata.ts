@@ -369,7 +369,8 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     quantity: String(item.quantity),
     weight: String(item.weight),
     description: item.description ?? '',
-    damage_dice: String(meta.damage_dice ?? '1d6'),
+    // Un'arma salvata senza dado (la Rete) resta senza: riaprire il modulo non ne inventa uno (CB-3162).
+    damage_dice: String(meta.damage_dice ?? (item.item_type === 'weapon' ? '' : '1d6')),
     damage_type: String(meta.damage_type ?? 'dmg_slashing'),
     weapon_type: String(meta.weapon_type ?? 'melee'),
     properties: Array.isArray(meta.properties) ? meta.properties.map(String) : [],

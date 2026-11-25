@@ -52,7 +52,6 @@ async def _dardo_di_fuoco(client, cid):
 @pytest.mark.caccia(id="CB-3511", fonte="2024 · Specie · Halfling · Fortuna · pag. 193", zona="regola:2024/razze", voce="regola",
                     copre=["carta:2024/races.md#Halfling / Halfling (pag. 193)", "POST /characters/{char_id}/items/{item_id}/attack",
                            "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3511: difforme dal manuale, confermato")
 async def test_fortuna_ritira_l_1_naturale_del_tiro_per_colpire_con_un_arma(client):
     cid = await _pg(client, "2024_halfling", {})
     arma = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[])

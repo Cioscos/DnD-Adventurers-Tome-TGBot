@@ -26,6 +26,8 @@ export type PromptContext = {
   preset?: string[]
   /** Il prompt si chiude (Chiudi, Esc, clic fuori) e il tiro non parte: `askRollOptions` rifiuta con `CastCancelled`. */
   cancellable?: boolean
+  /** Solo le opzioni con uno slot di turno proprio: Afferrare/Spingere non ha un tiro per colpire da ritoccare. */
+  ownSlotOnly?: boolean
 }
 
 export type PromptRequest = {
@@ -62,7 +64,7 @@ export const useCastConfirmStore = create<{ request: { code: string; answer: (go
 /** Il giocatore ha rifiutato una conferma o chiuso un prompt `cancellable`: nessun tiro e nessun errore da mostrare. */
 export class CastCancelled extends Error {}
 
-function askCastConfirm(code: string): Promise<boolean> {
+export function askCastConfirm(code: string): Promise<boolean> {
   return new Promise((resolve) => {
     useCastConfirmStore.setState({
       request: { code, answer: (go) => { useCastConfirmStore.setState({ request: null }); resolve(go) } },
@@ -205,7 +207,8 @@ export async function askRollOptions(
   const defersBy = (chosen: string[]) => attackQuery && listed.some((o) => o.defers_damage && chosen.includes(o.key))
   const inPhase = context?.fumble ? [] : listed.filter((o) => o.phase === phase)
   // `needs` di un'altra fase: il server lo azzera se è già confermata, altrimenti l'opzione non si può scegliere.
-  const options = inPhase.filter((o) => !o.needs || inPhase.some((p) => p.key === o.needs))
+  const options = inPhase.filter((o) => (!o.needs || inPhase.some((p) => p.key === o.needs))
+    && (!context?.ownSlotOnly || !!o.slot || !!o.outside_action))
   // Su un 1 naturale una somma non basta: resta mancato.
   const afterRoll = phase === 'after_hit'
     ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
