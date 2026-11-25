@@ -91,7 +91,6 @@ async def test_affinita_elementale_2024_somma_il_carisma_a_un_solo_tiro_di_danno
                     copre=["carta:2024/classes/sorcerer.md#Impulso di Magia Selvaggia / Wild Magic Surge (Magia Selvaggia 3, pag. 149)",
                            "carta:2024/general.md#Invisible [Condition] (Invisibile) (pag. 370)",
                            "POST /characters/{char_id}/wild-magic/surge"])
-@pytest.mark.xfail(strict=True, reason="CB-2614: difforme dal manuale, confermato")
 async def test_impulso_45_48_rende_invisibile_lo_stregone(client):
     cid = await _make(client, "wild_magic", 3)
     r = await client.post(f"/characters/{cid}/wild-magic/surge", json={"die": 20, "percentile": [45]})
