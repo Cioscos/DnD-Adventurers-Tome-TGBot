@@ -206,3 +206,22 @@ async def test_export_e_import_tengono_ogni_istanza_della_stessa_condizione(clie
     r = await client.post("/characters/import", json=(await client.get(f"/characters/{cid}/export")).json())
     assert r.status_code == 201, r.text
     assert sorted(e["expiry_count"] for e in r.json()["condition_effects"]) == [1, 10], r.json()["condition_effects"]
+
+
+@pytest.mark.caccia(id="CB-4239", fonte="2024 · Condizioni · pag. 29: finita un'istanza, la condizione resta finché ne resta un'altra", zona="regola:2024/generali",
+                    voce="interazione", copre=["carta:2024/general.md#Condizioni / Conditions (pag. 29)",
+                                               "POST /characters/{char_id}/rounds/tick", "GET /characters/{char_id}/history"])
+async def test_finita_un_istanza_l_avviso_e_lo_storico_dicono_che_la_condizione_resta(client, test_session_factory):
+    from api.services.condition_effects import ExpirySpec, upsert_effect
+    cid = await _pg(client)
+    await _cond(client, cid, frightened=True)
+    async with test_session_factory() as s:
+        for nota, durata in (("Drago", 10), ("Goblin", 1)):
+            await upsert_effect(s, ("character", cid), "frightened", expiry=ExpirySpec("owner", "start", durata), source_note=nota)
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/rounds/tick")
+    assert r.status_code == 200, r.text
+    assert r.json()["conditions"]["frightened"] is True
+    assert r.json()["expired_effects"] == ["Spaventato (resta da un'altra fonte)"], r.json()["expired_effects"]
+    storia = [h["description"] for h in (await client.get(f"/characters/{cid}/history")).json()]
+    assert "Durata scaduta: Spaventato (resta da un'altra fonte)" in storia, storia

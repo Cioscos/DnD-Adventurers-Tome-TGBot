@@ -304,6 +304,9 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
             _target_filter(here), ConditionEffect.slug == eff.slug, ConditionEffect.pending.is_(False),
             ConditionEffect.id != eff.id).limit(1))).first():
         # un'altra istanza la tiene accesa: finisce solo questa, con i suoi TS (2014 pag. 290; 2024 pag. 29)
+        label = f"{label} (resta da un'altra fonte)"  # l'avviso e lo storico non la danno per finita
+        if history and eff.character_id is not None:
+            add_history(db, eff.character_id, "condition_change", history.format(label=label))
         for ps in (await db.execute(select(PendingSave).where(PendingSave.effect_id == eff.id))).scalars():
             await db.delete(ps)
         await db.delete(eff)
