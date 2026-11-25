@@ -95,7 +95,9 @@ from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, release_concentration_effects, upsert_effect
+from api.services.condition_effects import (
+    ExpirySpec, effects_for_character, expire_effect, pending_read, release_concentration_effects, upsert_effect,
+)
 from api.services.durations import end_concentration, tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -851,14 +853,17 @@ async def escape_condition(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     skill: Literal["athletics", "acrobatics"] = "athletics",
     body: Annotated[D20RollSubmission | None, Body()] = None,
+    effect_id: int | None = None,
 ) -> EscapeResult:
     """U36: con un'azione il PG Trattenuto (o Afferrato) prova a liberarsi con Atletica o Acrobazia contro la CD
-    dell'effetto; se la raggiunge la condizione cade. In combattimento l'azione si spende prima del tiro."""
+    dell'effetto; se la raggiunge finisce quell'istanza (``effect_id``, altrimenti la prima con una CD), e con l'ultima la
+    condizione (2024 pag. 29). In combattimento l'azione si spende prima del tiro."""
     if slug not in ESCAPABLE:
         raise HTTPException(status_code=422, detail={"code": "not_escapable"})
     char = await get_owned(char_id, user_id, session, full=True)
-    eff = next((e for e in await effects_for_character(session, char_id) if e.slug == slug), None)
-    if not (char.conditions or {}).get(slug) or eff is None or eff.save_dc is None:
+    eff = next((e for e in await effects_for_character(session, char_id) if e.slug == slug and e.save_dc is not None
+                and effect_id in (None, e.id)), None)
+    if not (char.conditions or {}).get(slug) or eff is None:
         raise HTTPException(status_code=409, detail={"code": "no_escape_dc"})
     refuse_if_incapacitated(char)
     if await active_encounter_row(session, char_id) is not None:
@@ -868,9 +873,10 @@ async def escape_condition(
     add_history(session, char.id, "condition_change",
                 f"Liberarsi da {condition_label(slug)}: {roll.total} contro CD {eff.save_dc}, "
                 + ("riuscito" if escaped else "fallito"))
-    if escaped:
-        await apply_conditions(session, char, {slug: False})
-    return EscapeResult(roll=roll, dc=eff.save_dc, escaped=escaped)
+    dc = eff.save_dc
+    if escaped:  # finisce la presa battuta: quella di un'altra fonte, con la sua CD, lo tiene ancora
+        await expire_effect(session, eff, None, None)
+    return EscapeResult(roll=roll, dc=dc, escaped=escaped)
 
 
 # ---------------------------------------------------------------------------
@@ -1092,9 +1098,8 @@ async def close_pending_save(
             await activate_pending_effect(session, effect)
             add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
         return save_read, passed
-    if passed:
-        add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
-        await apply_conditions(session, char, {effect.slug: False})
+    if passed:  # finisce questa istanza: un'altra della stessa condizione, da un'altra fonte, la tiene accesa
+        await expire_effect(session, effect, "Liberato da: {label}", None)
     await session.flush()
     return save_read, passed
 

@@ -16,7 +16,6 @@ from tests.integration.rules.test_2024_bard_lore_valor import _sword
                     voce="regola", copre=["carta:2024/classes/bard.md#Ispirazione in Combattimento / Combat Inspiration (Collegio del Valore 3, pag. 67)",
                                           "POST /characters/{char_id}/spells/{spell_id}/attack",
                                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2211: difforme dal manuale, confermato")
 async def test_il_dado_del_valore_2024_si_somma_al_danno_di_un_attacco_con_incantesimo(client, test_session_factory, dadi):
     sid, bard, hero = await _table(client, test_session_factory, level=3, subclass=VALOR)
     assert (await _give(client, bard, hero)).status_code == 200

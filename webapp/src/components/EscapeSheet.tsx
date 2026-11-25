@@ -17,7 +17,7 @@ import { D20Breakdown } from '@/components/RollResultModal'
 type Skill = 'athletics' | 'acrobatics'
 
 /** U36: liberarsi da Trattenuto/Afferrato con un'azione: prova di Atletica o Acrobazia contro la CD dell'effetto. */
-export default function EscapeSheet({ charId, slug, dc, onClose }: { charId: number; slug: string; dc: number; onClose: () => void }) {
+export default function EscapeSheet({ charId, slug, dc, effectId, onClose }: { charId: number; slug: string; dc: number; effectId?: number | null; onClose: () => void }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
@@ -28,7 +28,7 @@ export default function EscapeSheet({ charId, slug, dc, onClose }: { charId: num
   const roll = useMutation({
     mutationFn: async () => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill })
-      return api.characters.escapeCondition(charId, slug, skill, d20Arg(mode, await rollD20(mode, choice), choice))
+      return api.characters.escapeCondition(charId, slug, skill, d20Arg(mode, await rollD20(mode, choice), choice), effectId)
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['character', charId] })

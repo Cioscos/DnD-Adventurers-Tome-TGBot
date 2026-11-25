@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.encounter import GmConditionApply, InternalConditionApply, SaveIn
 from api.services.condition_effects import (
-    ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, expire_effect, item_concentration, upsert_effect,
+    ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, expire_effect, item_concentration, same_source, upsert_effect,
 )
 from api.services.effects import apply_conditions
 from api.services.history import add_history
@@ -150,7 +150,7 @@ async def _activate_also(db: AsyncSession, eff: ConditionEffect, target: tuple[s
             comb = await db.get(Combatant, target[1])
             if not (comb.conditions or {}).get(slug):
                 comb.conditions = {**(comb.conditions or {}), slug: True}
-        await clear_effects_for(db, target, [slug])
+        await clear_effects_for(db, target, [slug], *same_source(eff.source_combatant_id, eff.source_character_id, None))
         db.add(ConditionEffect(
             character_id=eff.character_id, combatant_id=eff.combatant_id, slug=slug, expiry_anchor=eff.expiry_anchor,
             expiry_edge=eff.expiry_edge, expiry_count=eff.expiry_count, source_combatant_id=eff.source_combatant_id,
@@ -162,8 +162,9 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
     """TS fallito: la condizione va sulla scheda o sul mostro e la durata decorre da ora."""
     others = (await db.execute(select(ConditionEffect).where(
         ConditionEffect.character_id == eff.character_id, ConditionEffect.combatant_id == eff.combatant_id,
-        ConditionEffect.slug == eff.slug, ConditionEffect.id != eff.id))).scalars().all()
-    for other in others:  # un solo effetto per condizione, come in ``upsert_effect``
+        ConditionEffect.slug == eff.slug, ConditionEffect.id != eff.id,
+        *same_source(eff.source_combatant_id, eff.source_character_id, eff.source_note)))).scalars().all()
+    for other in others:  # un solo effetto per condizione e fonte, come in ``upsert_effect``
         await _delete_effect(db, other)
     if eff.character_id is not None:
         char = await pc_char_by_id(db, eff.character_id)

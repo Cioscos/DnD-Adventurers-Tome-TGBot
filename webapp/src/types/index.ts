@@ -495,6 +495,8 @@ export interface SpellcastingInfo {
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
 // e CharacterFull non è assegnabile a CharacterSummary, così effectiveAc non gira su di esso.
 export interface ConditionEffect {
+  /** Più istanze della stessa condizione (una per fonte): la fuga sceglie quale. */
+  id?: number | null
   slug: string
   expiry_anchor?: 'owner' | 'source' | null
   expiry_edge?: 'start' | 'end' | null

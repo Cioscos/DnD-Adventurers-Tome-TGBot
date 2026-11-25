@@ -9,6 +9,7 @@ from api.schemas.common import RollResult
 
 
 class ConditionEffectRead(BaseModel):
+    id: Optional[int] = None  # più istanze della stessa condizione: la fuga sceglie quale (U36)
     slug: str
     expiry_anchor: Optional[str] = None
     expiry_edge: Optional[str] = None

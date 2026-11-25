@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
-from api.services.condition_effects import ExpirySpec, SaveSpec, effects_for_character, upsert_effect
+from api.services.condition_effects import ExpirySpec, SaveSpec, effects_for_character, suspended_list, upsert_effect
 from api.services.homebrew.dsl import RuleDSL
 from api.services.wild_shape import start_form
 from api.version import APP_VERSION
@@ -155,8 +155,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
         "condition_effects": [e.__dict__ for e in await effects_for_character(session, char.id)
                               if e.expiry_count is not None or e.save_dc is not None]
-        + list(e for c, e in ((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
-               if c in ((char.settings or {}).get(SUSPENDED_ON) or {})),  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
+        + [e for c, saved in ((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
+           if c in ((char.settings or {}).get(SUSPENDED_ON) or {}) for e in suspended_list(saved)],  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
     })
 
 
@@ -280,7 +280,7 @@ async def import_character(
                 session, ("character", char.id), e.slug,
                 expiry=ExpirySpec("owner", e.expiry_edge or "start", e.expiry_count) if e.expiry_count else None,
                 save=SaveSpec(e.save_ability, e.save_dc, e.save_edge or "end") if e.save_ability and e.save_dc else None,
-                source_note=e.source_note)
+                source_note=e.source_note, replace=False)  # ogni istanza esportata resta, anche con la stessa nota
 
     rolls = (char.settings or {}).get("hp_rolls")
     if isinstance(rolls, dict) and rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate

@@ -27,7 +27,7 @@ import { notifyMutationError } from '@/lib/mutationError'
 import DurationInput from '@/components/character/DurationInput'
 import { useTickRound } from '@/hooks/useTickRound'
 import { useTurnState } from '@/hooks/useTurnState'
-import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
+import { conditionRounds, formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import EscapeSheet from '@/components/EscapeSheet'
 
 const CONDITION_KEYS = [
@@ -114,7 +114,7 @@ export default function Conditions() {
   // Interdizione della Natura: affascinato o spaventato che chiede da dove viene (elementale o folletto = immune).
   const [wardAsk, setWardAsk] = useState<'charmed' | 'frightened' | null>(null)
   // U36: Trattenuto/Afferrato con una CD: ci si libera con una prova (e l'azione), non solo col TS ripetuto.
-  const [escapeFrom, setEscapeFrom] = useState<{ slug: string; dc: number } | null>(null)
+  const [escapeFrom, setEscapeFrom] = useState<{ slug: string; dc: number; id?: number | null } | null>(null)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -278,9 +278,8 @@ export default function Conditions() {
     })
   }
 
-  const durations = Object.fromEntries((char.condition_effects ?? [])
-    .filter((e) => e.expiry_count != null).map((e) => [e.slug, e.expiry_count as number]))
-  const hasDurations = Object.keys(durations).length > 0 || char.settings?.concentration_rounds_left != null
+  const durations = conditionRounds(char.condition_effects ?? [])
+  const hasDurations = (char.condition_effects ?? []).some((e) => e.expiry_count != null) || char.settings?.concentration_rounds_left != null
 
   const effectRows = (char.condition_effects ?? [])
     .filter((e) => conditions[e.slug])
@@ -478,8 +477,8 @@ export default function Conditions() {
             {t('character.conditions.effect.active_title')}
           </h3>
           <ul className="space-y-2">
-            {effectRows.map(({ e, expiry, save }) => (
-              <li key={e.slug} className="text-sm font-body">
+            {effectRows.map(({ e, expiry, save }, i) => (
+              <li key={`${e.slug}-${i}`} className="text-sm font-body">
                 <span className="font-semibold text-dnd-text">
                   {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : conditionLabel(e.slug, t)}
                 </span>
@@ -495,7 +494,7 @@ export default function Conditions() {
                 {expiry && <p className="text-xs text-dnd-text-muted">{expiry}</p>}
                 {save && <p className="text-xs text-dnd-text-muted tabular-nums">{save}</p>}
                 {(e.slug === 'restrained' || e.slug === 'grappled') && e.save_dc != null && (
-                  <Button variant="secondary" size="sm" className="mt-1.5" onClick={() => setEscapeFrom({ slug: e.slug, dc: e.save_dc! })}>
+                  <Button variant="secondary" size="sm" className="mt-1.5" onClick={() => setEscapeFrom({ slug: e.slug, dc: e.save_dc!, id: e.id })}>
                     {t('character.conditions.effect.escape')}
                   </Button>
                 )}
@@ -676,7 +675,7 @@ export default function Conditions() {
         loading={mutation.isPending}
       />
       {escapeFrom && (
-        <EscapeSheet charId={charId} slug={escapeFrom.slug} dc={escapeFrom.dc} onClose={() => setEscapeFrom(null)} />
+        <EscapeSheet charId={charId} slug={escapeFrom.slug} dc={escapeFrom.dc} effectId={escapeFrom.id} onClose={() => setEscapeFrom(null)} />
       )}
     </Layout>
   )

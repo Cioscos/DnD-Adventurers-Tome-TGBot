@@ -89,9 +89,9 @@ export default function MyCombatantCard({ combatant: c, snapshot: s, isMyTurn, t
         </div>
       )}
 
-      {endOfTurnSaves.map((e) => (
+      {endOfTurnSaves.map((e, i) => (
         <p
-          key={e.slug}
+          key={`${e.slug}-${i}`}
           data-testid="end-turn-save-hint"
           className="mt-2 rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body"
         >

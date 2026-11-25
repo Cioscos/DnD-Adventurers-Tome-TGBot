@@ -816,8 +816,8 @@ async def gm_resolve_monster_save(
             await drop_pending_effect(db, eff)
         else:
             await activate_pending_effect(db, eff)
-    elif body.passed and eff is not None:
-        await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
+    elif body.passed and eff is not None:  # finisce questa istanza, con i suoi TS; un'altra fonte può tenere la condizione
+        await expire_effect(db, eff, None, None)
     touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)

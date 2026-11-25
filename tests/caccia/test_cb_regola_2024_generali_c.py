@@ -115,7 +115,6 @@ async def test_chi_e_incapacitato_non_lancia_da_un_oggetto_magico(client, condiz
                     copre=["carta:2024/general.md#Incapacitated [Condition] (Incapacitato) (pag. 369)",
                            "carta:2024/general.md#Reaction (Reazione) (pag. 372)",
                            "GET /characters/{char_id}/roll-options", "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-2964: difforme dal manuale, confermato")
 async def test_chi_e_stordito_non_usa_una_reazione_sul_danno(client):
     cid = await _pg(client, "rogue", 5)
     pieni = (await _scheda(client, cid))["current_hit_points"]

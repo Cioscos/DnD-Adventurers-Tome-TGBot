@@ -749,8 +749,8 @@ export const api = {
       }),
     tickRound: (id: number) =>
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
-    escapeCondition: (id: number, slug: string, skill: 'athletics' | 'acrobatics', die?: D20Roll) =>
-      request<{ roll: RollResult; dc: number; escaped: boolean }>(`/characters/${id}/conditions/${slug}/escape?skill=${skill}`, {
+    escapeCondition: (id: number, slug: string, skill: 'athletics' | 'acrobatics', die?: D20Roll, effectId?: number | null) =>
+      request<{ roll: RollResult; dc: number; escaped: boolean }>(`/characters/${id}/conditions/${slug}/escape?skill=${skill}${effectId != null ? `&effect_id=${effectId}` : ''}`, {
         method: 'POST',
         body: die != null ? JSON.stringify(d20Fields(die)) : undefined,
       }),

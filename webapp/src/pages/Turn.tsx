@@ -627,8 +627,8 @@ export default function Turn() {
           {activeConditions.map(([key, val]) => <ConditionBadge key={key} conditionKey={key} value={val} showLabel />)}
         </div>
       )}
-      {endOfTurnSaves.map((e) => (
-        <p key={e.slug} data-testid="turn-end-save" className="rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body">
+      {endOfTurnSaves.map((e, i) => (
+        <p key={`${e.slug}-${i}`} data-testid="turn-end-save" className="rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body">
           {t('session.combat.end_turn_save_hint', {
             save: t('character.conditions.effect.save_any', { ability: t(`character.ability.${e.save_ability}_short`), dc: e.save_dc }),
             condition: formatCondition(e.slug, true, t),

@@ -41,3 +41,16 @@ export function formatSave(effect: ConditionEffect, t: TFunction, ownerName?: st
     name: ownerName,
   })
 }
+
+/** Round rimasti per condizione. Ogni fonte ne ha un'istanza con la sua durata (2014 pag. 290; 2024 pag. 29): la condizione
+ *  dura quanto la più lunga, e un'istanza senza durata la lascia aperta (nessun conteggio). */
+export function conditionRounds(effects: ConditionEffect[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  const open = new Set<string>()
+  for (const e of effects) {
+    if (e.expiry_count == null) open.add(e.slug)
+    else out[e.slug] = Math.max(out[e.slug] ?? 0, e.expiry_count)
+  }
+  open.forEach((slug) => { delete out[slug] })
+  return out
+}

@@ -87,7 +87,6 @@ async def test_mistificatore_con_un_paladino_o_ranger_di_1_livello_usa_la_propri
                            "carta:2014/general.md#Incapacitato / Incapacitated (pag. 291)",
                            "PATCH /characters/{char_id}/hp", "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("condizione", ["incapacitated", "paralyzed"])
-@pytest.mark.xfail(strict=True, reason="CB-1962: difforme dal manuale, confermato")
 async def test_schivata_prodigiosa_non_si_usa_da_incapacitato(client, condizione):
     cid = await _ladro(client, 5)
     await _pf_pieni(client, cid)
