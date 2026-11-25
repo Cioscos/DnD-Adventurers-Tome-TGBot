@@ -251,7 +251,7 @@ describe('useCastFlow damageless casts', () => {
   })
 
   it('confirms a damageless levelled spell with slot and concentration', async () => {
-    useSpell.mockResolvedValue(char)
+    useSpell.mockResolvedValue({ ...char, concentrating_spell_id: bless.id })
     updateConc.mockResolvedValue(char)
     renderFlow(bless)
     await userEvent.click(screen.getByText('begin'))

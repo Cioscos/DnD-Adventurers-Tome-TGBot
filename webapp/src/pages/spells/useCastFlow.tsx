@@ -102,12 +102,12 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const spellSlots: SpellSlot[] = char?.spell_slots ?? []
 
   // Conferma dei lanci senza danno: nome + slot/rituale + concentrazione.
-  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean, ki: number | null = null, description?: string) => {
+  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean, concentrating: boolean, ki: number | null = null, description?: string) => {
     let msg = t('character.spells.cast_done', { name: spell.name })
     if (slotLevel != null && slotLevel >= 1) msg += t('character.spells.cast_done_slot', { level: slotLevel })
     if (ki != null && spell.ki_cast) msg += t('character.spells.cast_done_ki', { n: spell.ki_cast.cost + ki })
     if (ritual) msg += t('character.spells.cast_done_ritual')
-    if (spell.is_concentration) msg += t('character.spells.cast_done_concentration')
+    if (concentrating) msg += t('character.spells.cast_done_concentration')
     if (description) toast.success(msg, { description })  // un solo toast: il lancio e a chi è andato l'effetto
     else toast.success(msg)
   }, [t])
@@ -126,7 +126,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setCastingSpell(null)
       haptic.success()
       const fx = updated.spell_effects
-      confirmCastDone(spell, slot?.level ?? null, ritual, ki,
+      // non sempre: Immagine Maggiore con uno slot alto, la Benedizione del Dio della Guerra… lo sa il server
+      confirmCastDone(spell, slot?.level ?? null, ritual, updated.concentrating_spell_id === spell.id, ki,
         fx?.applied.length ? t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(fx.applied, charId, t) }) : undefined)
       refreshAfterOptions(qc, charId, updated.option_result)
       const lang = uiLang(i18n.language)
