@@ -23,6 +23,6 @@ def test_a_warlock_who_already_chose_it_keeps_the_row_and_the_option():
 
     def ctx(owned):
         row = SimpleNamespace(options={"invocations": owned})
-        return SimpleNamespace(class_level=5, class_row=row, char=SimpleNamespace(spells=[chill]))
+        return SimpleNamespace(class_level=5, class_row=row, char=SimpleNamespace(spells=[chill], settings={}))
     assert "eldritch_spear__chill_touch" not in inv.available_invocations(ctx([]))
     assert "eldritch_spear__chill_touch" in inv.available_invocations(ctx(["eldritch_spear__chill_touch"]))

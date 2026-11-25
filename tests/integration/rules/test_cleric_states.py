@@ -17,7 +17,7 @@ from tests.integration.rules.test_2014_cleric_late import _spell, _table
 
 
 def _char(*states: dict):
-    return SimpleNamespace(active_states=list(states), conditions={}, is_dead=False, settings={}, concentrating_spell_id=None)
+    return SimpleNamespace(active_states=list(states), conditions={}, is_dead=False, settings={}, turn_state={}, concentrating_spell_id=None)
 
 
 def _state(key, rounds, ends=("manual",)):
