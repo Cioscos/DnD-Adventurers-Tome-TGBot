@@ -392,3 +392,22 @@ async def test_un_rituale_gia_conosciuto_senza_classe_resta_lanciabile_con_lo_sl
 
     assert "ritual_only" not in await avvisi("alarm")  # è nel suo libro degli incantesimi
     assert "ritual_only" in await avvisi("identify")  # solo nel libro dei rituali
+
+
+@pytest.mark.caccia(id="CB-4789", fonte="2024 · Warlock · Patto della Lama · pag. 156: la competenza è di chi ha legato l'arma", zona="regola:2024/warlock", voce="interazione",
+                    copre=["POST /sessions/{session_id}/trade"])
+async def test_un_arma_legata_ceduta_non_e_piu_l_arma_del_patto():
+    from types import SimpleNamespace
+    from api.services.trades import give_item
+    from core.db.models import Item
+
+    class Db:
+        async def flush(self): ...
+        def add(self, _row): ...
+    arma = Item(id=1, character_id=1, name="Spada lunga +1", item_type="weapon", quantity=1, weight=3.0, is_equipped=False, item_metadata=json.dumps(
+        {"damage_dice": "1d8", "weapon_category": "martial", "magic_bonus": 1, "pact_weapon": True, "pact_bound": True,
+         "damage_type": "psychic", "pact_original_damage_type": "slashing"}))
+    cede, riceve = SimpleNamespace(id=1, items=[arma]), SimpleNamespace(id=2, items=[])
+    await give_item(Db(), cede, riceve, 1, None)
+    meta = json.loads(arma.item_metadata)
+    assert "pact_weapon" not in meta and meta["damage_type"] == "slashing"

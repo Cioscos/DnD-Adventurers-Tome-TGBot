@@ -151,18 +151,23 @@ def _bindable(ctx: RuleContext) -> list[str]:
 
 def _release_bound(char: Any) -> None:
     """Il legame con un'arma vera termina: torna com'era, non si cancella (l'arma evocata la toglie ``_create_pact_weapon``)."""
-    from core.game.item_bonuses import item_meta  # import locale
     for item in char.items:
-        meta = dict(item_meta(item))
-        if meta.get(BOUND):
-            original = meta.pop(ORIGINAL_TYPE, None)
-            meta.pop(PACT_WEAPON, None)
-            meta.pop(BOUND, None)
-            if original is None:
-                meta.pop("damage_type", None)
-            else:
-                meta["damage_type"] = original
-            item.item_metadata = json.dumps(meta)
+        unbind(item)
+
+
+def unbind(item: Any) -> None:
+    """Una sola arma: anche quando passa a un altro personaggio."""
+    from core.game.item_bonuses import item_meta  # import locale
+    meta = dict(item_meta(item))
+    if meta.get(BOUND):
+        original = meta.pop(ORIGINAL_TYPE, None)
+        meta.pop(PACT_WEAPON, None)
+        meta.pop(BOUND, None)
+        if original is None:
+            meta.pop("damage_type", None)
+        else:
+            meta["damage_type"] = original
+        item.item_metadata = json.dumps(meta)
 
 
 def _blade_use() -> OnUse:
