@@ -32,6 +32,11 @@ def _save(char, state: dict) -> None:
     char.turn_state = state  # nuovo dict: SQLAlchemy non vede le mutazioni in place
 
 
+# turn_state: attacchi fatti nel turno di un altro (``others_turn``); ``reset_turn`` li passa in ``attacked_before``, che
+# l'Ira 2014 guarda a fine turno («non ha attaccato una creatura ostile ... dal turno precedente», 2014 pag. 48)
+OFF_TURN_ATTACKS = "off_turn_attacks"
+
+
 def action_taken(st: dict) -> bool:
     """L'azione del turno è spesa: segnata, oppure l'azione Attacco è già iniziata (LA4b)."""
     return bool(st["action_used"] or st["action_attacks"] > 0)
@@ -50,6 +55,8 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     action_spent = slot == "action" and action_taken(st)
     if slot == "attack":
         st["attacks_made"] += 1
+        if st.get("others_turn"):  # Ira 2014: conta alla fine del proprio turno seguente
+            st[OFF_TURN_ATTACKS] = st.get(OFF_TURN_ATTACKS, 0) + 1
         if not own_slot:
             st["action_attacks"] += 1
     elif action_spent and st["extra_actions"] > 0:
@@ -70,6 +77,8 @@ def release(char, slot: str) -> dict:
     st = get_turn(char)
     if slot == "attack":
         st["attacks_made"] = max(0, st["attacks_made"] - 1)
+        if st.get("others_turn") and st.get(OFF_TURN_ATTACKS):
+            st[OFF_TURN_ATTACKS] -= 1
         weapons = list(st.get("action_weapons") or [])
         forgone = sum(w[0] == FORGONE for w in weapons)  # gli attacchi ceduti non sono fra quelli fatti e restano
         st["action_attacks"] = min(st["action_attacks"], st["attacks_made"] + forgone)
@@ -147,7 +156,8 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
     hasted = any(variant.extra_action for _s, _e, variant, _d in spell_instances(char))  # Velocità: un'azione in più, limitata a un attacco
     _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"] and keep_surprise,
-                 "turn_no": previous.get("turn_no", 0) + 1,  # marcatore del turno: i rimborsi delle reazioni lo confrontano
+                 "turn_no": previous.get("turn_no", 0) + 1,
+                 "attacked_before": previous.get(OFF_TURN_ATTACKS, 0),  # marcatore del turno: i rimborsi delle reazioni lo confrontano
                  **({"extra_actions": 1, "haste_action": True} if hasted else {}), **vex, **notice})
     return char.turn_state
 

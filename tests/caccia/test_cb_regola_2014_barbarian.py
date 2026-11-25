@@ -55,7 +55,6 @@ async def test_fuori_scontro_un_turno_senza_attacchi_ne_danni_chiude_l_ira(clien
 @pytest.mark.caccia(id="CB-1562", fonte="2014 · Barbaro · Ira · pag. 48", zona="regola:2014/barbarian", voce="regola",
                     copre=["carta:2014/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 48)",
                            "POST /sessions/{session_id}/encounter/next-turn", "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-1562: difforme dal manuale, confermato")
 async def test_l_attacco_fatto_nel_turno_di_un_nemico_tiene_viva_l_ira(client, test_session_factory, monkeypatch):
     sid, cid = await _in_scontro(client, test_session_factory, monkeypatch, ("barbarian", 3, 12))
     spada = await _weapon(client, cid)

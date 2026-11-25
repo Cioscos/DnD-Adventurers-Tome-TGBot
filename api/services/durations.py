@@ -242,7 +242,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "end":
         st = get_turn(char)
-        if not st["attacks_made"] and not st["damaged"]:
+        if not st["attacks_made"] and not st.get("attacked_before") and not st["damaged"]:
             end_states(char, "turn_end_inactive")
         end_unextended(char)  # Ira 2024: finisce se nel turno non è stata prolungata
         end_counted_at_turn_end(char)  # Colpo Mistico: finisce con il turno che segue il colpo
