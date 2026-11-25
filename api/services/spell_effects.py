@@ -100,6 +100,8 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
     chosen = _check_choices(variant, edition, choices)
     if effect.target.kind == "self" and any(t != caster.id for t in targets or []):
         raise _invalid("self_only_spell")  # un effetto solo su chi lancia non si dà ad altri
+    if variant.not_self and (targets is None or caster.id in targets):
+        raise _invalid("invalid_target")  # solo su un'altra creatura (Legame di Protezione 2024)
     if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio
         await _check_weapon(session, variant, caster, chosen)
         return effect, variant, [caster], chosen, False

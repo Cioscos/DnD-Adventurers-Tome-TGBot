@@ -243,6 +243,8 @@ export interface SpellEffectInfo {
   /** Il tipo dei dadi in più dello slot più alto scelto all'ultimo lancio (Colpo Infuocato, Fame di Hadar); il server lo conserva. */
   cast_upcast_type?: string | null
   max_targets_by_slot: Record<string, number>
+  /** Solo su un'altra creatura: il foglio dei bersagli non offre «te stesso» (Legame di Protezione 2024). */
+  not_self?: boolean
   /** `when`: si chiede solo se la scelta `[chiave, valore]` è già stata fatta (il tipo delle Rune Esplosive del Glifo). */
   choices: { key: string; label: { it: string; en: string }; options: string[]; when?: [string, string] | null }[]
 }

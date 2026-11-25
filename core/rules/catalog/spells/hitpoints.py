@@ -1,6 +1,8 @@
 """Incantesimi sui punti ferita: PF temporanei, CA impostata, Interdizione alla Morte, Legame di Protezione, rigenerazione."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.game.stats import effective_ability_mod
 from core.rules.catalog.spells.defenses import HOUR, both, txt
 from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant, roll
@@ -106,7 +108,8 @@ SPELLS: tuple[SpellEffect, ...] = (
                 SpellTarget("allies", lambda slot: 6), {"2024": _FORTIFY}),
     SpellEffect("death_ward", ("death-ward",), ("Interdizione alla Morte", "Death Ward"), SpellTarget("ally"), both(_DEATH_WARD)),
     SpellEffect("warding_bond", ("warding-bond",), ("Vincolo di Interdizione", "Legame di Protezione", "Warding Bond"),
-                SpellTarget("ally"), both(_WARDING_BOND)),
+                # 2024 p.340: «un'altra creatura consenziente», chi lancia non è un bersaglio (il 2014 dice «una creatura consenziente»)
+                SpellTarget("ally"), {"2014": _WARDING_BOND, "2024": replace(_WARDING_BOND, not_self=True)}),
     SpellEffect("regenerate", ("regenerate",), ("Rigenerazione", "Regenerate"), SpellTarget("ally"), both(_REGENERATE)),
     SpellEffect("prayer_of_healing", ("prayer-of-healing",), ("Preghiera di Guarigione", "Prayer of Healing"),
                 SpellTarget("allies", lambda _s: 5), {"2024": _PRAYER_OF_HEALING}),

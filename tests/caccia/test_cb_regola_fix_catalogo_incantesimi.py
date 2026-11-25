@@ -87,3 +87,25 @@ async def test_vita_falsata_2014_i_pf_temporanei_finiscono_dopo_l_ora(client, te
     assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
     # «ottieni 1d4 + 4 punti ferita temporanei per la durata»: finita l'ora, quelli rimasti si perdono
     assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 0
+
+
+@pytest.mark.caccia(id="CB-4074", fonte="2024 · Incantesimi · Legame di Protezione · pag. 340; 2024 · Bersagli · pag. 237",
+                    zona="regola:2024/incantesimi-G-L", voce="permessi",
+                    copre=["carta:2024/spells.md#Legame di Protezione", "POST /characters/{char_id}/spells/{spell_id}/use", "GET /characters/{char_id}/spells"])
+@pytest.mark.parametrize("su_di_se", [True, False], ids=["bersaglio_se_stesso", "senza_bersagli"])
+async def test_legame_di_protezione_2024_non_si_lancia_su_se_stessi(client, su_di_se):
+    cid = await _pg(client, "cleric", 3)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Legame di Protezione", "srd_index": "warding-bond", "level": 2})
+    assert r.status_code == 201, r.text
+    legame = r.json()["id"]
+    slot = lambda scheda: next(s["available"] for s in scheda["spell_slots"] if s["level"] == 2)  # noqa: E731
+    prima = slot((await client.get(f"/characters/{cid}")).json())
+    corpo = {"slot_level": 2, **({"targets": [cid]} if su_di_se else {})}
+    r = await client.post(f"/characters/{cid}/spells/{legame}/use", json=corpo)
+    # «Tocchi un'altra creatura consenziente» (Warding Bond 2024): chi lancia non è un bersaglio valido
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_target", r.text[:300]
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    assert slot(scheda) == prima and not [s for s in scheda["active_states"] or [] if s["key"] == "spell:warding_bond"]
+    # il foglio dei bersagli non offre «te stesso»
+    effetto = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == legame)["effect"]
+    assert effetto["not_self"] is True
