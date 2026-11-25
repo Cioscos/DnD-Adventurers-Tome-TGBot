@@ -37,7 +37,7 @@ def _spell_dc(ctx: RuleContext) -> int:
 
 
 def _beast_dc(ctx: RuleContext) -> int:
-    # shortcut: senza i bonus degli oggetti finché l'utente non decide Q-2024-ranger-3 (attacco e CD del Colpo della Bestia)
+    # senza i bonus degli oggetti, come l'attacco della bestia (D-025)
     return 8 + ctx.char.proficiency_bonus + _wis_mod(ctx)
 
 

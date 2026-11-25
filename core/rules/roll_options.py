@@ -608,6 +608,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     automatic = [o for o in automatic_options_for(ctx) if o.spec.phase == phase]
     keys = list(dict.fromkeys([*(o.spec.key for o in automatic), *keys]))  # le automatiche per prime, una volta sola
     usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
+    other_mode = next((usable[k].spec.mode for k in keys if k in usable and usable[k].spec.mode), None)
+    if ctx.mode == "normal" and other_mode:  # vantaggio o svantaggio di un'altra opzione (Spaventato): Ripristinare l'Equilibrio lo vede
+        ctx = replace(ctx, mode=other_mode)
+        usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
     turned = next((usable[k].spec.damage_type_to for k in keys if k in usable and usable[k].spec.damage_type_to), None)
     if turned and phase == "before":  # Incantesimo Trasmutato: le altre opzioni leggono il tipo nuovo (Affinità Elementale)
         fixed = {k: o for k, o in usable.items() if o.spec.damage_type_to or o.spec.automatic}

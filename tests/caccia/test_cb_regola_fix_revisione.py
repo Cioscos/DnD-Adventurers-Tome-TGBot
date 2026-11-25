@@ -701,3 +701,17 @@ async def test_finta_affondo_e_passo_del_vento_finiscono_col_turno(client, test_
     assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # tocca al goblin
     as_user(PLAYER_ID)
     assert not _ha(await _scheda(client, cid), stato)
+
+
+@pytest.mark.caccia(id="CB-4836", fonte="2024 · Stregone · Stregoneria Meccanica, Ripristinare l'Equilibrio · pag. 146 (un d20 con Vantaggio o Svantaggio); Condizioni · Spaventato",
+                    zona="regola:2024/sorcerer", voce="interazione",
+                    copre=["carta:2024/classes/sorcerer.md#Ripristinare l'Equilibrio / Restore Balance (Stregoneria Meccanica 3, pag. 146)",
+                           "POST /characters/{char_id}/skills/{skill_name}/roll"])
+async def test_ripristinare_l_equilibrio_vale_se_lo_svantaggio_viene_da_un_altra_opzione(client):
+    cid = await _crea(client, "2024", ("sorcerer", 5, "Stregoneria Meccanica"))
+    equilibrio = "sorcerer.restore_balance_own_roll"
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"frightened": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "normal", "dice": [7], "options": ["condition:frightened", equilibrio]})
+    assert r.status_code == 200, r.text[:200]
+    assert r.json()["mode_applied"] == "normal"
+    assert (await _ability(client, cid, "sorcerer.restore_balance"))["uses"] == 2
