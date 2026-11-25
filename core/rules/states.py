@@ -39,6 +39,9 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
         state.update(condition=spec.condition, condition_was_on=was[spec.condition])
         if spec.also_conditions:
             state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
+        from core.rules.catalog._common import INCAPACITATING  # import locale: il catalogo importa questo modulo
+        if any(c in INCAPACITATING and not (char.conditions or {}).get(c) for c in wanted):
+            state["data"]["drops_concentration"] = True  # incapacitato: la concentrazione cade (2014 pag. 203), la chiude il flush
         char.conditions = {**(char.conditions or {}), **{c: True for c in wanted}}
     char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
     return state
