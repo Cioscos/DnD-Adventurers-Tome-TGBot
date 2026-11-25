@@ -113,8 +113,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   })
 
   // Signore delle Bestie: i Dadi Vita del profilo della bestia, spesi in un riposo breve
-  const isBeast = comp.feature_key === 'ranger.rangers_companion'
-  const spendsHitDice = isBeast || comp.feature_key === 'ranger.primal_companion'  // anche la bestia primordiale 2024 ha Dadi Vita (p.123)
+  const isRangerBeast = comp.feature_key === 'ranger.rangers_companion' || comp.feature_key === 'ranger.primal_companion'  // anche la bestia primordiale 2024 ha Dadi Vita e reazione (p.122-123)
     || (comp.kind === 'wild_shape' && comp.is_active && !formHasNoHp)  // Forma Selvatica 2014: i Dadi Vita della bestia (p.66)
   const hitDice = useMutation({
     mutationFn: () => api.companions.hitDice(charId, comp.id, 1),
@@ -217,7 +216,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       )}
       </>}
 
-      {spendsHitDice && comp.current_hp > 0 && hdTotal > 0 && (
+      {isRangerBeast && comp.current_hp > 0 && hdTotal > 0 && (
         <Button variant="secondary" fullWidth className="min-h-11" disabled={comp.current_hp >= comp.max_hp || hdLeft === 0}
           loading={hitDice.isPending} onClick={() => hitDice.mutate()}>
           {t('character.extras.beast.hit_dice')} ({hdLeft}/{hdTotal})
@@ -260,7 +259,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
                   <Swords size={14} />{t('character.turn.attack')}
                 </RollButton>
               )}
-              {isBeast && (
+              {isRangerBeast && (
                 <RollButton
                   onRoll={(mode) => attack.mutate({ idx, mode, reaction: true })}
                   pending={attack.isPending}

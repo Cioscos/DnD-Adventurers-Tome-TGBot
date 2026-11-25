@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
+import CompanionCard from '@/pages/extras/CompanionCard'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
-import type { CharacterFull, Spell } from '@/types'
+import type { CharacterFull, Companion, Spell } from '@/types'
 
 const { attack, lancia, toastSuccess } = vi.hoisted(() => ({ attack: vi.fn(), lancia: vi.fn(), toastSuccess: vi.fn() }))
 
@@ -50,5 +51,19 @@ describe('caccia: revisioni delle correzioni regole', () => {
     await user.click(await screen.findByText('slot'))
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled())
     expect(String(toastSuccess.mock.calls[0][0]).includes('cast_done_concentration')).toBe(detta)
+  })
+
+  // caccia: {"id": "CB-4716", "fonte": "2024 · Ranger · Compagno Primordiale (può usare la reazione da sola) · pag. 122", "zona": "regola:2024/ranger", "voce": "regola", "copre": ["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)", "POST /characters/{char_id}/companions/{comp_id}/attack", "route:/char/:id/extras"]}
+  it('la bestia primordiale ha l\'attacco di reazione senza un ordine', async () => {
+    attack.mockResolvedValue({ to_hit_die: 12, to_hit_bonus: 6, to_hit_total: 18, is_critical: false, damage_total: 5, notes: [] })
+    const bestia = {
+      id: 3, kind: 'companion', name: 'Bestia della Terra', max_hp: 20, current_hp: 20, temp_hp: 0, armor_class: 14, is_active: false,
+      down: false, feature_key: 'ranger.primal_companion',
+      statblock: { hit_dice: '3d8', actions: [{ name: 'Colpo della Bestia', attack_bonus: 5, damage_dice: '1d8+2' }] },
+    } as unknown as Companion
+    renderWithProviders(<CompanionCard charId={7} comp={bestia} wildShapeUses={null} />)
+    await userEvent.setup({ pointerEventsCheck: 0 }).click(screen.getByLabelText('character.extras.beast.reaction_attack Colpo della Bestia'))
+    await waitFor(() => expect(attack).toHaveBeenCalled())
+    expect(attack.mock.calls[0][6]).toBe(true)
   })
 })
