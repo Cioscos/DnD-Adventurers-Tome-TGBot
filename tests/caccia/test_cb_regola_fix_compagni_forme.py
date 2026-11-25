@@ -1,9 +1,11 @@
 """Controlli scritti dalla correzione del gruppo compagni-forme (dubbi «Q-…» risolti come difetti)."""
 import pytest
 
+from tests.integration.rules.test_2014_bard import _full
 from tests.integration.rules.test_2014_druid import _activate, _beast, _form
 from tests.integration.rules.test_2014_ranger_beast import _companion, _master
 from tests.integration.rules.test_2024_druid import _druid24
+from tests.integration.rules.test_2024_ranger_subclasses import _beast as _primal, _companions, _sub
 from tests.integration.test_rules_forms import beast
 
 
@@ -45,3 +47,23 @@ async def test_in_forma_2024_la_forza_e_quella_della_bestia_non_la_piu_alta(clie
     atletica = (await client.post(f"/characters/{cid}/skills/athletics/roll", json={})).json()["bonus"]
     ts_for = (await client.post(f"/characters/{cid}/saving_throws/strength/roll", json={})).json()["bonus"]
     assert (atletica, ts_for) == (0, 0)  # Forza 10 della Bestia, non la Forza 18 del druido
+
+
+@pytest.mark.caccia(id="CB-4353", fonte="2024 · Ranger · Compagno Primordiale: PF e Dadi Vita della bestia seguono il livello di Ranger · pag. 122; Bestia della Terra: Dadi Vita d8 pari al livello · pag. 123",
+                    zona="regola:2024/ranger", voce="regola",
+                    copre=["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)",
+                           "carta:2024/classes/ranger.md#Bestia della Terra / Beast of the Land (Signore delle Bestie 3, pag. 123)",
+                           "GET /characters/{char_id}/companions", "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
+async def test_i_dadi_vita_della_bestia_primordiale_salgono_col_livello(client, dadi):
+    cid = await _sub(client, 5, "beast_master")
+    comp = await _primal(client, cid)  # evocata al 5°: 5d8
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{klass}", json={"level": 6})).status_code == 200
+    comp = next(c for c in await _companions(client, cid) if c["id"] == comp["id"])
+    assert (comp["max_hp"], comp["statblock"]["hit_dice"]) == (35, "6d8")
+    assert (await client.patch(f"/characters/{cid}/companions/{comp['id']}/hp", json={"op": "damage", "value": 20})).status_code == 200
+    dadi(1, 1, 1, 1, 1, 1)
+    r = await client.post(f"/characters/{cid}/companions/{comp['id']}/hit-dice", json={"count": 6})
+    assert r.status_code == 200, r.text
+    assert r.json()["hit_dice_left"] == 0
+

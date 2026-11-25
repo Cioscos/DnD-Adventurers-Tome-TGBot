@@ -21,6 +21,7 @@ class CompanionStats:
     fly_or_swim_m: int = 0
     damage_types: tuple[str, ...] = ()
     can_resist: bool = False
+    hit_dice: str | None = None  # Dadi Vita che seguono il livello (bestia primordiale 2024); None: quelli dello statblock
 
 
 def _rangers_companion(base_hp: int, base_ac: int, level: int, pb: int, _wis: int, _statblock: dict) -> CompanionStats:
@@ -29,9 +30,10 @@ def _rangers_companion(base_hp: int, base_ac: int, level: int, pb: int, _wis: in
 
 
 def _primal_companion(_hp: int, _ac: int, level: int, pb: int, wis: int, statblock: dict) -> CompanionStats:
-    # 2024: PF 5 + 5 x livello (Cielo 4 + 4 x livello), CA 13 + SAG, attacco = attacco con incantesimi, danno + SAG.
-    per_level = 4 if statblock.get("primal_type") == "sky" else 5
-    return CompanionStats(per_level * (level + 1), 13 + wis, pb + wis, wis)
+    # 2024: PF 5 + 5 x livello (Cielo 4 + 4 x livello), CA 13 + SAG, attacco = attacco con incantesimi, danno + SAG;
+    # Dadi Vita d8 (Cielo d6) pari al livello (pag. 123-124)
+    sky = statblock.get("primal_type") == "sky"
+    return CompanionStats((4 if sky else 5) * (level + 1), 13 + wis, pb + wis, wis, hit_dice=f"{level}d{6 if sky else 8}")
 
 
 BEAST_COMPANION = "ranger.rangers_companion"  # il compagno del Signore delle Bestie 2014: agisce solo se il ranger glielo ordina

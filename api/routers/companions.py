@@ -70,6 +70,8 @@ def _read(char: Character, comp: Companion) -> CompanionRead:
         out.save_dc, out.fly_or_swim_m, out.can_resist = stats.save_dc, stats.fly_or_swim_m, stats.can_resist
         out.damage_type_options = list(stats.damage_types)
         out.current_hp = min(comp.current_hp, out.max_hp)
+        if stats.hit_dice:
+            out.statblock = {**out.statblock, "hit_dice": stats.hit_dice}
     return out
 
 
@@ -484,7 +486,7 @@ async def spend_beast_hit_dice(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceResult:
     """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0
-    (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
+    (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello attuale (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
     if comp.feature_key not in BEAST_KEYS:
@@ -495,7 +497,8 @@ async def spend_beast_hit_dice(
     if comp.current_hp >= top:
         raise HTTPException(status_code=409, detail={"code": "hp_full"})
     sb = dict(comp.statblock or {})
-    dice = DICE_RE.match(str(sb.get("hit_dice") or ""))
+    stats = companion_stats(char, comp)
+    dice = DICE_RE.match(str((stats and stats.hit_dice) or sb.get("hit_dice") or ""))
     total, sides = (int(dice.group(1)), int(dice.group(2))) if dice else (0, 0)
     spent = stat_int(sb, "hit_dice_spent")
     if not sides or total - spent < body.count:
