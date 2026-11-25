@@ -9,7 +9,7 @@ const riga = async (index: string) => {
 
 describe('caccia: regola 2014 incantesimi G-L', () => {
   // caccia: {"id": "CB-3316", "fonte": "2014 · Incantesimi · Guardiani Spirituali · pag. 240; Glifo di Interdizione · pag. 239", "zona": "regola:2014/incantesimi-G-L", "voce": "regola", "copre": ["carta:2014/spells.md#Guardiani Spirituali", "carta:2014/spells.md#Glifo di Interdizione"]}
-  it.fails.each([
+  it.each([
     ['spirit-guardians', '3d8', '1d8'],
     ['glyph-of-warding', '5d8', '1d8'],
   ])('%s aggiunto dal catalogo 2014 ha i dadi di danno della carta', async (index, dadi, perSlot) => {

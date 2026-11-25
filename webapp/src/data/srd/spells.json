@@ -8191,9 +8191,9 @@
    },
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": null,
+   "damage_dice": "5d8",
    "damage_type": null,
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d8",
    "classes": [
     "bard",
     "cleric",
@@ -15533,9 +15533,9 @@
    },
    "attack_type": "SAVE",
    "save_ability": "wis",
-   "damage_dice": null,
+   "damage_dice": "3d8",
    "damage_type": null,
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d8",
    "classes": [
     "cleric"
    ],
