@@ -74,7 +74,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
         'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force', concentration_2024=True),
     'spirit-guardians': GrantedSpell(
         'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True,
-        attack_save='SAVE', damage_dice='3d8', higher_levels_dice='1d8'),  # tipo: radiosi o necrotici secondo l'allineamento (Q-2014-incantesimi-g-l-2)
+        attack_save='SAVE', damage_dice='3d8', higher_levels_dice='1d8'),  # tipo: nel 2014 radiosi o necrotici, scelti al lancio (D-031)
     'crusaders-mantle': GrantedSpell(
         'crusaders-mantle', {"it": 'Manto del crociato', "en": "Crusader's Mantle"}, 3, '1 azione', 'Personale (raggio 9 m)', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'freedom-of-movement': GrantedSpell(

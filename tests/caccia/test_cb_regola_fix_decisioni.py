@@ -188,3 +188,20 @@ async def test_punizione_divina_e_colpo_divino_2014_valgono_col_colpo_senz_armi(
     assert r.status_code == 200, r.text
     offerte = {o["key"] for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}
     assert not any("divine_strike" in k for k in offerte), offerte
+
+
+@pytest.mark.caccia(id="CB-4610", fonte="decisione D-031 (tests/caccia/decisioni.md): tipo scelto al lancio e ricordato per i tiri dei turni dopo; 2014 · Incantesimi · Guardiani Spirituali · pag. 240",
+                    zona="regola:2014/incantesimi-G-L", voce="regola",
+                    copre=["carta:2014/spells.md#Guardiani Spirituali", "POST /characters/{char_id}/spells/{spell_id}/use",
+                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
+async def test_guardiani_spirituali_2014_radiosi_o_necrotici_scelti_al_lancio(client):
+    cid = await _pg(client, "2014", "cleric", 5, "war")  # la riga la concede il Dominio della Guerra
+    spell = next(s["id"] for s in (await _scheda(client, cid))["spells"] if s["srd_index"] == "spirit-guardians")
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": {"damage_type": "cold"}})
+    assert r.status_code == 422, r.status_code
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": {"damage_type": "necrotic"}})
+    assert r.status_code == 200, r.text
+    for _ in range(2):  # lo stesso tipo anche nel turno dopo
+        r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 3})
+        assert r.status_code == 200 and r.json()["damage_type"] == "necrotic", r.text
+        assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200

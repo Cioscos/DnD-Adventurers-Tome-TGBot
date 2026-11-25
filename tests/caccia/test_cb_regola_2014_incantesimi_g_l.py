@@ -81,6 +81,8 @@ async def test_lama_infuocata_sale_di_1d6_ogni_due_livelli_di_slot(client, slot,
 async def test_guardiani_spirituali_del_dominio_della_guerra_tirano_i_loro_dadi(client):
     cid = await _pg(client, "cleric", 5, "Chierico", "Dominio della Guerra")
     spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "spirit-guardians")
+    r = await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 3, "choices": {"damage_type": "radiant"}})
+    assert r.status_code == 200, r.text  # il tipo si sceglie al lancio (D-031)
     r = await client.post(f"/characters/{cid}/spells/{spell['id']}/roll_damage", json={"casting_level": 4})
     assert r.status_code == 200, r.text  # oggi 400: la riga del dominio non ha dadi di danno
     assert r.json()["scaled_dice"] == "4d8"  # 3d8 al 3°, +1d8 per livello di slot

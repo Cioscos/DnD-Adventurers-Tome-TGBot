@@ -37,6 +37,10 @@ _ELEMENTAL = SpellVariant(  # 2024: l'elemento del Grande Spirito decide il tipo
     choices=(_types("lightning", "thunder", "fire", "cold"),), track=True, concentration=True, rounds=MIN10,
     text=txt("Chi entra nello Spirito o inizia lì il turno fa il TS Destrezza o subisce 8d8 del tipo dell'elemento scelto (aria fulmine, terra tuono, fuoco fuoco, acqua freddo): li applichi a mano.",
              "A creature that enters the spirit or starts its turn there makes a DEX save or takes 8d8 of the chosen element's type (air lightning, earth thunder, fire fire, water cold): apply it by hand."))
+_GUARDIANS_2014 = SpellVariant(  # la carta dice «secondo l'allineamento»: lo sceglie chi lancia (D-031)
+    choices=(_types("radiant", "necrotic"),), track=True, concentration=True, rounds=MIN10,
+    text=txt("Entro 4,5 m la velocità è dimezzata e chi entra o inizia lì il turno fa il TS Saggezza o subisce 3d8 del tipo scelto (metà se riesce): li tiri dalla pagina degli incantesimi.",
+             "Within 15 ft speed is halved, and a creature that enters or starts its turn there makes a WIS save or takes 3d8 of the chosen type (half on a success): you roll it from the spells page."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("chromatic_orb", ("chromatic-orb",), ("Globo Cromatico", "Sfera Cromatica", "Chromatic Orb"), SpellTarget("self"), both(_ORB)),
@@ -44,4 +48,6 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("sorcerous_burst", ("sorcerous-burst",), ("Esplosione Stregonesca", "Sorcerous Burst"), SpellTarget("self"), {"2024": _BURST}),
     SpellEffect("dragons_breath", ("dragons-breath",), ("Soffio del Drago", "Dragon's Breath"), SpellTarget("ally"), {"2024": _BREATH}),
     SpellEffect("conjure_elemental", ("conjure-elemental",), ("Evoca Elementale", "Conjure Elemental"), SpellTarget("self"), {"2024": _ELEMENTAL}),
+    SpellEffect("spirit_guardians", ("spirit-guardians",), ("Guardiani Spirituali", "Spiriti Guardiani", "Spirit Guardians"), SpellTarget("self"),
+                {"2014": _GUARDIANS_2014}),
 )
