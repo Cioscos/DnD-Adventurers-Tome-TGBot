@@ -674,18 +674,14 @@ async def test_empty_body_needs_level_18_four_ki_and_the_action(client):
 # ---------------------------------------------------------------------------
 
 async def test_perfect_self_gives_back_four_ki_at_initiative_only_with_none_left(client):
-    low = await _monk(client, 19)
-    await _set_ki(client, low, 0)
-    assert PERFECT not in await _roll_keys(client, low, "initiative")
-    cid = await _monk(client, 20)
-    assert PERFECT not in await _roll_keys(client, cid, "initiative")  # i ki non sono finiti
-    await _set_ki(client, cid, 1)
-    assert PERFECT not in await _roll_keys(client, cid, "initiative")
-    await _set_ki(client, cid, 0)
-    assert PERFECT in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8, "options": [PERFECT]})
-    assert r.status_code == 200, r.text
-    assert await _ki(client, cid) == 4
+    # 2014, Perfezione Interiore (Monaco 20), pag. 92: automatica a 0 punti ki, non un'opzione da spuntare
+    for level, before, after in ((19, 0, 0), (20, 1, 1), (20, 0, 4)):
+        cid = await _monk(client, level)
+        await _set_ki(client, cid, before)
+        assert PERFECT not in await _roll_keys(client, cid, "initiative")
+        r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})
+        assert r.status_code == 200, r.text
+        assert await _ki(client, cid) == after
     effect = r.json()["option_result"]["effects"][0]
     assert "4 punti ki" in effect["it"] and "4 ki points" in effect["en"]
 
@@ -721,7 +717,6 @@ async def test_perfect_self_works_at_the_initiative_of_an_encounter_too(client, 
     as_user(PLAYER_ID)
     assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "monk", "level": 20, "hit_die": 8})).status_code == 201
     await _set_ki(client, cid, 0)
-    assert PERFECT in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 8, "options": [PERFECT]})
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 8})
     assert r.status_code == 200, r.text
     assert await _ki(client, cid) == 4

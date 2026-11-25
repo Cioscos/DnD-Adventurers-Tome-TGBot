@@ -228,7 +228,7 @@ def _perfect_self_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> N
 
 
 PERFECT_SELF = RollOptionSpec(
-    key=f"{CK}.perfect_self", phase="before", rolls=("initiative",), available=_no_ki_left,
+    key=f"{CK}.perfect_self", phase="before", rolls=("initiative",), automatic=True, available=_no_ki_left,  # nessuna scelta
     on_confirm=_perfect_self_confirmed,
     label={"it": "Perfezione Interiore: non hai più ki, recuperane 4", "en": "Perfect Self: you have no ki left, regain 4"},
     effect=_say("Perfezione Interiore: recuperi 4 punti ki.", "Perfect Self: you regain 4 ki points."))

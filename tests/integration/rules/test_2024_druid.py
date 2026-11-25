@@ -457,8 +457,8 @@ async def test_evergreen_wild_shape_gives_back_a_use_when_rolling_initiative_wit
     for _ in range(4):
         await _shape(client, cid, 1, fly=30)
     assert (await _ability(client, cid, WILD))["uses"] == 0
-    assert EVERGREEN in await _roll_keys(client, cid, "initiative")
-    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 9, "options": [EVERGREEN]})
+    assert EVERGREEN not in await _roll_keys(client, cid, "initiative")  # passivo (pag. 82): scatta da solo
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 9})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, WILD))["uses"] == 1
 
@@ -467,7 +467,8 @@ async def test_evergreen_wild_shape_needs_level_20(client):
     cid = await _druid24(client, 19)
     for _ in range(4):
         await _shape(client, cid, 1, fly=30)
-    assert EVERGREEN not in await _roll_keys(client, cid, "initiative")
+    assert (await client.post(f"/characters/{cid}/dice/initiative", json={"die": 9})).status_code == 200
+    assert (await _ability(client, cid, WILD))["uses"] == 0
 
 
 @pytest.mark.parametrize("uses,slot", [(1, 2), (2, 4), (4, 8)])

@@ -455,3 +455,24 @@ async def test_conoscenze_secolari_sostituisce_l_atleta_straordinario(client):
     r = await _use(client, cid, "cleric.knowledge_of_the_ages", params={"skill": "athletics"})
     assert r.status_code == 200, r.text
     assert await bonus() == 2 + 4  # Forza e competenza
+
+
+@pytest.mark.caccia(id="CB-4812", fonte="2014 · Guerriero · Implacabile · pag. 74; 2014 · Monaco · Perfezione Interiore · pag. 92; 2024 · Druido · Arcidruido · pag. 82", zona="regola:2014/fighter", voce="regola",
+                    copre=["POST /characters/{char_id}/dice/initiative"])
+@pytest.mark.parametrize("edizione,classe,livello,sub,riserva,dopo", [
+    ("2014", "fighter", 15, "Maestro di Battaglia", "fighter.superiority_dice", 1),
+    ("2014", "monk", 20, None, "monk.ki", 4),
+    ("2024", "druid", 20, None, "druid.wild_shape", 1)])
+async def test_i_recuperi_passivi_scattano_da_soli_al_tiro_di_iniziativa(client, edizione, classe, livello, sub, riserva, dopo):
+    cid = await _crea(client, edizione, (classe, livello, sub))
+
+    async def usi(nuovi: int | None = None) -> int:
+        riga = next(a for a in (await client.get(f"/characters/{cid}")).json()["abilities"] if a["feature_key"] == riserva)
+        if nuovi is not None:
+            assert (await client.patch(f"/characters/{cid}/abilities/{riga['id']}", json={"uses": nuovi})).status_code == 200
+        return riga["uses"]
+
+    await usi(0)
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 8})  # il giocatore non spunta nulla
+    assert r.status_code == 200, r.text
+    assert await usi() == dopo

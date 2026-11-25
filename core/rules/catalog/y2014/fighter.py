@@ -456,7 +456,7 @@ def _relentless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> Non
 
 
 RELENTLESS = RollOptionSpec(
-    key=f"{CK}.relentless", phase="before", rolls=("initiative",), available=_relentless_available,
+    key=f"{CK}.relentless", phase="before", rolls=("initiative",), automatic=True, available=_relentless_available,  # passivo: nessuna scelta
     on_confirm=_relentless_confirmed,
     label={"it": "Implacabile: recupera un dado di superiorità (non ne hai)", "en": "Relentless: regain a superiority die (you have none)"})
 

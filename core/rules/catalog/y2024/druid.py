@@ -176,7 +176,7 @@ def _regain_use(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 
 EVERGREEN = RollOptionSpec(
-    key=f"{CK}.evergreen_wild_shape", phase="before", rolls=("initiative",), on_confirm=_regain_use,
+    key=f"{CK}.evergreen_wild_shape", phase="before", rolls=("initiative",), automatic=True, on_confirm=_regain_use,  # passivo: nessuna scelta
     available=lambda c: _no_uses_left(c) and c.class_level >= 20,
     label={"it": "Forma Selvatica Sempreverde: tirando l'Iniziativa senza usi ne recuperi uno",
            "en": "Archdruid's Evergreen Wild Shape: rolling Initiative with no uses left gives one back"})
