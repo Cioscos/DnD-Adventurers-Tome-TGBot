@@ -62,3 +62,21 @@ async def test_la_finestra_di_realta_illusoria_resta_con_una_illusione_a_concent
     await _rilancia(client, cid, await _illusion(client, cid, is_concentration=True), slot_level=1)
     r = await _use(client, cid, "wizard.illusory_reality", params={"object": "Ponte"})
     assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-4703", fonte="2014 · Mago · Realtà Illusoria (finché l'incantesimo è attivo) · pag. 87; Immagine Maggiore dal 6° senza concentrazione · pag. 242",
+                    zona="regola:2014/wizard", voce="interazione",
+                    copre=["carta:2014/classes/wizard.md#Realtà Illusoria / Illusory Reality (Illusione 14, pag. 87)", "carta:2014/spells.md#Immagine Maggiore",
+                           "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/features/{feature_key}/use"])
+@pytest.mark.parametrize("slot", [3, 6])
+async def test_realta_illusoria_vale_finche_dura_l_immagine_maggiore_lanciata_con_quello_slot(client, slot):
+    cid = await _wizard(client, 14, "illusion")
+    silenziosa = await _illusion(client, cid, is_concentration=True)
+    maggiore = await _illusion(client, cid, 3, "Concentrazione, fino a 10 minuti", "Immagine Maggiore", is_concentration=True, srd_index="major-image")
+    await _rilancia(client, cid, silenziosa, slot_level=1)  # una concentrazione di prima
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    await _rilancia(client, cid, maggiore, slot_level=slot)
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+    r = await _use(client, cid, "wizard.illusory_reality", params={"object": "Ponte"})
+    # col 3° l'illusione era la concentrazione appena persa; col 6° dura finché non è dissolta, la concentrazione non c'entra
+    assert r.status_code == (409 if slot == 3 else 200), r.text

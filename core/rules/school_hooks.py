@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from core.game.actions import parse_duration_rounds
 from core.rules import arcane_ward
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.schools import (
     WINDOW_ENCHANTMENT, WINDOW_ILLUSION, WINDOW_ILLUSION_TURN, WINDOW_TRANSMUTATION, normalize_school,
 )
+from core.rules.slot_concentration import slot_concentration
 from core.rules.states import begin_state
 from core.rules.types import FeatureSpec, StateSpec
 
@@ -49,10 +51,10 @@ def _enchantment_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, foun
     l'ammaliamento e un altro lancio non la chiude."""
     if found != "enchantment" or not level:
         return
-    from core.game.actions import parse_duration_rounds  # import locale
     # shortcut: senza una durata in round/minuti/ore (istantanea, giorni) resta fino al riposo lungo; da legare alla fine reale se serve
-    ends_on = ("rest_long", *(("concentration_end",) if spell.is_concentration else ()))
-    begin_state(char, StateSpec(WINDOW_ENCHANTMENT, rounds=parse_duration_rounds(spell.duration), ends_on=ends_on,
+    rounds, concentrates = _spell_lasts(char, spell, level)
+    ends_on = ("rest_long", *(("concentration_end",) if concentrates else ()))
+    begin_state(char, StateSpec(WINDOW_ENCHANTMENT, rounds=rounds, ends_on=ends_on,
                                 data={"internal": True, "spell": spell.name}), spec.key, spec.name["it"])
 
 
@@ -60,16 +62,28 @@ def _reality_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, found: s
     """Realtà Illusoria: la finestra dura quanto l'incantesimo (anche nei turni seguenti); senza una durata in round, solo il turno."""
     if found != "illusion" or not level:
         return
-    rounds = _illusion_duration(spell)
-    ends_on = ("rest_long", *(("concentration_end",) if spell.is_concentration else ())) if rounds else ("new_turn", "turn_end", "rest_long")
+    long, rounds = _long_illusion(char, spell, level)
+    ends_on = (("rest_long", *(("concentration_end",) if _spell_lasts(char, spell, level)[1] else ())) if long
+               else ("new_turn", "turn_end", "rest_long"))
     begin_state(char, StateSpec(WINDOW_ILLUSION_TURN, rounds=rounds, ends_on=ends_on, data={"internal": True, "spell": spell.name}),
                 spec.key, spec.name["it"])
 
 
-def _illusion_duration(spell: Any) -> int | None:
-    from core.game.actions import parse_duration_rounds  # import locale
-    rounds = parse_duration_rounds(spell.duration)
-    return rounds if rounds and rounds >= 10 else None  # 1 minuto o più (10 round)
+def _spell_lasts(char: Any, spell: Any, level: int | None) -> tuple[int | None, bool]:
+    """Round dell'incantesimo lanciato a questo livello e se li tiene la concentrazione."""
+    if spell.is_concentration:
+        concentrates, rounds = slot_concentration(char, spell, level or spell.level)
+        return rounds, concentrates
+    return parse_duration_rounds(spell.duration), False
+
+
+def _long_illusion(char: Any, spell: Any, level: int | None) -> tuple[bool, int | None]:
+    """Se l'illusione dura almeno 1 minuto (10 round) e per quanti round: ``None`` quando lo slot la fa durare finché non è
+    dissolta (Immagine Maggiore)."""
+    rounds, concentrates = _spell_lasts(char, spell, level)
+    if spell.is_concentration and not concentrates:
+        return True, None
+    return (True, rounds) if rounds and rounds >= 10 else (False, None)
 
 
 def _overchannel_cast(char: Any, row: Any, spec: FeatureSpec, spell: Any, school: str | None, level: int | None) -> None:
@@ -79,7 +93,8 @@ def _overchannel_cast(char: Any, row: Any, spec: FeatureSpec, spell: Any, school
 
 
 def _illusion_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, school: str | None, level: int | None) -> None:
-    if school == "illusion" and (rounds := _illusion_duration(spell)):
+    long, rounds = _long_illusion(char, spell, level)
+    if school == "illusion" and long:
         begin_state(char, StateSpec(WINDOW_ILLUSION, rounds=rounds, ends_on=("rest_long",), data={"internal": True, "spell": spell.name}),
                     spec.key, spec.name["it"])
 
