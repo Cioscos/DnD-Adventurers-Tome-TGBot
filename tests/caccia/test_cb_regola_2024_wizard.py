@@ -143,7 +143,6 @@ async def test_le_scelte_di_incantesimi_dei_livelli_passati_hanno_il_tetto_di_qu
                     voce="interazione", copre=["carta:2024/classes/wizard.md#Saturazione Magica / Overchannel (Invocatore 14, pag. 174)",
                                                "carta:2024/classes/wizard.md#Multiclasse: Mago / Multiclassing: Wizard (Mago, pag. 44)",
                                                "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2713: difforme dal manuale, confermato")
 async def test_saturazione_magica_2024_non_vale_per_un_incantesimo_da_chierico(client):
     cid = await _mago(client, 14, "evoker")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 1, "hit_die": 8})

@@ -127,7 +127,6 @@ async def test_interdizione_ricaricata_dal_livello_a_cui_si_lancia(client):
                     zona="regola:2014/wizard", voce="interazione",
                     copre=["carta:2014/classes/wizard.md#Saturazione Magica / Overchannel (Invocazione 14, pag. 87)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2112: difforme dal manuale, confermato")
 async def test_saturazione_magica_non_vale_per_un_incantesimo_di_un_altra_classe(client):
     cid = await _mago(client, 14, "evocation")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 1, "hit_die": 8})

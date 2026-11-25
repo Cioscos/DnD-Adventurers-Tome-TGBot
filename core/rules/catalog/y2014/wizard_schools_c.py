@@ -77,11 +77,15 @@ SCULPT_SPELLS = RollOptionSpec(
 EMPOWERED_USED = "empowered_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il bonus (un tiro per lancio)
 
 
+def _wizard_spell(ctx: RuleContext) -> bool:
+    """Un incantesimo da mago: della riga del mago, o senza classe se il personaggio ha solo quella."""
+    return ctx.spell.class_id == ctx.class_row.id or (ctx.spell.class_id is None and len(ctx.char.classes) == 1)
+
+
 def _empowered(ctx: RuleContext) -> bool:
     spell = ctx.spell
     return (ctx.roll == "damage" and spell is not None and normalize_school(spell.school) == "evocation"
-            and (ctx.char.turn_state or {}).get(EMPOWERED_USED) != spell.id
-            and (spell.class_id == ctx.class_row.id or (spell.class_id is None and len(ctx.char.classes) == 1)))
+            and (ctx.char.turn_state or {}).get(EMPOWERED_USED) != spell.id and _wizard_spell(ctx))
 
 
 def _overchannel_state(char) -> dict | None:
@@ -104,7 +108,8 @@ def _overchannel_hurt(ctx: RuleContext, _inputs: dict) -> str | None:
 
 OVERCHANNEL_OPTION = RollOptionSpec(
     key=OVERCHANNEL, phase="before", rolls=("spell_damage",), maximize=True, on_confirm=_count_overchannel, self_damage=_overchannel_hurt,
-    available=lambda c: c.spell is not None and 1 <= (c.casting_level or c.spell.level) <= 5 and bool(c.spell.damage_dice),
+    available=lambda c: (c.spell is not None and 1 <= (c.casting_level or c.spell.level) <= 5 and bool(c.spell.damage_dice)
+                         and _wizard_spell(c)),  # «un incantesimo da mago» (2014 pag. 87, 2024 pag. 174)
     label={"it": "Saturazione Magica: i dadi di danno valgono il massimo (dal secondo uso subisci danni necrotici)",
            "en": "Overchannel: damage dice are maximized (from the second use you take necrotic damage)"})
 
