@@ -3551,14 +3551,14 @@
     "it": "Evochi uno spirito Grande e intangibile dai Piani Elementali che appare in uno spazio non occupato entro gittata. Scegli l'elemento dello spirito, che ne determina il tipo di danno: aria (Fulmine), terra (Tuono), fuoco (Fuoco) o acqua (Freddo). Lo spirito dura per la durata.\n\nOgni volta che una creatura che puoi vedere entra nello spazio dello spirito o inizia il proprio turno entro 5 piedi dallo spirito, puoi costringere quella creatura a effettuare un tiro salvezza su Destrezza se lo spirito non ha alcuna creatura Trattenuta. Se fallisce il tiro salvezza, il bersaglio subisce 8d8 danni del tipo dello spirito e ha la condizione Trattenuto finché l'incantesimo non termina. All'inizio di ciascuno dei suoi turni, il bersaglio Trattenuto ripete il tiro salvezza. Se lo fallisce, il bersaglio subisce 4d8 danni del tipo dello spirito. Se lo supera, il bersaglio non è più Trattenuto dallo spirito."
    },
    "higher_level": {
-    "en": "The damage increases by 1d8 for each spell slot level above 5.",
-    "it": "I danni aumentano di 1d8 per ogni livello dello slot incantesimo superiore al 5°."
+    "en": "The damage increases by 2d8 for each spell slot level above 5.",
+    "it": "I danni aumentano di 2d8 per ogni livello dello slot incantesimo superiore al 5°."
    },
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": null,
+   "damage_dice": "8d8",
    "damage_type": null,
-   "higher_levels_dice": null,
+   "higher_levels_dice": "2d8",
    "classes": [
     "druid",
     "wizard"

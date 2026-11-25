@@ -694,9 +694,9 @@ GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "spiritual-weapon": replace(GRANTED_SPELLS["spiritual-weapon"], higher_levels_dice="1d8"),
     # Tempesta di ghiaccio: 2d10 contundenti, +1d10 per livello oltre il 4° (p.287)
     "ice-storm": replace(GRANTED_SPELLS["ice-storm"], damage_dice="2d10", higher_levels_dice="1d10"),
-    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti, TS Destrezza (p.254)
+    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti, TS Destrezza o 8d8 (p.254)
     "conjure-elemental": replace(GRANTED_SPELLS["conjure-elemental"], casting_time="1 azione", range_area="18 m",
-                                 duration="Concentrazione, fino a 10 minuti", components="V, S", attack_save="SAVE"),
+                                 duration="Concentrazione, fino a 10 minuti", components="V, S", attack_save="SAVE", damage_dice="8d8", higher_levels_dice="2d8"),
     # Saltare: azione bonus (p.290); Inviare: istantanea (p.314)
     "lesser-restoration": replace(GRANTED_SPELLS["lesser-restoration"], casting_time="1 azione bonus"),  # p.291
     "jump": replace(GRANTED_SPELLS["jump"], casting_time="1 azione bonus"),

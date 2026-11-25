@@ -17677,8 +17677,8 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "wis",
-   "damage_dice": null,
-   "damage_type": null,
+   "damage_dice": "4d10",
+   "damage_type": "psychic",
    "higher_levels_dice": null,
    "classes": [
     "wizard"

@@ -120,3 +120,13 @@ def test_gli_incantesimi_concessi_hanno_i_dati_della_carta(edizione, chiave, cam
 def test_le_voci_2014_del_catalogo_hanno_scuola_e_ts_della_carta(indice, campi):
     voce = _voce("2014", indice)
     assert {k: voce[k] for k in campi} == campi
+
+
+@pytest.mark.caccia(id="CB-4766", fonte="2024 · Incantesimi · Evoca Elementale · pag. 254; 2014 · Incantesimi · Fatale · pag. 235", zona="regola:2024/incantesimi-D-F",
+                    voce="regola", copre=["carta:2024/spells.md#Evoca Elementale", "carta:2014/spells.md#Fatale"])
+def test_evoca_elementale_2024_e_fatale_2014_hanno_i_dadi_della_carta():
+    for voce in (_voce("2024", "conjure-elemental"), vars(granted_spell("conjure-elemental", "2024"))):  # 8d8 del tipo scelto, +2d8 per slot oltre il 5°
+        assert (voce["damage_dice"], voce["damage_type"], voce["higher_levels_dice"]) == ("8d8", None, "2d8")
+    assert granted_spell("conjure-elemental", "2014").damage_dice is None  # nel 2014 evoca una creatura, nessun danno
+    fatale = _voce("2014", "weird")
+    assert (fatale["damage_dice"], fatale["damage_type"], fatale["higher_levels_dice"]) == ("4d10", "psychic", None)
