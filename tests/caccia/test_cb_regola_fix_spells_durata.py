@@ -2,7 +2,9 @@
 import pytest
 
 from tests.caccia.test_cb_regola_2014_incantesimi_d_f import _impara, _pg
-from tests.integration.rules.test_2014_bard import _add_spell, _full, _roll_keys
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration.rules.test_2014_bard import _add_spell, _full, _roll_keys, _use
+from tests.integration.rules.test_2024_cleric_domains import _spell_rows, _table
 from tests.integration.rules.test_2024_bard import VALOR, _bard24
 from tests.integration.rules.test_2024_bard_lore_valor import _sword
 
@@ -36,3 +38,23 @@ async def test_deflagrazione_occulta_tira_per_colpire_una_volta_per_raggio(clien
     r = await client.post(f"/characters/{cid}/spells/{sid}/attack", json={})
     assert r.status_code == 200, r.text
     assert sorted(r.json()["dice"]) == [1, 20]  # oggi un solo d20 vale per tutti i raggi: critico o mancato tutto insieme
+
+
+@pytest.mark.caccia(id="CB-3913", fonte="2024 · Chierico · Dominio della Guerra · Benedizione del Dio della Guerra (termina prima se lo si rilancia) · pag. 77",
+                    zona="regola:2024/cleric", voce="regola",
+                    copre=["carta:2024/classes/cleric.md#Benedizione del Dio della Guerra / War God's Blessing (Guerra 6, pag. 77)",
+                           "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_lo_scudo_della_fede_della_benedizione_rilanciato_su_altri_lascia_il_bersaglio_di_prima(client, test_session_factory):
+    # senza Concentrazione il lancio non scaccia il precedente da solo: lo chiude la regola del privilegio
+    _, chierico, eroe = await _table(client, test_session_factory, 6, "war")
+    as_user(PLAYER_ID)
+    ca = (await _full(client, eroe))["ac"]
+    as_user(GM_ID)
+    scudo = (await _spell_rows(client, chierico))["shield-of-faith"]["id"]
+    for bersaglio in (eroe, chierico):
+        assert (await _use(client, chierico, "cleric.war_gods_blessing", params={"spell": "shield-of-faith"})).status_code == 200
+        r = await client.post(f"/characters/{chierico}/spells/{scudo}/use", json={"free_cast": True, "targets": [bersaglio]})
+        assert r.status_code == 200, r.text
+        assert (await client.post(f"/characters/{chierico}/turn/new")).status_code == 200
+    as_user(PLAYER_ID)
+    assert (await _full(client, eroe))["ac"] == ca  # il secondo lancio ha chiuso il primo
