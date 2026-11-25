@@ -648,3 +648,29 @@ async def test_il_lancio_gratuito_di_druido_e_chierico_non_fatto_non_consuma_l_u
     for chiave in rimasti:  # lo stato che segue il lancio, chiuso a mano, non rende niente
         assert (await client.delete(f"/characters/{cid}/active-states/{chiave}")).status_code == 200
     assert (await _ability(client, cid, riserva))["uses"] == pieni - 1, "il lancio fatto spende l'uso"
+
+
+@pytest.mark.caccia(id="CB-4834", fonte="2024 · Incantesimi · Punizione Infuocata e le altre punizioni (arma da mischia o Colpo Senz'Armi); Equipaggiamento · Lancio · pag. 214; 2014 · Incantesimi · Punizione Incandescente (attacco con arma da mischia)",
+                    zona="regola:2024/incantesimi-S-Z", voce="regola",
+                    copre=["carta:2024/spells.md#Punizione Infuocata", "carta:2024/spells.md#Punizione Tonante", "GET /characters/{char_id}/roll-options"])
+@pytest.mark.parametrize("edizione", ["2024", "2014"])
+async def test_le_punizioni_2024_valgono_con_un_arma_da_mischia_lanciata(client, edizione):
+    cid = await _crea(client, edizione, ("paladin", 5, None))
+    ids = {}
+    for nome, indice in (("Punizione Infuocata", "searing-smite"), ("Punizione Tonante", "thunderous-smite")):
+        r = await client.post(f"/characters/{cid}/spells", json={"name": nome, "srd_index": indice, "level": 1, "is_prepared": True})
+        assert r.status_code == 201, r.text
+        ids[indice] = r.json()["id"]
+    accetta = await _item(client, cid, "Accetta", damage_dice="1d6", weapon_type="melee", properties=["thrown"])
+    dardo = await _item(client, cid, "Dardo", damage_dice="1d4", weapon_type="ranged", properties=["thrown"])
+
+    async def offerte(arma, modo):
+        return {o["key"] for o in await _listed(client, cid, arma, attack_mode=modo, grip="one")}
+    if edizione == "2024":  # dopo il colpo, con lo slot scelto lì
+        assert "spell:thunderous_smite:hit" in await offerte(accetta, "thrown"), "lanciata, l'accetta resta un'arma da mischia"
+        assert "spell:thunderous_smite:hit" not in await offerte(dardo, "thrown")
+    r = await client.post(f"/characters/{cid}/spells/{ids['searing-smite']}/use", json={"slot_level": 1})
+    assert r.status_code == 200, r.text
+    assert ("spell:searing_smite:hit" in await offerte(accetta, "thrown")) is (edizione == "2024"), "lanciata prima (stato sul paladino)"
+    assert "spell:searing_smite:hit" in await offerte(accetta, "melee")
+    assert "spell:searing_smite:hit" not in await offerte(dardo, "thrown")

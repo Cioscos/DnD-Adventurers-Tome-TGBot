@@ -120,9 +120,14 @@ def _ranged(ctx: RuleContext) -> bool:
     return ctx.attack_mode == "thrown" or _ranged_weapon(ctx)
 
 
+def _melee(ctx: RuleContext) -> bool:
+    """2024: un'arma da mischia, anche lanciata (Lancio, pag. 214), o il colpo senz'armi; 2014: un attacco in mischia."""
+    return not (_ranged_weapon(ctx) if ctx.edition == "2024" else _ranged(ctx))
+
+
 def _hit_ok(ctx: RuleContext, *, ranged: bool, anywhere: bool = False) -> bool:
     """Non ancora scaricata, attacco del lanciatore e del tipo giusto (a distanza o no; ``anywhere``: qualunque attacco con arma)."""
-    return not _data(ctx).get("discharged") and _weapon_attack(ctx) and (anywhere or _ranged(ctx) == ranged)
+    return not _data(ctx).get("discharged") and _weapon_attack(ctx) and (anywhere or (_ranged(ctx) if ranged else _melee(ctx)))
 
 
 def _discharge(key: str) -> Callable:
@@ -174,7 +179,7 @@ def _cast_on_hit(variant: SpellVariant, base_slot: int, kind: str = "melee") -> 
         return replace(ctx, spell_data={**_data(ctx), "slot_level": int(inputs.get("slot_level") or base_slot)})
 
     def available(ctx: RuleContext) -> bool:
-        kind_ok = (ctx.attack_mode in ("melee", "offhand") if kind == "melee" else _ranged(ctx) if kind == "ranged"
+        kind_ok = (ctx.attack_mode in ("melee", "offhand", "thrown") and _melee(ctx) if kind == "melee" else _ranged(ctx) if kind == "ranged"
                    else _ranged_weapon(ctx) if kind == "ranged_weapon" else ctx.item is not None)
         return (ctx.spell is None and kind_ok and _own_attack(ctx) and not (ctx.char.turn_state or {}).get("spell_slot_cast")
                 and not any(s.get("key") in states for s in ctx.char.active_states or []))
