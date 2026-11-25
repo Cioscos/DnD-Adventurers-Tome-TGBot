@@ -195,7 +195,7 @@ def _di_effect(ctx: RuleContext, params: dict) -> None:
     ctx.char.spells.append(Spell(
         character_id=ctx.char.id, name=name, level=level, srd_index=tag, class_id=ctx.class_row.id, is_prepared=True,
         always_prepared=True, is_concentration=concentration, duration=f"{rounds} round" if rounds else None))
-    data: dict = {"stolen_spell": tag, "free_cast": tag}
+    data: dict = {"stolen_spell": tag, "free_cast": tag, **({} if wish else {"refund": DIVINE_INTERVENTION})}  # chiusa senza lancio rende l'uso
     if concentration:  # lanciato, resta sulla scheda per la sua durata (la concentrazione lo indica) ma non si rilancia gratis
         data |= {"free_cast_keep": True, "then": {"key": "divine_intervention_free", "rounds": rounds, "ends_on": ["manual", "rest_long"],
                                                   "data": {"stolen_spell": tag}}}
@@ -379,7 +379,9 @@ _WGB_SPELLS = {"shield-of-faith": {"it": "Scudo della fede", "en": "Shield of Fa
 
 
 def _wgb_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
-    """L'incantesimo scelto deve stare sulla scheda (lo dà il dominio al 3° livello)."""
+    """L'incantesimo scelto deve stare sulla scheda (lo dà il dominio al 3° livello); con un lancio già autorizzato si lancia quello."""
+    if state_on(ctx, "war_gods_blessing_free"):
+        return 409, "feature_unavailable"
     return None if any(sp.srd_index == params.get("spell") for sp in ctx.char.spells) else (422, "invalid_choice")
 
 
@@ -388,7 +390,7 @@ def _wgb_effect(ctx: RuleContext, params: dict) -> None:
     l'autorizzazione e avvia lo stato di 1 minuto, che finisce se Incapacitato o se si rilancia."""
     spell = str(params["spell"])
     begin_state(ctx.char, StateSpec("war_gods_blessing_free", ends_on=("manual", "rest_short", "rest_long"), data={
-        "free_cast": spell, "free_cast_slot": "bonus", "no_concentration": True, "spell": spell,
+        "free_cast": spell, "free_cast_slot": "bonus", "no_concentration": True, "spell": spell, "refund": POOL,
         "then": {"key": "war_gods_blessing", "rounds": 10, "ends_on": ["incapacitated", "manual"], "data": {"spell": spell}}}),
         f"{CK}.war_gods_blessing", "Benedizione del Dio della Guerra")
 

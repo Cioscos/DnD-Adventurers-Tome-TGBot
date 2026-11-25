@@ -248,7 +248,7 @@ def refund_unused_cast(char, closed: list[dict]) -> None:
     lancio, a mano o col riposo, rende l'uso: la carta conta i lanci. Il lancio la chiude da sé, senza passare di qui."""
     for s in closed:
         key = (s.get("data") or {}).get("refund")
-        row = next((a for a in char.abilities if a.feature_key == key), None) if key else None
+        row = next((a for a in char.abilities if a.feature_key == pool_key(char, key)), None) if key else None
         if row is not None and row.max_uses is not None:
             row.uses = min(row.max_uses, (row.uses or 0) + 1)
 

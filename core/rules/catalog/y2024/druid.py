@@ -351,7 +351,7 @@ def _recovery_cast(ctx: RuleContext, params: dict) -> None:
     """Autorizza un lancio gratuito (R43) di un incantesimo di circolo; il lancio chiude l'autorizzazione."""
     spell = str(params["spell"])
     begin_state(ctx.char, StateSpec("natural_recovery_free", ends_on=("manual", "rest_long"), data={
-        "free_cast": spell, "spell": spell}), f"{CK}.natural_recovery_cast", "Recupero Naturale")
+        "free_cast": spell, "spell": spell, "refund": f"{CK}.natural_recovery_cast"}), f"{CK}.natural_recovery_cast", "Recupero Naturale")
 
 
 NATURAL_RECOVERY_CAST = OnUse(

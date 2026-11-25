@@ -612,3 +612,39 @@ async def test_il_terreno_del_circolo_si_cambia_una_volta_per_riposo_lungo(clien
     assert r.status_code == 409 and r.json()["detail"]["code"] == "replace_after_long_rest", r.text[:200]
     assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
     assert (await client.post(url, json={"group": "land_terrain", "old_key": "polar", "new_key": "tropical"})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4833", fonte="2024 · Druido · Recupero Naturale · pag. 85; Chierico · Intervento Divino · pag. 71, Benedizione del Dio della Guerra · pag. 77: l'uso paga un lancio",
+                    zona="regola:2024/druid", voce="annullamento",
+                    copre=["carta:2024/classes/druid.md#Recupero Naturale / Natural Recovery (Circolo della Terra 6, pag. 85)",
+                           "carta:2024/classes/cleric.md#Intervento Divino / Divine Intervention (Chierico 10, pag. 71)",
+                           "carta:2024/classes/cleric.md#Benedizione del Dio della Guerra / War God's Blessing (Guerra 6, pag. 77)",
+                           "DELETE /characters/{char_id}/active-states/{key}"])
+@pytest.mark.parametrize("caso", ["recupero", "intervento", "benedizione"])
+async def test_il_lancio_gratuito_di_druido_e_chierico_non_fatto_non_consuma_l_uso(client, caso):
+    if caso == "recupero":
+        cid = await _circle(client, "land", 6, "arid")
+        privilegio, riserva, stato, params = "druid.natural_recovery_cast", "druid.natural_recovery_cast", "natural_recovery_free", {"spell": "burning-hands"}
+    elif caso == "intervento":
+        cid = await _crea(client, "2024", ("cleric", 10, None))
+        privilegio, riserva, stato = "cleric.divine_intervention", "cleric.divine_intervention", "divine_intervention_free"
+        params = {"spell": "Benedizione", "spell_level": "1"}
+    else:
+        cid = await _crea(client, "2024", ("cleric", 6, "Dominio della Guerra"))
+        privilegio, riserva, stato, params = "cleric.war_gods_blessing", "cleric.channel_divinity", "war_gods_blessing_free", {"spell": "shield-of-faith"}
+    pieni = (await _ability(client, cid, riserva))["uses"]
+    r = await client.post(f"/characters/{cid}/features/{privilegio}/use", json={"params": params})
+    assert r.status_code == 200, r.text
+    assert (await client.post(f"/characters/{cid}/features/{privilegio}/use", json={"params": params})).status_code == 409, "un lancio è già autorizzato"
+    assert (await _ability(client, cid, riserva))["uses"] == pieni - 1
+    assert (await client.delete(f"/characters/{cid}/active-states/{stato}")).status_code == 200
+    assert (await _ability(client, cid, riserva))["uses"] == pieni, "chiusa a mano senza lancio"
+    assert (await client.post(f"/characters/{cid}/features/{privilegio}/use", json={"params": params})).status_code == 200
+    sid = next(x["data"]["free_cast"] for x in (await _scheda(client, cid))["active_states"] if x["key"] == stato)
+    spell = next(x["id"] for x in (await client.get(f"/characters/{cid}/spells")).json() if x["srd_index"] == sid)
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"free_cast": True})
+    assert r.status_code == 200, r.text
+    rimasti = {x["key"] for x in (await _scheda(client, cid))["active_states"] or []} & {stato, "war_gods_blessing"}
+    for chiave in rimasti:  # lo stato che segue il lancio, chiuso a mano, non rende niente
+        assert (await client.delete(f"/characters/{cid}/active-states/{chiave}")).status_code == 200
+    assert (await _ability(client, cid, riserva))["uses"] == pieni - 1, "il lancio fatto spende l'uso"
