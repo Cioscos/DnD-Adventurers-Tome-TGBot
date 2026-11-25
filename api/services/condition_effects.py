@@ -77,6 +77,16 @@ def effect_snapshot(effect: ConditionEffect | PendingSave) -> dict:
     return {c.name: getattr(effect, c.name) for c in type(effect).__table__.columns}
 
 
+def suspended_list(saved: dict | list | None) -> list[dict]:
+    """Le istanze sospese di una condizione (``SUSPENDED_EFFECTS``): un dict se è una sola, com'è sempre stata salvata, una
+    lista se sono più fonti, ognuna con la sua durata (2014 pag. 290; 2024 pag. 29)."""
+    return list(saved) if isinstance(saved, list) else [saved] if saved else []
+
+
+def suspended_value(snaps: list[dict]) -> dict | list[dict]:
+    return snaps[0] if len(snaps) == 1 else snaps
+
+
 async def _restore_row(db: AsyncSession, model, snap: dict):
     """Recreate a deleted row, keeping its id unless something reused it meanwhile."""
     data = dict(snap)
@@ -157,22 +167,25 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             from api.services.condition_removal import resuspend  # import locale: il servizio importa questo modulo
             from api.services.effects import _still_concentrating  # circular import
             await resuspend(db, pc)
-            for slug, x in (snap.get("suspended") or {}).items():  # tornata dopo l'avanzamento: le resta la durata di prima
-                eff = (await db.execute(select(ConditionEffect).where(
-                    _target_filter(("character", pc.id)), ConditionEffect.slug == slug,
-                    ConditionEffect.pending.is_(False)))).scalars().first() if (pc.conditions or {}).get(slug) else None
-                if eff is not None and eff.expiry_count == x["effect"]["expiry_count"] - 1:
-                    eff.expiry_count += 1
+            for slug, x in (snap.get("suspended") or {}).items():  # tornata dopo l'avanzamento: ogni istanza riprende la durata di prima
+                for s in suspended_list(x["effect"]) if (pc.conditions or {}).get(slug) else []:
+                    eff = (await db.execute(select(ConditionEffect).where(
+                        _target_filter(("character", pc.id)), ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
+                        *same_source(s.get("source_combatant_id"), s.get("source_character_id"), s.get("source_note"))))).scalars().first()
+                    if eff is not None and isinstance(s.get("expiry_count"), int) and eff.expiry_count == s["expiry_count"] - 1:
+                        eff.expiry_count += 1
             held = {}
             for slug, x in (snap.get("suspended") or {}).items():
                 if (pc.conditions or {}).get(slug):
                     continue
                 if await _rehold(db, pc.id, slug, x["by"]):
                     held[slug] = x
-                elif not x["effect"].get("ends_with_concentration") or await db.run_sync(_still_concentrating, x["effect"]):
-                    # chi la sospendeva ha smesso dopo l'avanzamento: torna attiva
+                elif back := [s for s in suspended_list(x["effect"])
+                              if not s.get("ends_with_concentration") or await db.run_sync(_still_concentrating, s)]:
+                    # chi la sospendeva ha smesso dopo l'avanzamento: torna attiva, con ogni istanza
                     pc.conditions = {**(pc.conditions or {}), slug: True}
-                    await _restore_row(db, ConditionEffect, x["effect"])
+                    for s in back:
+                        await _restore_row(db, ConditionEffect, s)
             if held:
                 st = pc.settings or {}
                 pc.settings = {**st, SUSPENDED_EFFECTS: {**(st.get(SUSPENDED_EFFECTS) or {}), **{c: x["effect"] for c, x in held.items()}},

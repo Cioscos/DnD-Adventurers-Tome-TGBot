@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.condition_effects import effect_snapshot, effects_for_character
+from api.services.condition_effects import effect_snapshot, effects_for_character, suspended_value
 from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
@@ -43,9 +43,13 @@ async def resolve_targets(session: AsyncSession, caster: Character, removal: Con
     return out
 
 
-async def _suspended_effects(session: AsyncSession, target: Character, present: list[str]) -> dict[str, dict]:
-    return {e.slug: {k: v for k, v in effect_snapshot(e).items() if k != "id"}
-            for e in await effects_for_character(session, target.id) if e.slug in present and not e.pending}
+async def _suspended_effects(session: AsyncSession, target: Character, present: list[str]) -> dict[str, dict | list[dict]]:
+    """Ogni istanza delle condizioni sospese, con la sua durata e la sua fonte (``suspended_list`` le rilegge)."""
+    snaps: dict[str, list[dict]] = {}
+    for e in await effects_for_character(session, target.id):
+        if e.slug in present and not e.pending:
+            snaps.setdefault(e.slug, []).append({k: v for k, v in effect_snapshot(e).items() if k != "id"})
+    return {slug: suspended_value(s) for slug, s in snaps.items()}
 
 
 def _mark_suspended(caster: Character, target: Character, present: list[str], effects: dict[str, dict]) -> None:

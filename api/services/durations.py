@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from api.services.condition_effects import (
-    UndoLog, effects_for_character, expire_effect, release_concentration_effects,
+    UndoLog, effects_for_character, expire_effect, release_concentration_effects, suspended_list, suspended_value,
 )
 from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
@@ -104,12 +104,15 @@ def tick_suspended(char: Character) -> dict:
     saved, marks = dict(settings.get(SUSPENDED_EFFECTS) or {}), dict(settings.get(SUSPENDED_ON) or {})
     before = {}
     for slug, effect in list(saved.items()):
-        left = effect.get("expiry_count")
-        if slug not in marks or not _is_int(left):
+        snaps = suspended_list(effect)
+        if slug not in marks or not any(_is_int(s.get("expiry_count")) for s in snaps):
             continue
         before[slug] = {"effect": effect, "by": marks[slug]}
-        if left > 1:
-            saved[slug] = {**effect, "expiry_count": left - 1}
+        # ogni istanza scorre per conto suo; la condizione non torna solo se sono scadute tutte
+        left = [{**s, "expiry_count": s["expiry_count"] - 1} if _is_int(s.get("expiry_count")) else s
+                for s in snaps if not (_is_int(s.get("expiry_count")) and s["expiry_count"] <= 1)]
+        if left:
+            saved[slug] = suspended_value(left)
         else:
             saved.pop(slug)
             marks.pop(slug)

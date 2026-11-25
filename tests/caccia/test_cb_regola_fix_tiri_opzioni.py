@@ -165,3 +165,28 @@ async def test_liberarsi_chiude_solo_la_presa_battuta(client, test_session_facto
     # liberato dalla presa del goblin 2: quella del goblin 1, con la sua CD, lo tiene ancora afferrato
     assert scheda["conditions"].get("grappled") is True
     assert [(e["source_name"], e["save_dc"]) for e in scheda["condition_effects"]] == [(goblin1["name"], 25)]
+
+
+@pytest.mark.caccia(id="CB-4237", fonte="2014 · Condizioni · Regole generali · pag. 290; Calmare Emozioni · pag. 218", zona="regola:2014/generali",
+                    voce="interazione", copre=["carta:2014/general.md#Regole generali / General (pag. 290)",
+                                               "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/rounds/tick",
+                                               "PATCH /characters/{char_id}/concentration"])
+async def test_calmare_emozioni_sospende_ogni_istanza_con_la_sua_durata(client, test_session_factory):
+    from api.services.condition_effects import ExpirySpec, upsert_effect
+    cid = await _pg(client, "2014", "cleric")
+    classe = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    spell = (await client.post(f"/characters/{cid}/spells", json={
+        "name": "calm-emotions", "level": 2, "srd_index": "calm-emotions", "is_prepared": True, "is_concentration": True, "class_id": classe})).json()["id"]
+    await _cond(client, cid, charmed=True)
+    async with test_session_factory() as s:
+        for nota, durata in (("Driade", 5), ("Vampiro", 2)):
+            await upsert_effect(s, ("character", cid), "charmed", expiry=ExpirySpec("owner", "start", durata), source_note=nota)
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 2, "removal": {"targets": ["self"]}})
+    assert r.status_code == 200, r.text
+    for _ in range(2):  # sospese, le durate scorrono: quella del vampiro finisce, quella della driade no
+        assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    assert scheda["conditions"].get("charmed") is True
+    assert [(e["source_note"], e["expiry_count"]) for e in scheda["condition_effects"]] == [("Driade", 3)]
