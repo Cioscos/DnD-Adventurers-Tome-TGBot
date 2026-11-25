@@ -64,7 +64,7 @@ export const useCastConfirmStore = create<{ request: { code: string; answer: (go
 /** Il giocatore ha rifiutato una conferma o chiuso un prompt `cancellable`: nessun tiro e nessun errore da mostrare. */
 export class CastCancelled extends Error {}
 
-function askCastConfirm(code: string): Promise<boolean> {
+export function askCastConfirm(code: string): Promise<boolean> {
   return new Promise((resolve) => {
     useCastConfirmStore.setState({
       request: { code, answer: (go) => { useCastConfirmStore.setState({ request: null }); resolve(go) } },

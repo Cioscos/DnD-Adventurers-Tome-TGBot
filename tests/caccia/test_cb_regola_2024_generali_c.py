@@ -101,7 +101,6 @@ async def test_l_attacco_della_forma_selvatica_fa_finire_il_nascondiglio(client)
                            "carta:2024/general.md#Magic [Action] (Magia) (pag. 371)",
                            "POST /characters/{char_id}/items/{item_id}/cast"])
 @pytest.mark.parametrize("condizione", ["stunned", "incapacitated"])
-@pytest.mark.xfail(strict=True, reason="CB-2963: difforme dal manuale, confermato")
 async def test_chi_e_incapacitato_non_lancia_da_un_oggetto_magico(client, condizione):
     cid = await _pg(client, "fighter", 3)
     bacchetta = await _item(client, cid, name="Bacchetta", charges={"current": 3, "max": 3},

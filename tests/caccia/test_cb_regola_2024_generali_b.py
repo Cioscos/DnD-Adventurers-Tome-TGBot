@@ -68,7 +68,6 @@ async def test_la_trance_dell_ordine_alza_a_10_anche_il_ts_di_concentrazione(cli
 @pytest.mark.caccia(id="CB-2913", fonte="2024 · Glossario · Addestramento con le armature · pag. 361", zona="regola:2024/generali", voce="regola",
                     copre=["carta:2024/general.md#Armor Training (Addestramento con le armature) (pag. 361)",
                            "POST /characters/{char_id}/items", "POST /characters/{char_id}/items/{item_id}/cast"])
-@pytest.mark.xfail(strict=True, reason="CB-2913: difforme dal manuale, confermato")
 async def test_con_un_armatura_senza_addestramento_non_si_lancia_da_un_oggetto(client):
     cid = await _pg(client, "wizard")
     await _piastre(client, cid)

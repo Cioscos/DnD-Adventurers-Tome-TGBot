@@ -1085,7 +1085,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ spell_level: spellLevel }),
       }),
-    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string> }) =>
+    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string>; confirm?: string[] }) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
         method: 'POST',
         body: JSON.stringify({ spell_index: spellIndex, ...effect }),

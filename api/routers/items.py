@@ -73,6 +73,8 @@ from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, option_names, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.spell_effects import enchanted_weapon
+from core.rules.spellcasting import _armor_block
+from core.rules.states import casting_blocked_by
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 from api.services.character_load import get_owned_full
 from api.services.dice_notation import DICE_RE, roll_dice
@@ -1185,6 +1187,7 @@ class ItemCast(BaseModel):
     spell_index: int = Field(ge=0)
     targets: list[int] | None = Field(None, max_length=20)  # come in /spells/{id}/use
     choices: dict[str, str] | None = None
+    confirm: list[str] | None = Field(None, max_length=10)  # regole violate confermate, come in /spells/{id}/use
 
 
 async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
@@ -1249,6 +1252,7 @@ async def cast_from_item(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
+    refuse_if_incapacitated(char)  # lanciare da un oggetto è un'azione (2024 Incapacitato pag. 369, Magia pag. 371)
     item = await _get_item(session, char_id, item_id)
     meta = item_meta(item)
     granted = meta.get("granted_spells") or []
@@ -1257,6 +1261,11 @@ async def cast_from_item(
     spell = granted[body.spell_index]
     if meta.get("requires_attunement") and not meta.get("attuned"):
         raise HTTPException(status_code=409, detail="attunement_required")
+    # È un lancio come da /spells/{id}/use: l'armatura senza addestramento (2024 pag. 361) e l'Ira (2014 pag. 48) si
+    # confermano. Il resto di cast_warnings non vale qui: niente slot, componenti né tempo di lancio dell'oggetto.
+    warnings = (["armor"] if _armor_block(char) else []) + (["state_blocks_casting"] if casting_blocked_by(char) else [])
+    if missing := [w for w in warnings if w not in (body.confirm or [])]:
+        raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
     fx_spell = item_spell(spell)
     fx_level = max(fx_spell.level, int(spell.get("slot_level") or 0))  # l'oggetto può lanciarlo a un livello più alto
     resolved = await validate_spell_targets(session, char, fx_spell, fx_level, body.targets, body.choices)  # prima di spendere
