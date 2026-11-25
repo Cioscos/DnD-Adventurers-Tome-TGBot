@@ -153,3 +153,21 @@ async def test_arma_consacrata_sceglie_radioso_o_normale_a_ogni_colpo(client):
         effetti = (colpo.json().get("option_result") or {}).get("effects", [])
         assert any("radios" in e["it"].lower() for e in effetti) is atteso, effetti
     assert (await _ability(client, cid, "paladin.channel_divinity"))["uses"] == 1, "cambiare tipo non costa un altro uso"
+
+@pytest.mark.caccia(id="CB-4478", fonte="2024 · Paladino · Imposizione delle Mani · pag. 109; Tocco Ristoratore · pag. 111",
+                    zona="regola:2024/paladin", voce="regola",
+                    copre=["carta:2024/classes/paladin.md#Imposizione delle Mani / Lay On Hands (Paladino 1, pag. 109)",
+                           "carta:2024/classes/paladin.md#Tocco Ristoratore / Restoring Touch (Paladino 14, pag. 111)",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+@pytest.mark.xfail(strict=True, reason="CB-4478: rinviato, un uso che cura e toglie condizioni cambia la richiesta e il pannello del privilegio")
+async def test_imposizione_delle_mani_cura_e_toglie_avvelenato_con_un_solo_tocco(client):
+    cid = await _paladin24(client, 5)
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
+    r = await _use_feature(client, cid, "paladin.lay_on_hands", amount=5,
+                           params={"mode": "self", "removal": {"targets": ["self"], "conditions": ["poisoned"]}})
+    assert r.status_code == 200, r.text  # «You can also expend 5 Hit Points ... from the creature»: lo stesso tocco
+    full = (await client.get(f"/characters/{cid}")).json()
+    assert r.json()["healed"] == 5 and not full["conditions"].get("poisoned")
+    assert (await _ability(client, cid, "paladin.lay_on_hands"))["uses"] == 25 - 5 - 5, "i 5 punti della condizione non curano"
+
