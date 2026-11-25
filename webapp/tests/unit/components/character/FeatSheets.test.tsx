@@ -79,19 +79,21 @@ describe('FeatOptionsSheet (Completa talento)', () => {
       options: { picks: ['stealth', 'arcana', 'history'] }, spells: [] }))
   })
 
-  it('Crafter picks three artisan tools from the catalog, without the ones already owned', async () => {
+  // 2024 Artigiano pag. 200: solo gli strumenti della tabella Creazione rapida
+  it('Crafter picks three Fast Crafting tools from the catalog, without the ones already owned', async () => {
     complete.mockResolvedValue({ id: 7 })
     const crafter = { ...skilled, name: 'Artigiano', feature_key: 'feat.2024_crafter' } as Ability
     const owned = { ...char(), tool_proficiencies: { carpenters_tools: true } } as unknown as CharacterFull
     renderWithProviders(<FeatOptionsSheet char={owned} ability={crafter} open onClose={() => {}} />)
     expect(screen.queryByText('Strumenti da falegname')).toBeNull()
     expect(screen.queryByText('Liuto')).toBeNull()  // non è da artigiano
+    expect(screen.queryByText('Scorte da alchimista')).toBeNull()  // da artigiano, ma fuori dalla tabella
     await userEvent.click(screen.getByText('Strumenti da fabbro'))
-    await userEvent.click(screen.getByText('Scorte da mescitore'))
-    await userEvent.click(screen.getByText('Utensili da cuoco'))
+    await userEvent.click(screen.getByText('Strumenti da tessitore'))
+    await userEvent.click(screen.getByText('Strumenti da vasaio'))
     await userEvent.click(screen.getByText('character.feats.complete_confirm'))
     await waitFor(() => expect(complete).toHaveBeenCalledWith(7, 3, {
-      options: { tools: ['smiths_tools', 'brewers_supplies', 'cooks_utensils'] }, spells: [] }))
+      options: { tools: ['smiths_tools', 'weavers_tools', 'potters_tools'] }, spells: [] }))
   })
 
   it('Skilled can pick a catalog tool as tool:<key>', async () => {

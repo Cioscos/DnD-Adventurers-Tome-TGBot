@@ -34,6 +34,9 @@ const SKILL_CHOICES: Record<string, readonly string[]> = {
   '2024_observant': ['insight', 'investigation', 'perception'],
 }
 const ADEPT_TYPES = ['acid', 'cold', 'fire', 'lightning', 'thunder'] as const
+// Artigiano: gli strumenti della tabella Creazione rapida (2024 pag. 200)
+const FAST_CRAFTING_TOOLS = ['carpenters_tools', 'leatherworkers_tools', 'masons_tools', 'potters_tools', 'smiths_tools',
+  'tinkers_tools', 'weavers_tools', 'woodcarvers_tools']
 const ENERGY_TYPES = ['acid', 'cold', 'fire', 'lightning', 'necrotic', 'poison', 'psychic', 'radiant', 'thunder'] as const
 const TOUCHED_SCHOOLS: Record<string, readonly string[]> = {
   '2024_fey_touched': ['divination', 'enchantment'],
@@ -213,7 +216,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             {hint(t('character.feats.tools_hint', { n: 3 - tools.length }))}
             <div className="flex flex-wrap gap-2">
-              {freeTools(toolCats).map((x) => (
+              {freeTools(toolCats).filter((x) => toolKey !== 'tools' || FAST_CRAFTING_TOOLS.includes(x.key)).map((x) => (
                 <Pressable key={x.key} onClick={() => setTools(toggled(tools, x.key, 3))} aria-pressed={tools.includes(x.key)} className={chip(tools.includes(x.key))}>
                   {toolLabel(x.key, i18n.language)}
                 </Pressable>

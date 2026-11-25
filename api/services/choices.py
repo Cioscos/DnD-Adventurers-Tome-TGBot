@@ -586,7 +586,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità, strumenti, tipo di danno, padronanza e
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
-    from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES
+    from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES, FAST_CRAFTING_TOOLS
     from core.rules.weapons import WEAPONS
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
@@ -616,10 +616,12 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         char.skills = current
         add_tools(char, tools)
         saved["picks"] = picks
-    for name, category in (("tools", "artisan"), ("instruments", "instrument")):
+    # Artigiano: solo gli strumenti della tabella Creazione rapida (2024 pag. 200); Musicista: strumenti musicali
+    instruments = tuple(k for k, t in TOOLS.items() if t.category == "instrument")
+    for name, allowed in (("tools", FAST_CRAFTING_TOOLS), ("instruments", instruments)):
         if name in needs:
             keys = _text_list(options.get(name), 3)
-            if any(k not in TOOLS or TOOLS[k].category != category for k in keys):
+            if any(k not in allowed for k in keys):
                 raise _bad("feat_options_invalid")
             saved[name] = keys
             add_tools(char, keys)
