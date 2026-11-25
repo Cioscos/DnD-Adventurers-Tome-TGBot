@@ -104,7 +104,7 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
-    "new_turn", "attack", "cast", "act", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor",
+    "new_turn", "attack", "cast", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor", "action", "reaction",
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
@@ -122,7 +122,8 @@ class StateSpec:
     prossimo «Nuovo turno» di chi lo porta (Canto di Riposo); ``turn_end_counted`` = alla fine del turno che comincia dopo
     quello in cui è nato, con ``data["skip_new_turns"]`` = 1 (Colpo Mistico): ``new_turn`` lo fa scalare invece di
     chiuderlo e fuori da un incontro lo chiude al «Nuovo turno» seguente; ``attack`` / ``cast`` = quando chi lo porta attacca o lancia
-    un incantesimo (Manto di Ombre); ``act`` = quando chi lo porta spende la sua azione o la sua reazione (Tutt'Uno con le Ombre 2014). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
+    un incantesimo (Manto di Ombre); ``action`` / ``reaction`` = quando spende l'azione o la reazione del turno
+    (Tutt'Uno con le Ombre e Nascondersi in Piena Vista 2014). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
     quando finisce, a meno che ci fosse già per un'altra fonte. ``turn_end_unextended`` = alla fine di un turno di chi lo
     porta in cui non è stato prolungato (attacco, TS imposto o azione bonus: Ira 2024); lo stato nato in quel turno
     (``data["fresh"]``) vive fino alla fine del turno seguente. ``heavy_armor`` = quando chi lo porta indossa un'armatura pesante.
@@ -162,7 +163,8 @@ class TargetEffect:
     nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito.
     ``extends``: se il bersaglio porta già la condizione da chi usa il privilegio, la durata si rinnova senza un nuovo TS
     (prolungamento). ``immune_on_success``: chi supera il TS non è più bersaglio di questo effetto fino al prossimo
-    riposo lungo di chi lo usa (le «24 ore» delle schede)."""
+    riposo lungo di chi lo usa (le «24 ore» delle schede). ``immune_on_end``: lo stesso anche quando l'effetto finisce, cioè
+    dal primo uso su quel bersaglio, salvo prolungarlo finché dura (Sguardo Ipnotico 2014)."""
     condition: str | None = None
     save_ability: str | None = None
     save_dc: int | None = None
@@ -174,6 +176,7 @@ class TargetEffect:
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    immune_on_end: bool = False
     # Con un TS: se fallito, la condizione ripete il TS a ``start`` o ``end`` del turno del bersaglio (Collera della Natura)
     repeat_save: str | None = None
     # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non

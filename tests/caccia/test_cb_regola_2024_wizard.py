@@ -100,7 +100,6 @@ async def _riposo(client, cid, tipo, **altro):
                            "carta:2024/classes/wizard.md#Vedere Invisibilità / See Invisibility (Divinatore 10, pag. 173)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("lancio", ["terzo_occhio", "rituale"])
-@pytest.mark.xfail(strict=True, reason="CB-2711: difforme dal manuale, confermato")
 async def test_divinazione_esperta_non_rende_slot_a_un_lancio_senza_slot(client, lancio):
     cid = await _mago(client, 10, "diviner")
     await _spendi(client, cid, 1, 2)
@@ -144,7 +143,6 @@ async def test_le_scelte_di_incantesimi_dei_livelli_passati_hanno_il_tetto_di_qu
                     voce="interazione", copre=["carta:2024/classes/wizard.md#Saturazione Magica / Overchannel (Invocatore 14, pag. 174)",
                                                "carta:2024/classes/wizard.md#Multiclasse: Mago / Multiclassing: Wizard (Mago, pag. 44)",
                                                "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2713: difforme dal manuale, confermato")
 async def test_saturazione_magica_2024_non_vale_per_un_incantesimo_da_chierico(client):
     cid = await _mago(client, 14, "evoker")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 1, "hit_die": 8})
@@ -152,6 +150,8 @@ async def test_saturazione_magica_2024_non_vale_per_un_incantesimo_da_chierico(c
     chierico = next(c["id"] for c in (await _scheda(client, cid))["classes"] if c["class_name"].lower() == "cleric")
     dardo = await _incantesimo(client, cid, "Dardo tracciante", 1, class_id=chierico, school="evocation", attack_save="ATK",
                                damage_dice="4d6", damage_type="radiant")
+    r = await client.post(f"/characters/{cid}/spells/{dardo}/use", json={"slot_level": 1})  # lanciato con uno slot: manca solo la classe
+    assert r.status_code == 200, r.text
     assert SATURAZIONE not in await _opzioni(client, cid, "spell_damage", spell_id=dardo)
 
 
@@ -160,7 +160,6 @@ async def test_saturazione_magica_2024_non_vale_per_un_incantesimo_da_chierico(c
                     copre=["carta:2024/classes/wizard.md#Saturazione Magica / Overchannel (Invocatore 14, pag. 174)",
                            "carta:2024/classes/wizard.md#Maestria negli Incantesimi / Spell Mastery (Mago 18, pag. 167)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2714: difforme dal manuale, confermato")
 async def test_saturazione_magica_2024_non_vale_per_un_lancio_senza_slot(client):
     cid = await _mago(client, 18, "evoker")
     await _oro(client, cid, 500)
@@ -177,7 +176,6 @@ async def test_saturazione_magica_2024_non_vale_per_un_lancio_senza_slot(client)
                     voce="ripetizione", copre=["carta:2024/classes/wizard.md#Saturazione Magica / Overchannel (Invocatore 14, pag. 174)",
                                                "POST /characters/{char_id}/spells/{spell_id}/use",
                                                "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2715: difforme dal manuale, confermato")
 async def test_saturazione_magica_i_raggi_dello_stesso_lancio_sono_un_solo_uso(client, monkeypatch):
     cid = await _mago(client, 14, "evoker")
     await _pf(client, cid, 200)

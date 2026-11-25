@@ -329,7 +329,12 @@ SENTINEL = RollOptionSpec(
 
 
 def _removable_conditions(ctx: RuleContext) -> list[str]:
-    return [k for k, v in (ctx.char.conditions or {}).items() if v is True]
+    """Le condizioni attive (l'app non sa se vengono da un incantesimo) e gli incantesimi su di sé, gli stati ``spell:*``,
+    anche se li ha lanciati un altro. Non la letargia che Velocità lascia: è l'incantesimo già finito (senza ``srd_index``)."""
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro degli incantesimi importa il catalogo
+    spells = [s["key"] for s in ctx.char.active_states or [] if str(s.get("key", "")).startswith("spell:")
+              and (effect := SPELL_EFFECTS.get((s.get("data") or {}).get("spell_key"))) and effect.srd_index]
+    return [k for k, v in (ctx.char.conditions or {}).items() if v is True] + spells
 
 
 def _condition_label(_ctx: RuleContext, key: str) -> dict:

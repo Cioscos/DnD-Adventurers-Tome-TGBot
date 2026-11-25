@@ -29,7 +29,7 @@ async def _monaco_in_scontro(client, factory, monkeypatch, livello, sottoclasse=
 @pytest.mark.caccia(id="CB-1811", fonte="2014 · Monaco · Elusione · pag. 92", zona="regola:2014/monk", voce="edizioni",
                     copre=["carta:2014/classes/monk.md#Elusione / Evasion (Monaco 7, pag. 92)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.parametrize("edizione, offerta", [pytest.param("2014", True, marks=pytest.mark.xfail(strict=True, reason="CB-1811: difforme dal manuale, confermato")), ("2024", False)])
+@pytest.mark.parametrize("edizione, offerta", [("2014", True), ("2024", False)])
 async def test_elusione_da_stordito_solo_nel_2024_si_perde(client, edizione, offerta):
     # 2014: nessuna clausola sull'incapacitato (il TS fallito d'ufficio dà comunque metà danni); 2024: non funziona da Incapacitato
     cid = await _monk(client, 7)
@@ -44,7 +44,6 @@ async def test_elusione_da_stordito_solo_nel_2024_si_perde(client, edizione, off
                     copre=["carta:2014/classes/monk.md#Difesa Paziente / Patient Defense (Monaco 2, pag. 91)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/saving_throws/{ability}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-1812: difforme dal manuale, confermato")
 async def test_difesa_paziente_da_vantaggio_ai_ts_su_destrezza(client, dadi):
     # Difesa Paziente fa l'azione di Schivata: fino al prossimo turno i TS su Destrezza hanno vantaggio (Schivata, pag. 193)
     cid = await _monk(client, 2)
@@ -58,7 +57,6 @@ async def test_difesa_paziente_da_vantaggio_ai_ts_su_destrezza(client, dadi):
 @pytest.mark.caccia(id="CB-1813", fonte="2014 · Monaco · Tranquillità · pag. 93", zona="regola:2014/monk", voce="interazione",
                     copre=["carta:2014/classes/monk.md#Tranquillità / Tranquility (Monaco 11, pag. 93)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-1813: difforme dal manuale, confermato")
 async def test_tranquillita_resta_dopo_un_incantesimo_che_non_tocca_nemici(client):
     # Santuario 2014 (pag. 272) finisce se il protetto attacca o lancia un incantesimo su un nemico: Luce non tocca nessuno
     cid = await _monk(client, 11, "open_hand")
@@ -78,7 +76,6 @@ async def test_tranquillita_resta_dopo_un_incantesimo_che_non_tocca_nemici(clien
                            "carta:2014/classes/monk.md#Raffica di Colpi / Flurry of Blows (Monaco 2, pag. 91)",
                            "POST /sessions/{session_id}/encounter/next-turn"])
 @pytest.mark.parametrize("caso", ["passo_dell_ombra", "zanne", "raffica"])
-@pytest.mark.xfail(strict=True, reason="CB-1814: difforme dal manuale, confermato")
 async def test_gli_effetti_di_questo_turno_finiscono_con_il_turno_del_monaco(client, test_session_factory, monkeypatch, caso):
     # Vantaggio «prima della fine del turno», portata e fuoco «per il resto del turno», i due colpi dell'azione bonus:
     # nel turno del goblin non valgono più (un attacco di opportunità non li usa)

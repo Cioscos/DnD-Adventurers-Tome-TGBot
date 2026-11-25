@@ -79,7 +79,6 @@ async def test_un_livello_da_ranger_non_cambia_gli_slot_dell_unico_incantatore(c
                     copre=["carta:2014/classes/ranger.md#Sterminatore di Nemici / Foe Slayer (Ranger 20, pag. 105)",
                            "carta:2014/classes/ranger.md#Sensi Ferini / Feral Senses (Ranger 18, pag. 105)",
                            "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/companions/{comp_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-1912: difforme dal manuale, confermato")
 async def test_l_attacco_della_bestia_non_prende_le_opzioni_d_attacco_del_ranger(client):
     cid, comp = await _beast(client, 20, wisdom=16)  # Signore delle Bestie 20, Saggezza +3
     offered = set(await _roll_keys(client, cid, "attack", attack_mode="companion"))
@@ -110,7 +109,6 @@ async def test_la_bestia_compagna_rispetta_taglia_grado_di_sfida_e_tipo(client, 
                            "POST /characters/{char_id}/features/{feature_key}/use"])
 @pytest.mark.parametrize("feature,params", [("ranger.primeval_awareness", {"slot_level": "1"}),  # un'azione
                                             ("ranger.stand_against_the_tide", None)])  # una reazione
-@pytest.mark.xfail(strict=True, reason="CB-1914: difforme dal manuale, confermato")
 async def test_agire_o_reagire_toglie_il_mimetismo(client, feature, params):
     cid = await _superior(client, "stand_against_the_tide")  # Cacciatore 15: ha anche Nascondersi in Piena Vista
     assert (await _use(client, cid, CAMO_FEATURE)).status_code == 200
@@ -171,7 +169,6 @@ async def test_da_incapacitato_i_privilegi_d_azione_non_si_usano(client, who, fe
                     zona="regola:2014/ranger", voce="regola",
                     copre=["carta:2014/classes/ranger.md#Devastatore dell'Orda / Horde Breaker (Cacciatore 3, pag. 106)",
                            "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-1917: difforme dal manuale, confermato")
 async def test_devastatore_dell_orda_solo_con_la_stessa_arma(client):
     cid = await _hunter(client, 3, (PREY, "horde_breaker"))
     sword = await _sword(client, cid, equip="main_hand")

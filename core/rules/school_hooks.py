@@ -2,7 +2,7 @@
 
 ``after_cast`` gira dentro il lancio (sincrono, sulla scheda già caricata): crea o ricarica l'Interdizione Arcana, ricarica
 la Trasposizione Benevola e apre le finestre di Alterare Ricordi, Illusioni Duttili, Realtà Illusoria e Pietra del
-Trasmutatore, che i rispettivi usi controllano.
+Trasmutatore, che i rispettivi usi controllano, e segna il lancio per la Saturazione Magica (un uso per lancio).
 """
 from __future__ import annotations
 
@@ -44,6 +44,18 @@ def _window(key: str, school: str, rounds_of: Callable[[Any], int | None] | None
     return hook
 
 
+def _enchantment_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, found: str | None, level: int | None) -> None:
+    """Alterare Ricordi: l'oblio si usa «prima che l'incantesimo termini» (2014 pag. 85), quindi la finestra dura quanto
+    l'ammaliamento e un altro lancio non la chiude."""
+    if found != "enchantment" or not level:
+        return
+    from core.game.actions import parse_duration_rounds  # import locale
+    # shortcut: senza una durata in round/minuti/ore (istantanea, giorni) resta fino al riposo lungo; da legare alla fine reale se serve
+    ends_on = ("rest_long", *(("concentration_end",) if spell.is_concentration else ()))
+    begin_state(char, StateSpec(WINDOW_ENCHANTMENT, rounds=parse_duration_rounds(spell.duration), ends_on=ends_on,
+                                data={"internal": True, "spell": spell.name}), spec.key, spec.name["it"])
+
+
 def _reality_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, found: str | None, level: int | None) -> None:
     """Realtà Illusoria: la finestra dura quanto l'incantesimo (anche nei turni seguenti); senza una durata in round, solo il turno."""
     if found != "illusion" or not level:
@@ -60,6 +72,12 @@ def _illusion_duration(spell: Any) -> int | None:
     return rounds if rounds and rounds >= 10 else None  # 1 minuto o più (10 round)
 
 
+def _overchannel_cast(char: Any, row: Any, spec: FeatureSpec, spell: Any, school: str | None, level: int | None) -> None:
+    """Saturazione Magica: ogni lancio è un lancio nuovo, che conterà il suo uso (``level``: nel 2024 lo slot, ``None`` senza)."""
+    from core.rules.catalog.y2014.wizard_schools_c import OVERCHANNEL_CAST  # import locale: il catalogo importa questo modulo
+    char.turn_state = {**(char.turn_state or {}), OVERCHANNEL_CAST: {"spell": spell.id, "slot": level}}
+
+
 def _illusion_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, school: str | None, level: int | None) -> None:
     if school == "illusion" and (rounds := _illusion_duration(spell)):
         begin_state(char, StateSpec(WINDOW_ILLUSION, rounds=rounds, ends_on=("rest_long",), data={"internal": True, "spell": spell.name}),
@@ -69,10 +87,11 @@ def _illusion_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, school:
 HOOKS: dict[str, Callable[..., None]] = {
     "wizard.arcane_ward": _ward,
     "wizard.benign_transposition": _transposition,
-    "wizard.alter_memories": _window(WINDOW_ENCHANTMENT, "enchantment"),
+    "wizard.alter_memories": _enchantment_window,
     "wizard.malleable_illusions": _illusion_window,
     "wizard.illusory_reality": _reality_window,
     "wizard.transmuters_stone": _window(WINDOW_TRANSMUTATION, "transmutation"),
+    "wizard.overchannel": _overchannel_cast,
 }
 
 
@@ -88,11 +107,12 @@ def concentration_safe(char: Any) -> bool:
 
 def after_cast(char: Any, spell: Any, slot_level: int | None = None) -> None:
     """Hook dei privilegi attivi dopo un lancio; ognuno controlla il livello che gli serve (un trucchetto di illusione apre
-    Illusioni Duttili, ma non crea un'interdizione). Il livello che conta è quello dell'incantesimo nel 2014 e quello dello
-    slot speso nel 2024 (``None`` se il lancio è un rituale o gratuito: «con uno slot»)."""
+    Illusioni Duttili, ma non crea un'interdizione). Il livello che conta è quello a cui si lancia nel 2014 (con uno slot
+    superiore l'incantesimo ne assume il livello, pag. 201; il proprio se è un rituale o gratuito) e quello dello slot speso
+    nel 2024 (``None`` se il lancio è un rituale o gratuito: «con uno slot»)."""
     from core.rules.spellcasting import spell_school  # import locale: spellcasting importa il catalogo come questo modulo
     school = spell_school(char, spell)
-    level = spell.level if character_edition(char) != "2024" else slot_level
+    level = max(spell.level, slot_level or 0) if character_edition(char) != "2024" else slot_level
     for spec, row in active_features(char):
         hook = HOOKS.get(spec.key)
         if hook is not None:

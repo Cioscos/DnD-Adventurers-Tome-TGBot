@@ -11,7 +11,7 @@ from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _sp
 from tests.integration.rules.test_2014_paladin import _rest
 from tests.integration.rules.test_2014_wizard import _choice, _spend, _used, _wizard_id
 from tests.integration.rules.test_2014_wizard_abjuration import _abjuration, _cast_at, _damage, _hp, _ward
-from tests.integration.rules.test_2014_wizard_illusion_evocation import _illusion, _states, _turn
+from tests.integration.rules.test_2014_wizard_illusion_evocation import _illusion, _new_cast, _states, _turn
 
 NAMES = {"abjurer": "Abiuratore", "diviner": "Divinatore", "evoker": "Invocatore", "illusionist": "Illusionista"}
 SCHOOL = {"abjurer": "abjuration", "diviner": "divination", "evoker": "evocation", "illusionist": "illusion"}
@@ -376,9 +376,11 @@ async def test_overchannel_maximises_the_damage_and_hurts_from_the_second_use(cl
     await _hp(client, cid, 200)
     ball = await _evocation(client, cid)
     monkeypatch.setattr(random, "randint", lambda a, b: 1)
+    await _new_cast(client, cid, ball, 3)  # pag. 174: il lancio con uno slot di 1-5, un uso per lancio
     r = await client.post(f"/characters/{cid}/spells/{ball}/roll_damage", json={"casting_level": 3, "options": [OVERCHANNEL]})
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["current_hit_points"] == 200 and (await _states(client, cid))["overchannel"]["data"]["uses"] == 1
+    await _new_cast(client, cid, ball, 3)
     await client.post(f"/characters/{cid}/spells/{ball}/roll_damage", json={"casting_level": 3, "options": [OVERCHANNEL]})
     assert (await _full(client, cid))["current_hit_points"] == 200 - 6  # 2d12 x 3 livelli con ogni dado a 1: 6
     low = await _make(client, "evoker", 13)

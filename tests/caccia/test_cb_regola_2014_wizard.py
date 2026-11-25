@@ -110,7 +110,6 @@ async def _bersaglio(client, cid, gid, chiave):
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Interdizione Arcana / Arcane Ward (Abiurazione 2, pag. 85)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2111: difforme dal manuale, confermato")
 async def test_interdizione_ricaricata_dal_livello_a_cui_si_lancia(client):
     cid = await _mago(client, 6, "abjuration", intelligence=16)  # interdizione massima 2 x 6 + 3 = 15
     await _pf(client, cid, 100)
@@ -127,7 +126,6 @@ async def test_interdizione_ricaricata_dal_livello_a_cui_si_lancia(client):
                     zona="regola:2014/wizard", voce="interazione",
                     copre=["carta:2014/classes/wizard.md#Saturazione Magica / Overchannel (Invocazione 14, pag. 87)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2112: difforme dal manuale, confermato")
 async def test_saturazione_magica_non_vale_per_un_incantesimo_di_un_altra_classe(client):
     cid = await _mago(client, 14, "evocation")
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 1, "hit_die": 8})
@@ -145,7 +143,6 @@ async def test_saturazione_magica_non_vale_per_un_incantesimo_di_un_altra_classe
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Sguardo Ipnotico / Hypnotic Gaze (Ammaliamento 2, pag. 85)",
                            "POST /characters/{char_id}/target-effects"])
-@pytest.mark.xfail(strict=True, reason="CB-2113: difforme dal manuale, confermato")
 async def test_sguardo_ipnotico_non_si_ripete_sulla_stessa_creatura_dopo_la_fine(client, test_session_factory, monkeypatch):
     sid, cid, g1 = await _in_serata(client, test_session_factory, monkeypatch,
                                     {"class_name": "wizard", "level": 2, "hit_die": 6, "subclass": "Scuola di Ammaliamento"})
@@ -189,7 +186,6 @@ async def test_comandare_non_morti_immunita_anche_dopo_il_riposo_lungo(client, t
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Pietra del Trasmutatore / Transmuter's Stone (Trasmutazione 6, pag. 88)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2115: difforme dal manuale, confermato")
 async def test_pietra_velocita_niente_bonus_da_ingombrato(client):
     cid = await _mago(client, 6, "transmutation", strength=10)  # variante: ingombrato oltre 50 lb
     impostazioni = {**((await _scheda(client, cid))["settings"] or {}), "encumbrance_variant": True}
@@ -207,7 +203,6 @@ async def test_pietra_velocita_niente_bonus_da_ingombrato(client):
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Alterare Ricordi / Alter Memories (Ammaliamento 14, pag. 85)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2116: difforme dal manuale, confermato")
 async def test_alterare_ricordi_resta_finche_dura_l_ammaliamento(client):
     cid = await _mago(client, 14, "enchantment")
     charme = await _incantesimo(client, cid, "Charme su persone", 1, school="enchantment", duration="1 ora", attack_save="WIS")

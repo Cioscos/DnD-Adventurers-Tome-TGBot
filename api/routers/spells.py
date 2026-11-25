@@ -50,7 +50,7 @@ from api.routers._helpers import collect_homebrew_notifications, refuse_null, ro
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
-from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.sorcerer import AFFINITY_USED, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.warlock_subclasses import PSYCHIC_SILENT, THRALL_CAST
@@ -722,6 +722,7 @@ def _end_cast(char: Character, opts: Any = None) -> None:
     turn = get_turn(char)
     meta = [k for k in (opts.keys if opts is not None else []) if k.startswith("sorcerer.metamagic_")]
     changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None,  # nuovo lancio: Invocazione Potente si riapre
+                   turn.pop(AFFINITY_USED, None) is not None,  # e Affinità Elementale
                    turn.pop(SPELL_ATTACK_DICE, None) is not None])  # e i dadi extra di un attacco precedente (forse mancato) non contano
     if meta or turn.get("cast_metamagic"):
         turn["cast_metamagic"], changed = meta, True

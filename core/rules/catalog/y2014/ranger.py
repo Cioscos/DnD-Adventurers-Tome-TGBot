@@ -13,7 +13,7 @@ from core.rules.catalog._common import attacks_made, feature, state_on, style_op
 from core.rules.catalog.y2014.cleric import LANGUAGES, _languages_owned, language_label
 from core.rules.catalog.y2014.fighter import _is_ranged_weapon, _off_hand_modifier, _dueling, _weapon_in_hand, _wears_armor
 from core.rules.states import begin_state
-from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, UseToggle
+from core.rules.types import FORGONE, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, UseToggle
 
 ED, CK = "2014", "ranger"
 ENEMY, ENEMY_LANGUAGE, TERRAIN = "favored_enemy", "favored_enemy_language", "favored_terrain"
@@ -82,6 +82,18 @@ def _permanent_note(key: str) -> StateSpec:
 
 def _weapon_attack(ctx: RuleContext) -> bool:
     return _weapon_in_hand(ctx)
+
+
+def _weapon_used_this_turn(ctx: RuleContext) -> bool:
+    """L'arma dell'attacco ha già attaccato in questo turno (Devastatore dell'Orda: «la stessa arma»). Un attacco segnato a
+    mano o fuori dall'azione non dice l'arma: allora vale, come per l'altra mano."""
+    known = [w for w, _opens in (ctx.turn or {}).get("action_weapons") or [] if w != FORGONE]
+    return len(known) < attacks_made(ctx) or ctx.item.id in known
+
+
+def _own_attack(ctx: RuleContext) -> bool:
+    """L'attacco è del ranger: non quello della bestia o di un altro compagno (Sterminatore di Nemici, Sensi Ferini)."""
+    return ctx.attack_mode not in ("beast", "companion")
 
 
 def _melee_weapon(ctx: RuleContext) -> bool:
@@ -186,7 +198,7 @@ HIDE_STEALTH = RollOptionSpec(
            "en": "Hide in Plain Sight: are you still against a solid surface, without moving or acting? +10 to Stealth"})
 
 FERAL_SENSES = RollOptionSpec(
-    key=f"{CK}.feral_senses", phase="before", rolls=("attack",), cancels=("condition:blinded",),
+    key=f"{CK}.feral_senses", phase="before", rolls=("attack",), cancels=("condition:blinded",), available=_own_attack,
     label={"it": "Sensi Ferini: attacchi una creatura entro 9 m che non vedi? Non vederla non ti dà svantaggio",
            "en": "Feral Senses: are you attacking a creature within 30 ft that you cannot see? Not seeing it gives no disadvantage"},
     effect=_say("Sensi Ferini: non vedere il bersaglio non ti dà svantaggio al tiro per colpire. Le altre fonti di svantaggio restano: "
@@ -196,7 +208,7 @@ FERAL_SENSES = RollOptionSpec(
 
 
 def _slayer_ready(ctx: RuleContext) -> bool:
-    return _wis_mod(ctx) > 0
+    return _own_attack(ctx) and _wis_mod(ctx) > 0
 
 
 def _slayer_bonus(ctx: RuleContext, _inputs: dict) -> int:
@@ -232,7 +244,7 @@ COLOSSUS_SLAYER = RollOptionSpec(
 
 HORDE_BREAKER = RollOptionSpec(
     key=f"{CK}.horde_breaker", phase="before", rolls=("attack",), once_per_turn=True, outside_action=True,
-    available=lambda c: _weapon_attack(c) and attacks_made(c) >= 1,
+    available=lambda c: _weapon_attack(c) and attacks_made(c) >= 1 and _weapon_used_this_turn(c),
     label={"it": "Devastatore dell'Orda: un altro attacco con la stessa arma contro una creatura diversa entro 1,5 m dal primo bersaglio",
            "en": "Horde Breaker: another attack with the same weapon against a different creature within 5 ft of the first target"},
     effect=_say("Attacco in più, fuori dall'azione Attacco: un bersaglio diverso entro 1,5 m dal primo, con la stessa arma e nella sua gittata.",
@@ -407,7 +419,7 @@ FEATURES = (
             ("Dopo 1 minuto con materiali naturali ti mimetizzi: +10 a Furtività restando fermo contro una superficie solida. Muoverti, agire o reagire lo toglie.",
              "After 1 minute with natural materials you camouflage: +10 to Stealth while still against a solid surface. Moving, acting or reacting ends it."),
             roll_options=(HIDE_STEALTH,),
-            on_use=OnUse(state=StateSpec("camouflaged", ends_on=("manual", "attack", "cast", "rest_short", "rest_long"),
+            on_use=OnUse(state=StateSpec("camouflaged", ends_on=("manual", "attack", "cast", "action", "reaction", "rest_short", "rest_long"),
                                          data={"stealth_bonus": 10}))),
     feature("vanish", CK, ED, 14, "Svanire / Vanish (Ranger 14, pag. 105)", ("Svanire", "Vanish"),
             ("Puoi usare Nascondersi come azione bonus. Non si seguono le tue tracce con mezzi non magici, se non vuoi.",

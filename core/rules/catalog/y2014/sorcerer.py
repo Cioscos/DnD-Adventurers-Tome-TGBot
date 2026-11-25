@@ -110,9 +110,10 @@ CONVERT_USE = OnUse(
 # Metamagia: la gittata, la durata, le condizioni dell'incantesimo
 # ---------------------------------------------------------------------------
 
-_RANGE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(km|m|metri|metro|ft|feet|foot|piedi|mi|miglia|miles?)\b", re.IGNORECASE)
+_RANGE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(km|m|metri|metro|ft|feet|foot|piedi|mi|miglia|miglio|miles?)\b", re.IGNORECASE)
+_UNITS = {"metri": "m", "metro": "m", "miglio": "miglia", "mile": "miles", "foot": "feet"}  # raddoppiata, la gittata è al plurale
 _TOUCH = ("contatto", "tocco", "touch")
-_SELF = ("personale", "self")
+_SELF = ("personale", "incantatore", "self")  # «Incantatore» è la gittata personale del manuale italiano (pag. 202)
 
 
 def _range_of(spell: Any) -> tuple[float, str] | str | None:
@@ -127,7 +128,7 @@ def _range_of(spell: Any) -> tuple[float, str] | str | None:
     if m is None:
         return None
     unit = m[2].lower()
-    return float(m[1].replace(",", ".")), "m" if unit.startswith(("m", "k")) and unit not in ("mi", "miles", "mile") else unit
+    return float(m[1].replace(",", ".")), _UNITS.get(unit, unit)
 
 
 def _distant_ok(ctx: RuleContext) -> bool:
@@ -289,11 +290,20 @@ DRAGON_ANCESTOR_CHECK = RollOptionSpec(
     label={"it": "Antenato Draconico: la prova è per interagire con un drago? Il bonus di competenza raddoppia",
            "en": "Dragon Ancestor: is the check to interact with a dragon? Your proficiency bonus doubles"})
 
+AFFINITY_USED = "affinity_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il Carisma (un tiro per lancio)
+
+
+def _mark_affinity(_session: Any, ctx: RuleContext, _inputs: dict) -> list[str]:
+    """Il Carisma va su un solo tiro di danno del lancio: il lancio seguente lo riapre (``_end_cast``)."""
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), AFFINITY_USED: ctx.spell.id}
+    return [f"turnkey:{AFFINITY_USED}"]
+
+
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{CK}.elemental_affinity", phase="before", rolls=("spell_damage",),
     available=lambda c: c.spell is not None and _ancestor_type(c) is not None
-    and spell_damage_type(c) == _ancestor_type(c),
-    bonus=lambda c, _i: _cha(c),
+    and spell_damage_type(c) == _ancestor_type(c) and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
+    bonus=lambda c, _i: _cha(c), on_confirm=_mark_affinity,
     label={"it": "Affinità Elementale: aggiungi il Carisma ai danni del tipo del tuo antenato",
            "en": "Elemental Affinity: add your Charisma modifier to damage of your ancestor's type"})
 
@@ -357,7 +367,9 @@ PRESENCE_USE = OnUse(
 
 TIDES = f"{CK}.tides_of_chaos"
 TIDES_ADVANTAGE = RollOptionSpec(
-    key=f"{CK}.tides_of_chaos_advantage", phase="before", rolls=("attack", "skill", "save"), mode="advantage", cost=Cost(feature_key=TIDES),
+    # l'iniziativa è una prova di Destrezza (pag. 189), il TS contro la morte un tiro salvezza (pag. 197)
+    key=f"{CK}.tides_of_chaos_advantage", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"),
+    mode="advantage", cost=Cost(feature_key=TIDES),
     label={"it": "Onde di Caos: tira questo attacco, prova o TS con vantaggio", "en": "Tides of Chaos: make this attack, check or save with advantage"})
 
 BEND_LUCK_USE = OnUse(

@@ -104,7 +104,7 @@ VIGOR_USE = OnUse(slot="action", rolls="1d4", temp_hp=lambda _c, rolled: rolled 
 
 
 def _shadows_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "act", "rest_short", "rest_long", "manual"),
+    return StateSpec(INVISIBLE_UNTIL_ACT, condition="invisible", ends_on=("attack", "cast", "action", "reaction", "rest_short", "rest_long", "manual"),
                      data={"others": [f"{CK}.one_with_shadows"]})
 
 

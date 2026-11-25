@@ -34,7 +34,6 @@ async def _surge(client, cid, **body) -> dict:
                     copre=["carta:2014/classes/sorcerer.md#Onde di Caos / Tides of Chaos (Magia Selvaggia 1, pag. 111)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("roll", ["initiative", "death_save"])
-@pytest.mark.xfail(strict=True, reason="CB-2011: difforme dal manuale, confermato")
 async def test_onde_di_caos_vale_anche_per_l_iniziativa_e_per_il_ts_contro_la_morte(client, roll):
     # L'iniziativa è una prova di Destrezza e il TS contro la morte è un tiro salvezza: Onde di Caos li copre come gli altri
     cid = await _sorcerer(client, 1, "wild_magic")
@@ -65,7 +64,6 @@ async def test_incantesimo_rapido_dopo_un_incantesimo_di_livello_lanciato_con_l_
 @pytest.mark.caccia(id="CB-2013", fonte="2014 · Stregone · Affinità Elementale · pag. 111", zona="regola:2014/sorcerer", voce="regola",
                     copre=["carta:2014/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Discendenza Draconica 6, pag. 111)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2013: difforme dal manuale, confermato")
 async def test_affinita_elementale_somma_il_carisma_a_un_solo_tiro_di_danno_per_lancio(client):
     cid = await _draconic(client, 6, "red", charisma=18)
     spell = await _spell(client, cid, "Raggio rovente", 2, attack_save="ATK", damage_dice="2d6", damage_type="fire", range_area="36 m")
@@ -119,7 +117,6 @@ async def test_incantesimo_potenziato_si_usa_una_volta_sola_sullo_stesso_danno(c
                            "carta:2014/general.md#Gittata / Range (pag. 202-203)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("option", ["sorcerer.metamagic_twinned", "sorcerer.metamagic_distant"])
-@pytest.mark.xfail(strict=True, reason="CB-2016: difforme dal manuale, confermato")
 async def test_la_gittata_incantatore_del_manuale_esclude_raddoppiato_e_distante_come_personale(client, option):
     # Il manuale italiano chiama «Incantatore» la gittata personale: un cono che parte da chi lancia non ha una gittata da raddoppiare
     cid = await _caster(client, 10, "twinned", "distant")
@@ -133,7 +130,6 @@ async def test_la_gittata_incantatore_del_manuale_esclude_raddoppiato_e_distante
                     copre=["carta:2014/classes/sorcerer.md#Incantesimo Distante / Distant Spell (Stregone 3, pag. 110)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("range_area,shown", [("1,5 km", "3 km"), ("500 miglia", "1000 miglia")])
-@pytest.mark.xfail(strict=True, reason="CB-2017: difforme dal manuale, confermato")
 async def test_incantesimo_distante_raddoppia_la_gittata_in_chilometri_e_miglia_senza_cambiare_unita(client, range_area, shown):
     # Chiaroveggenza nel manuale italiano ha gittata 1,5 km: raddoppiata è 3 km, non 3 m
     cid = await _caster(client, 10, "distant")

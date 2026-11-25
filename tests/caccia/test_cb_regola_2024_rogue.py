@@ -117,7 +117,6 @@ async def test_la_prova_di_arcano_della_pergamena_rispetta_dote_affidabile(clien
                     zona="regola:2024/rogue", voce="regola",
                     copre=["carta:2024/classes/rogue.md#Schivata Prodigiosa / Uncanny Dodge (Ladro 5, pag. 131)",
                            "PATCH /characters/{char_id}/hp", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2564: difforme dal manuale, confermato")
 async def test_schivata_prodigiosa_non_si_usa_da_accecato(client):
     cid = await _ladro(client, 5)
     await _pf_pieni(client, cid)

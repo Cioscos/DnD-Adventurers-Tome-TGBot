@@ -65,6 +65,11 @@ FORCE_STRIKE = RollOptionSpec(
     label=_both("Colpi Potenziati: il colpo senz'armi infligge danni da Forza", "Empowered Strikes: the unarmed strike deals Force damage"))
 
 
+# Elusione 2024 (pag. 103): non vale con la condizione Incapacitato; la carta 2014 (pag. 92) non ha questa clausola
+EVASION_2024 = tuple(replace(o, available=lambda c, f=o.available: f(c) and _can_act(c))
+                     for o in (EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED))
+
+
 # ---------------------------------------------------------------------------
 # Raffica di Colpi, Difesa Paziente, Passo del Vento
 # ---------------------------------------------------------------------------
@@ -330,7 +335,7 @@ BASE_ROWS = (
     feature("evasion", CK, ED, 7, "Elusione / Evasion (Monaco 7, pag. 103)", ("Elusione", "Evasion"),
             ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà. Non vale se sei incapacitato.",
              "On a Dexterity save for half damage: no damage on a success, half on a failure. Not while incapacitated."),
-            roll_options=(EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED)),
+            roll_options=EVASION_2024),
     feature("acrobatic_movement", CK, ED, 9, "Movimento Acrobatico / Acrobatic Movement (Monaco 9, pag. 103)",
             ("Movimento Acrobatico", "Acrobatic Movement"),
             ("Senza armatura né scudo, nel tuo turno ti muovi su pareti e liquidi senza cadere; il DM decide i dettagli.",

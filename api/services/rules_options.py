@@ -10,7 +10,7 @@ from fastapi import HTTPException, status
 from api.schemas.common import OptionResult
 from api.schemas.rules import RollOptionCost, RollOptionRead, RollOptionSlot
 from api.services.dice_stats import record_dice
-from api.services.rules_states import MISS_REFUND
+from api.services.rules_states import MISS_REFUND, end_states
 from api.services.rules_turn import get_turn
 from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, is_incapacitated
@@ -60,6 +60,9 @@ def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "bef
                              getattr(body, "option_inputs", None), phase)
     except OptionUnavailable as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": exc.key}) from exc
+    for slot in ("action", "reaction"):  # un'opzione che spende l'azione o la reazione chiude gli stati come spend()
+        if f"turn:{slot}" in opts.spent:
+            end_states(char, slot)
     if phase == "before":
         _forget_roll(char)
     return opts

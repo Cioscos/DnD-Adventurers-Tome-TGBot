@@ -9,7 +9,7 @@ import pytest
 from tests.integration.rules.test_2014_bard import _ability, _full, _roll_keys, _use
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _spell
 from tests.integration.rules.test_2014_paladin import _rest
-from tests.integration.rules.test_2014_wizard import _choice, _wizard
+from tests.integration.rules.test_2014_wizard import _choice, _spend, _wizard
 
 PICK, MALLEABLE, SELF, REALITY = "improved_minor_illusion", "wizard.malleable_illusions", "wizard.illusory_self", "wizard.illusory_reality"
 SCULPT, EMPOWERED, OVERCHANNEL = "wizard.sculpt_spells", "wizard.empowered_evocation", "wizard.overchannel"
@@ -234,6 +234,15 @@ async def _overchannel(client, cid, spell, level=None, monkeypatch=None):
         "casting_level": level or 1, "options": [OVERCHANNEL]})
 
 
+async def _new_cast(client, cid, spell, level) -> None:
+    """Un lancio nuovo, in un turno nuovo e con lo slot che serve: la Saturazione Magica conta un uso per lancio, non per tiro di
+    danno (2014 pag. 87, 2024 pag. 174)."""
+    await client.post(f"/characters/{cid}/turn/new")
+    await _spend(client, cid, **{f"l{level}": 0})
+    r = await _cast(client, cid, spell, slot_level=level)
+    assert r.status_code == 200, r.text
+
+
 async def _hp(client, cid, value=200) -> None:
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": value})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": value})
@@ -270,6 +279,7 @@ async def test_each_later_overchannel_deals_necrotic_damage_that_ignores_resista
     spell = await _evocation(client, cid, "Prova", spell_level)
     monkeypatch.setattr(random, "randint", lambda a, b: b)  # ogni dado al massimo: d12 = 12
     for n in range(1, uses + 1):
+        await _new_cast(client, cid, spell, spell_level)  # un uso per lancio (pag. 87)
         result = await _overchannel(client, cid, spell, spell_level)
         assert result.status_code == 200, result.text
         effects = str(result.json()["option_result"]["effects"])
@@ -299,6 +309,7 @@ async def test_overchannel_self_damage_uses_the_slot_level_of_the_cast(client, m
     ball = await _evocation(client, cid, "Palla di fuoco", 3)
     monkeypatch.setattr(random, "randint", lambda a, b: b)
     await _overchannel(client, cid, ball, 5)
+    await _new_cast(client, cid, ball, 5)  # il secondo uso è un secondo lancio (pag. 87)
     result = await _overchannel(client, cid, ball, 5)
     assert result.status_code == 200, result.text
     assert (await _full(client, cid))["current_hit_points"] == 1000 - 12 * 2 * 5  # 2d12 per livello di lancio (5), non del 3
@@ -331,6 +342,7 @@ async def test_minori_8_55_the_self_damage_uses_the_request_language_and_the_rol
     await _hp(client, cid, 1000)
     ball = await _evocation(client, cid, "Palla di fuoco", 3)
     await _overchannel(client, cid, ball, 3)
+    await _new_cast(client, cid, ball, 3)  # il secondo uso è un secondo lancio (pag. 87)
     app.dependency_overrides[get_current_lang] = lambda: "en"
     langs, commits = [], []
     real_update, real_commit = hp_router.update_hp, AsyncSession.commit
