@@ -184,11 +184,12 @@ async def test_a_cure_costs_exactly_five_points_per_condition_and_needs_a_condit
 
 async def test_restoring_touch_adds_six_conditions_at_level_14_and_each_costs_five(client):
     cid = await _paladin24(client, 14)
-    await _conditions(client, cid, poisoned=True, blinded=True, stunned=True, prone=True)
-    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "blinded", "stunned"]))
+    # 2024 Incapacitato p.369: da stordito niente Azione Bonus, quindi una condizione che non incapacita
+    await _conditions(client, cid, poisoned=True, blinded=True, deafened=True, prone=True)
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "blinded", "deafened"]))
     assert r.status_code == 200, r.text
     left = (await _full(client, cid))["conditions"]
-    assert not any(left.get(c) for c in ("poisoned", "blinded", "stunned")) and left.get("prone") is True
+    assert not any(left.get(c) for c in ("poisoned", "blinded", "deafened")) and left.get("prone") is True
     assert (await _ability(client, cid, LOH))["uses"] == 70 - 15
 
 

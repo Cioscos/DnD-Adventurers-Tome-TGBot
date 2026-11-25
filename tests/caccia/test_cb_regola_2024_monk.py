@@ -103,7 +103,6 @@ async def test_gli_effetti_del_turno_finiscono_col_turno_del_monaco(client, test
     ("mercy", 3, "monk.hand_of_healing", {"mode": "self"}), ("shadow", 6, "monk.shadow_step", {"light": "dim_or_dark"}),
     ("shadow", 17, "monk.cloak_of_shadows", {"light": "dim_or_dark"}), ("elements", 6, "monk.elemental_burst", {"element": "fire"}),
     ("open_hand", 6, "monk.wholeness_of_body", {})])
-@pytest.mark.xfail(strict=True, reason="CB-2413: difforme dal manuale, confermato")
 async def test_un_monaco_incapacitato_non_usa_azioni_ne_azioni_bonus(client, sottoclasse, livello, chiave, parametri):
     cid = await _monaco(client, sottoclasse, livello, wisdom=14)
     await _conditions(client, cid, incapacitated=True)

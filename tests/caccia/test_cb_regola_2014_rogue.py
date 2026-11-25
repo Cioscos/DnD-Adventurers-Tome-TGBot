@@ -110,7 +110,6 @@ async def test_schivata_prodigiosa_non_si_usa_da_incapacitato(client, condizione
     ("rogue.versatile_trickster", 13, "arcane_trickster", {}, "bonus_used"),
     ("rogue.spell_thief", 17, "arcane_trickster", {"stolen": False}, "reaction_used"),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1963: difforme dal manuale, confermato")
 async def test_azioni_bonus_e_reazioni_del_ladro_rifiutate_da_stordito(client, chiave, livello, sottoclasse, params, slot):
     cid = await _ladro(client, livello, sottoclasse)
     if sottoclasse:

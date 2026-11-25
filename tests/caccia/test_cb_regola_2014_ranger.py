@@ -148,7 +148,6 @@ async def test_schivata_prodigiosa_non_si_usa_da_incapacitato(client, condition)
     ("whirlwind", "ranger.whirlwind_attack", None),
     ("tide", "ranger.stand_against_the_tide", None),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1916: difforme dal manuale, confermato")
 async def test_da_incapacitato_i_privilegi_d_azione_non_si_usano(client, who, feature, params):
     if who == "ranger3":
         cid = await _ranger(client, 3)

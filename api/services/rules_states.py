@@ -18,6 +18,7 @@ from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.modifiers import is_incapacitated, surprise_exit_features
 from core.rules.roll_options import keep_target_effect, refund_spent
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.states import begin_state, has_state, item_spell_held, settle_closed
@@ -360,6 +361,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.panel:
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     params = dict(params or {})
+    # Incapacitato: niente azioni, azioni bonus né reazioni (2014 p.189-190 e 291, 2024 p.369); passano le uscite dichiarate (Istinto Ferino, Vendetta Ardente)
+    turn_slot = on_use.slot_by(RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level),
+                               params) if on_use.slot_by else on_use.slot
+    if turn_slot and is_incapacitated(char) and feature_key not in surprise_exit_features(char):
+        raise _err(status.HTTP_409_CONFLICT, "incapacitated")
     removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
     if on_use.removal is not None:
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,

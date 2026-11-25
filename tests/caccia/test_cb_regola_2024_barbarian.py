@@ -91,7 +91,6 @@ async def test_gufo_aggiunge_60_piedi_alla_scurovisione_della_specie_2024(client
                     copre=["carta:2024/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 51)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("condizione", ["incapacitated", "stunned", "paralyzed", "unconscious"])
-@pytest.mark.xfail(strict=True, reason="CB-2163: difforme dal manuale, confermato")
 async def test_da_incapacitato_non_si_entra_in_ira(client, condizione):
     cid = await _barbarian(client, 5)
     r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {condizione: True}})

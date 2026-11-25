@@ -160,7 +160,6 @@ def test_i_dadi_extra_dei_privilegi_hanno_il_tipo_di_danno_della_carta(key, kind
 @pytest.mark.parametrize("sub,key,params", [(None, "ranger.tireless", None), (None, "ranger.natures_veil", None),
                                             ("fey_wanderer", "ranger.beguiling_twist", {"condition": "charmed"}),
                                             ("gloom_stalker", "ranger.shadowy_dodge", None)])
-@pytest.mark.xfail(strict=True, reason="CB-2518: difforme dal manuale, confermato")
 async def test_un_ranger_incapacitato_non_usa_azioni_azioni_bonus_ne_reazioni(client, sub, key, params):
     cid = await (_sub(client, 15, sub, wisdom=16) if sub else _ranger24(client, 15, wisdom=16))
     await _incapacitate(client, cid)

@@ -7,6 +7,7 @@ from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, seed_session
 from tests.integration._telegram_stub import install_fake_telegram
 from tests.integration.rules.test_2014_barbarian import _barbarian, _hit, _rage, _states
 from tests.integration.rules.test_2014_fighter import _fighter
+from tests.integration.rules.test_2014_rogue_thief import _reflexes_encounter
 
 
 @pytest.mark.caccia(id="CB-4191", fonte="2014 · Barbaro · Ira · pag. 48", zona="regola:2014/barbarian", voce="regola",
@@ -68,3 +69,19 @@ async def test_ispirazione_superiore_anche_con_l_iniziativa_tirata_dal_master(cl
     come_utente(PLAYER_ID)
     # il tiro d'ufficio è il tiro di iniziativa del bardo: gli usi tornano a due come quando tira lui
     assert (await _riga(client, cid, BI))["uses"] == 2
+
+
+@pytest.mark.caccia(id="CB-4194", fonte="2014 · Ladro · Azione Scaltra · pag. 78; Combattere · Sorpresa e Azioni Bonus · pag. 189-190",
+                    zona="regola:2014/rogue", voce="interazione",
+                    copre=["carta:2014/classes/rogue.md#Azione Scaltra / Cunning Action (Ladro 2, pag. 78)",
+                           "carta:2014/general.md#Sorpresa / Surprise (pag. 189)",
+                           "carta:2014/general.md#Azioni Bonus / Bonus Actions (pag. 189-190)",
+                           "PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}",
+                           "POST /characters/{char_id}/features/{feature_key}/use"])
+async def test_da_sorpreso_il_ladro_non_usa_l_azione_scaltra(client, test_session_factory, come_utente):
+    # la sorpresa toglie l'azione nel primo turno, e ciò che impedisce le azioni impedisce anche le azioni bonus
+    _sid, cid, _live = await _reflexes_encounter(client, test_session_factory, surprised=True, level=2, subclass=None)
+    come_utente(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/features/rogue.cunning_action/use", json={"params": {"action": "dash"}})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "incapacitated", r.text[:200]
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["bonus_used"] is False
