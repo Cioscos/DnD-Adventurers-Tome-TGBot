@@ -132,7 +132,6 @@ async def test_chi_e_stordito_non_usa_una_reazione_sul_danno(client):
                     zona="regola:2024/generali", voce="regola",
                     copre=["carta:2024/general.md#Heroic Inspiration (Ispirazione Eroica) (pag. 368)",
                            "POST /characters/{char_id}/death_saves/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2965: difforme dal manuale, confermato")
 async def test_il_rilancio_del_ts_contro_la_morte_chiede_l_ispirazione(client):
     cid = await _pg(client, "fighter", 1)
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
@@ -140,7 +139,7 @@ async def test_il_rilancio_del_ts_contro_la_morte_chiede_l_ispirazione(client):
     assert r.json()["heroic_inspiration"] is False
     r = await client.post(f"/characters/{cid}/death_saves/roll", json={"with_inspiration": True, "dice": [15]})
     assert r.status_code == 409, r.text[:200]
-    assert (await _scheda(client, cid))["death_saves"]["successes"] == 0
+    assert ((await _scheda(client, cid))["death_saves"] or {}).get("successes", 0) == 0  # mai tirato: nessun conteggio salvato
 
 
 # ---------------------------------------------------------------------------------------------------------------------

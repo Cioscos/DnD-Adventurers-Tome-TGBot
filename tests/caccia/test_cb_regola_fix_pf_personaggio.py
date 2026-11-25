@@ -103,3 +103,27 @@ async def test_un_solo_ts_contro_la_morte_per_turno_in_uno_scontro(client, test_
     as_user(PLAYER_ID)
     r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
     assert r.status_code == 200 and r.json()["failures"] == 2, r.text
+
+
+@pytest.mark.caccia(id="CB-4315", fonte="2024 · Regole generali · Ispirazione Eroica · pag. 13 e Glossario · pag. 368 (si spende per rilanciare il dado appena tirato e vale il nuovo risultato)",
+                    zona="regola:2024/generali", voce="regola",
+                    copre=["carta:2024/general.md#Ispirazione Eroica / Heroic Inspiration (pag. 13)",
+                           "carta:2024/general.md#Heroic Inspiration (Ispirazione Eroica) (pag. 368)",
+                           "PATCH /characters/{char_id}/inspiration", "POST /characters/{char_id}/death_saves/roll"])
+@pytest.mark.parametrize("fallimenti_prima,esito", [(0, (1, 0)), (2, (1, 2))])
+async def test_il_rilancio_con_ispirazione_sostituisce_il_ts_contro_la_morte(client, fallimenti_prima, esito):
+    cid = await _pg(client, "fighter", 1, "2024")
+    await _pf(client, cid, 10)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
+    assert r.status_code == 200, r.text
+    for _ in range(fallimenti_prima):
+        assert (await client.patch(f"/characters/{cid}/death_saves", json={"action": "failure"})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})).status_code == 200
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
+    assert r.status_code == 200 and r.json()["failures"] == fallimenti_prima + 1, r.text
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"with_inspiration": True, "dice": [15]})
+    assert r.status_code == 200, r.text
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    # vale solo il 15: il fallimento del 5 sparisce (con due fallimenti prima il PG non muore) e l'Ispirazione è spesa
+    assert (scheda["death_saves"]["successes"], scheda["death_saves"]["failures"]) == esito
+    assert scheda["is_dead"] is False and scheda["heroic_inspiration"] is False

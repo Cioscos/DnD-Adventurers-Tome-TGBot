@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from api.services.d20 import d20_records, resolve_applied, resolve_body
+from api.services.d20 import d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
@@ -1190,6 +1190,8 @@ async def roll_death_save(
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
     char = await get_owned_full_with_resources(char_id, user_id, session)
+    if body is not None and body.with_inspiration:  # prima dei rifiuti: il rilancio può salvare chi il primo tiro uccideva
+        return await _reroll_death_save(session, char, body)
     if char.is_dead:
         return DeathSaveRollResult(
             die=0, outcome="failure",
@@ -1247,6 +1249,30 @@ async def roll_death_save(
         current_hp=char.current_hit_points,
         option_result=block,
     )
+
+
+async def _reroll_death_save(session: AsyncSession, char: Character, body: D20RollSubmission) -> DeathSaveRollResult:
+    """Ispirazione Eroica 2024 (pag. 13, 368): si spende per rilanciare il TS appena tirato e conta solo il nuovo esito."""
+    last = get_turn(char).get("last_roll") or {}
+    death = last.get("death") if last.get("roll") == "death_save" else None
+    if death is None or death_state(char) != death["after"]:  # nessun TS da rilanciare, o lo stato è andato avanti
+        raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
+    spend_inspiration_reroll(char)  # 409 senza Ispirazione; nel 2014 si spende prima del tiro
+    applied = modifiers_for(char, "death_save")
+    await attach_party_auras(session, char)
+    opts = use_options(session, char, "death_save", body)  # le opzioni confermate per il primo tiro, senza ripagarle
+    merge_options(applied, opts)
+    d20 = resolve_body(body, applied)
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus = applied.flat + opts.bonus
+    total = d20.kept + bonus + option_total
+    record_dice(char, d20_records(d20), total)
+    block = option_result(opts, option_rolls, option_total)
+    fields = {"die": d20.kept, "dice": d20.dice, "mode": d20.mode, "bonus": bonus, "total": total, "notes": applied.notes,
+              "auto_fail": False, "description": "", "option_result": block.model_dump(mode="json") if block else None}
+    result, death = await retouch_death_save(session, char, death, fields)
+    remember_roll(char, "death_save", opts, fields, death=death)
+    return result
 
 
 def death_state(char: Character) -> dict:
