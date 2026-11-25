@@ -37,7 +37,7 @@ import { api, type DeathSaveRollResult } from '@/api/client'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
-import { isHealingSpell } from '@/lib/spellHealing'
+import { rollsDamageAgain } from '@/lib/spellType'
 import { readHeroLayout, type HeroSectionKey } from '@/lib/heroLayout'
 import { hpNumeralTone } from '@/lib/hpTone'
 import type { Ability, CharacterFull } from '@/types'
@@ -297,7 +297,7 @@ export default function HeroScreen({ char }: Props) {
           const spellName = concentrationLabel(char)
           // T13: un incantesimo attivo che fa danni (Guardiani spirituali) porta al Turno, dove si ritirano i danni
           const active = char.spells?.find((s) => s.id === char.concentrating_spell_id)
-          const rollsAgain = !!active?.damage_dice && active.level >= 1 && !isHealingSpell(active)
+          const rollsAgain = !!active && rollsDamageAgain(active)
           return (
             <Pressable
               onClick={() => navigate(`/char/${char.id}/${rollsAgain ? 'turn' : 'spells'}`)}

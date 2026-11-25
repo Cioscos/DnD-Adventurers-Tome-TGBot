@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { isAttackSpell, rollsDamageOnCast } from '@/lib/spellType'
+import { isAttackSpell, rollsDamageAgain, rollsDamageOnCast } from '@/lib/spellType'
 import { needsEffectAsk } from '@/lib/spellChoice'
 import { parseCastingTime } from '@/lib/turnGrouping'
 import { m, AnimatePresence } from 'framer-motion'
@@ -423,7 +423,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   /** Incantesimo attivo che fa danni anche nei turni dopo (Guardiani spirituali, Raggio di luna): si ritira senza slot. */
   const canRollActiveDamage = (spell: Spell) =>
-    char?.concentrating_spell_id === spell.id && !!spell.damage_dice && spell.level >= 1 && !isHealingSpell(spell)
+    char?.concentrating_spell_id === spell.id && rollsDamageAgain(spell)
   const rollActiveDamage = (spell: Spell) => {
     const level = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
     setPendingRitual(false)
