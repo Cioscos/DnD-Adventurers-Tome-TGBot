@@ -1,4 +1,4 @@
-"""Controlli della revisione indipendente dei gruppi lancio-core, dati-incantesimi-fe, catalogo-incantesimi, scelte, stati-turno, oggetti e pf-personaggio."""
+"""Controlli della revisione indipendente dei gruppi lancio-core, dati-incantesimi-fe, catalogo-incantesimi, scelte, stati-turno, oggetti, pf-personaggio e classi."""
 import json
 from pathlib import Path
 
@@ -12,8 +12,10 @@ from tests.caccia.test_cb_regola_2024_fighter import _guerriero, _manovre, _sche
 from tests.caccia.test_cb_regola_fix_lancio_core import _pg
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
 from tests.integration._telegram_stub import install_fake_telegram
-from tests.integration.rules.test_2014_bard import _roll_keys, _sword, _use
+from tests.integration.rules.test_2014_bard import _ability, _roll_keys, _sword, _use
 from tests.integration.rules.test_2014_fighter_battle_master import _damage, _hit, _key
+from tests.integration.rules.test_2014_fighter_styles import _item
+from tests.integration.rules.test_2014_paladin_combat import _listed
 from tests.integration.rules.test_2014_ranger_beast import _panther
 from tests.integration.rules.test_2014_ranger_hunter import _superior
 from tests.integration.rules.test_2014_sorcerer_origins import PRESENCE, _draconic
@@ -21,7 +23,9 @@ from tests.integration.rules.test_2014_warlock import _warlock
 from tests.integration.rules.test_2014_warlock_invocations import _blade, _caster
 from tests.integration.rules.test_2014_warlock_patrons import FEY
 from tests.integration.rules.test_2014_wizard_enchantment import GAZE, _effect, _wizard
+from tests.integration.rules.test_2024_druid_circles import _circle
 from tests.integration.rules.test_2024_warlock_review2 import _chain
+from tests.integration.rules.test_2014_barbarian_round1 import _in_encounter
 from tests.integration.rules.test_feats_take_complete import _complete, _feat_rows, _spell, _take
 from tests.integration.rules.test_spell_effects_defenses import _cast, _sheet, _table
 
@@ -565,3 +569,31 @@ async def test_condividere_incantesimi_vale_con_la_gittata_incantatore(client):
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Scurovisione", "level": 2, "range_area": "Incantatore"})
     assert r.status_code == 201, r.text
     assert "ranger.share_spells_extend" in await _roll_keys(client, cid, "cast", spell_id=r.json()["id"])
+
+
+@pytest.mark.caccia(id="CB-4831", fonte="2024 · Stregone · Metamagia · pag. 141; 2024 · Warlock · Suppliche Occulte · pag. 153; 2014 · Warlock · Suppliche Occulte · pag. 115: a ogni livello acquisito se ne sostituisce una",
+                    zona="regola:2024/sorcerer", voce="limiti",
+                    copre=["carta:2024/classes/sorcerer.md#Metamagia / Metamagic (Stregone 2, pag. 141)",
+                           "carta:2024/classes/warlock.md#Suppliche Occulte / Eldritch Invocations (Warlock 1, pag. 153)",
+                           "carta:2014/classes/warlock.md#Suppliche Occulte / Eldritch Invocations (Warlock 2, pag. 115)",
+                           "POST /characters/{char_id}/classes/{class_id}/options/replace"])
+@pytest.mark.parametrize("edizione, classe, gruppo, scelte, nuove", [
+    ("2024", "sorcerer", "metamagic", ["twinned", "quickened"], ["subtle", "seeking"]),
+    ("2024", "warlock", "invocations", ["armor_of_shadows", "eldritch_mind", "devils_sight"], ["fiendish_vigor", "misty_visions"]),
+    ("2014", "warlock", "invocations", ["armor_of_shadows", "beast_speech"], ["eldritch_sight", "devils_sight"])])
+async def test_metamagia_e_suppliche_si_sostituiscono_una_per_livello(client, edizione, classe, gruppo, scelte, nuove):
+    cid = await _crea(client, edizione, (classe, 2, None))
+    scheda = await _scheda(client, cid)
+    cls = scheda["classes"][0]["id"]
+    scelta = next(c for c in scheda["pending_choices"] if c.get("group") == gruppo)
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": scelte})
+    assert r.status_code == 200, r.text
+    assert (await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": 4})).status_code == 200
+    url = f"/characters/{cid}/classes/{cls}/options/replace"
+    r = await client.post(url, json={"group": gruppo, "old_key": scelte[0], "new_key": nuove[0]})
+    assert r.status_code == 200, r.text
+    r = await client.post(url, json={"group": gruppo, "old_key": scelte[1], "new_key": nuove[1]})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "replace_on_level_up", r.text[:200]
+    assert (await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": 5})).status_code == 200
+    r = await client.post(url, json={"group": gruppo, "old_key": scelte[1], "new_key": nuove[1]})
+    assert r.status_code == 200, r.text

@@ -321,7 +321,7 @@ BASE_ROWS = (
     feature("metamagic", CK, ED, 2, "Metamagia / Metamagic (Stregone 2, pag. 141)", ("Metamagia", "Metamagic"),
             ("Due opzioni al 2° livello, due in più al 10° e al 17°, sostituibili a ogni livello. Una sola opzione per incantesimo.",
              "Two options at 2nd level, two more at 10th and 17th, replaceable every level. One option per spell."),
-            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={2: 2, 10: 4, 17: 6}, replaceable=True,
+            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={2: 2, 10: 4, 17: 6}, replaceable=True, replace_per_level="each",
                                              options=lambda _c: [k for k, *_ in METAMAGIC_2024]),),
             covered_by="ChoiceSpec metamagic di questa riga e le righe delle dieci opzioni; test_metamagic_options_known_follow_the_level"),
     feature("sorcerer_subclass", CK, ED, 3, "Sottoclasse da Stregone / Sorcerer Subclass (Stregone 3, pag. 141)",

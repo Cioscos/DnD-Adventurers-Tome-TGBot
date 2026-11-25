@@ -368,6 +368,7 @@ async def test_each_chosen_option_becomes_a_row_and_one_can_be_replaced_at_any_l
     klass = (await _full(client, cid))["classes"][0]
     state = (await client.get(f"/characters/{cid}/classes/{klass['id']}/options/metamagic")).json()
     assert state["replaceable"] is True and {o["key"] for o in state["chosen"]} == {"twinned", "quickened"}
+    assert (await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 3})).status_code == 200  # una per livello
     r = await client.post(f"/characters/{cid}/classes/{klass['id']}/options/replace",
                           json={"group": "metamagic", "old_key": "twinned", "new_key": "seeking"})
     assert r.status_code == 200, r.text

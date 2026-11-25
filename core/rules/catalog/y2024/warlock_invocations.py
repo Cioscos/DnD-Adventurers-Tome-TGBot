@@ -433,6 +433,6 @@ def protected_invocations(ctx: RuleContext) -> set[str]:
 
 
 INVOCATION_CHOICE = ChoiceSpec(
-    group=INVOCATIONS, levels={1: 1, 2: 3, 5: 5, 7: 6, 9: 7, 12: 8, 15: 9, 18: 10}, replaceable=True, options=available_invocations,
+    group=INVOCATIONS, levels={1: 1, 2: 3, 5: 5, 7: 6, 9: 7, 12: 8, 15: 9, 18: 10}, replaceable=True, replace_per_level="each", options=available_invocations,
     import_options=lambda _c: list(LEVELS), protected=protected_invocations,
     batch_ok=picks_ok)

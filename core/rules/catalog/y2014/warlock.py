@@ -64,7 +64,7 @@ def available_invocations(ctx: RuleContext) -> list[str]:
             if ctx.class_level >= level and (boon is None or boon in boons) and (not needs_blast or blast)]
 
 
-INVOCATION_CHOICE = ChoiceSpec(group=INVOCATIONS, levels={2: 2, 5: 3, 7: 4, 9: 5, 12: 6, 15: 7, 18: 8}, replaceable=True,
+INVOCATION_CHOICE = ChoiceSpec(group=INVOCATIONS, levels={2: 2, 5: 3, 7: 4, 9: 5, 12: 6, 15: 7, 18: 8}, replaceable=True, replace_per_level="each",
                                options=available_invocations, import_options=lambda _c: list(PREREQUISITES))
 BOON_CHOICE = ChoiceSpec(group=BOON_GROUP, levels={3: 1}, options=lambda _c: ["chain", "blade", "tome"])
 

@@ -291,7 +291,9 @@ async def test_a_pact_that_another_invocation_needs_cannot_be_replaced_but_a_fre
     blocked = await replace(BLADE, "fiendish_vigor")
     assert blocked.status_code == 422 and blocked.json()["detail"] == {"code": "option_is_prerequisite"}
     assert (await replace("eldritch_mind", "fiendish_vigor")).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 6})).status_code == 200  # una per livello
     assert (await replace("thirsting_blade", "misty_visions")).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 7})).status_code == 200  # una per livello
     assert (await replace(BLADE, "otherworldly_leap")).status_code == 200
     keys = await _keys_of(client, cid)
     assert f"warlock.{BLADE}" not in keys and "warlock.otherworldly_leap" in keys

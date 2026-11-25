@@ -51,7 +51,7 @@ class ChoiceSpec:
     # Con ``replaceable``: un cambio, poi serve un riposo breve o lungo (Preda del Cacciatore 2024, «dopo un riposo breve o lungo»)
     replace_per_rest: bool = False
     # Con ``replaceable``: un cambio per livello di classe, dopo quello della prima scelta; «each» a ogni livello (Stile di
-    # Combattimento 2024), «new_picks» solo ai livelli che danno nuove opzioni del gruppo (manovre, discipline elementali 2014)
+    # Combattimento e Metamagia 2024, suppliche), «new_picks» solo ai livelli che danno nuove opzioni del gruppo (manovre, discipline elementali 2014)
     replace_per_level: Literal["each", "new_picks"] | None = None
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None

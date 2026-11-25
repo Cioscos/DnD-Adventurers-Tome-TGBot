@@ -233,6 +233,7 @@ async def test_an_invocation_can_be_replaced_with_one_that_meets_the_prerequisit
     klass = (await _full(client, cid))["classes"][0]
     replace = lambda old, new: client.post(f"/characters/{cid}/classes/{klass['id']}/options/replace",  # noqa: E731
                                            json={"group": "invocations", "old_key": old, "new_key": new})
+    assert (await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 3})).status_code == 200  # una per livello
     assert (await replace("beast_speech", "mire_the_mind")).status_code == 422
     assert (await replace("beast_speech", "eldritch_sight")).status_code == 200
     keys = await _keys_of(client, cid)
