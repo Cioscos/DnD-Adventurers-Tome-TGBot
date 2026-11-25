@@ -1326,6 +1326,7 @@ async def cast_from_scroll(
     """Usare Dispositivi Magici (Furfante 2024, 13°): lancio da una pergamena. Livelli 0-1 riescono sempre; dal 2° prova di
     Intelligenza (Arcano) CD 10 + livello. La pergamena si consuma; l'effetto dell'incantesimo resta a parole."""
     char = await get_owned_full(char_id, user_id, session)
+    refuse_if_incapacitated(char)  # è un lancio: come da un oggetto
     item = await _get_item(session, char_id, item_id)
     if not has_use_magic_device(char):
         raise HTTPException(status_code=409, detail="no_scroll_casting")

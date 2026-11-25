@@ -181,3 +181,19 @@ async def test_l_attacco_dell_arciere_fa_finire_il_nascondiglio(client):
     assert r.status_code == 200, r.text
     j = await _scheda(client, cid)
     assert (bool(j["conditions"].get("invisible")), j["hiding_dc"]) == (False, None)
+
+
+@pytest.mark.caccia(id="CB-4711", fonte="2024 · Glossario · Incapacitato (niente azioni) · pag. 369; Furfante · Usare Dispositivi Magici · pag. 137",
+                    zona="regola:2024/rogue", voce="interazione",
+                    copre=["carta:2024/general.md#Incapacitated [Condition] (Incapacitato) (pag. 369)",
+                           "carta:2024/classes/rogue.md#Usare Dispositivi Magici / Use Magic Device (Furfante 13, pag. 137)",
+                           "POST /characters/{char_id}/items/{item_id}/scroll"])
+async def test_chi_e_incapacitato_non_lancia_da_una_pergamena(client):
+    cid = await _ladro(client, 13, "thief")
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Pergamena", "item_type": "consumable", "quantity": 1, "item_metadata": {"subtype": "scroll"}})
+    iid = max(i["id"] for i in r.json()["items"])
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 1})
+    assert (r.status_code, r.json()["detail"].get("code")) == (409, "incapacitated"), r.text
+    assert next(i for i in (await _scheda(client, cid))["items"] if i["id"] == iid)["quantity"] == 1
