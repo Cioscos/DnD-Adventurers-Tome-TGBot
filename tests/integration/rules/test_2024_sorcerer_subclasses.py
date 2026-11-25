@@ -97,6 +97,14 @@ async def test_psionic_sorcery_casts_with_points_equal_to_the_spell_level_and_no
     assert await _points(client, cid) == 7 - 3 and sum(s["available"] for s in (await _full(client, cid))["spell_slots"]) == total
 
 
+async def test_psionic_sorcery_casts_a_ninth_level_psionic_spell_from_level_9(client):
+    # 2024 pag. 145-146: Telecinesi è un Incantesimo Psionico dal 9° (al 6° il 409 è in CB-2616)
+    cid = await _make(client, "aberrant", 9)
+    spell = (await _spells(client, cid))["telekinesis"]["id"]
+    assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True})).status_code == 200
+    assert await _points(client, cid) == 9 - 5
+
+
 async def test_psionic_sorcery_needs_level_6_and_a_psionic_spell(client):
     cid = await _make(client, "aberrant", 5)
     spell = (await _spells(client, cid))["arms-of-hadar"]["id"]

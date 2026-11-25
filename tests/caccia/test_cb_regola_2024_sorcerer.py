@@ -122,7 +122,6 @@ async def test_stregoneria_psionica_a_punti_non_toglie_il_nascondiglio(client):
                     copre=["carta:2024/classes/sorcerer.md#Stregoneria Psionica / Psionic Sorcery (Stregoneria Aberrante 6, pag. 146)",
                            "carta:2024/classes/sorcerer.md#Incantesimi Psionici / Psionic Spells (Stregoneria Aberrante 3, pag. 145)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2616: difforme dal manuale, confermato")
 async def test_stregoneria_psionica_non_lancia_un_incantesimo_psionico_non_ancora_ottenuto(client):
     # Telecinesi entra negli Incantesimi Psionici al 9° livello: al 6° non è un incantesimo di quel privilegio
     cid = await _make(client, "aberrant", 6)

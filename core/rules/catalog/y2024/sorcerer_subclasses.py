@@ -80,6 +80,7 @@ PSIONIC_SPELLS = (("arms-of-hadar", "calm-emotions", "detect-thoughts", "dissona
                   ("evards-black-tentacles", "summon-aberration"), ("rarys-telepathic-bond", "telekinesis"))
 PSIONIC_LEVELS = {"arms-of-hadar": 1, "dissonant-whispers": 1, "calm-emotions": 2, "detect-thoughts": 2, "hunger-of-hadar": 3, "sending": 3,
                   "evards-black-tentacles": 4, "summon-aberration": 4, "rarys-telepathic-bond": 5, "telekinesis": 5}
+PSIONIC_FROM = {s: lv for lv, tier in zip((3, 5, 7, 9), PSIONIC_SPELLS) for s in tier}  # livello da cui la lista lo dà (pag. 145)
 PSYCHIC_SAVE = RollOptionSpec(
     key=f"{P}psychic_defenses", phase="before", rolls=("save",), mode="advantage",
     label=_both("Difese Psichiche: il TS è per evitare o terminare Affascinato o Spaventato? Vantaggio",
@@ -225,7 +226,7 @@ SUBCLASS_ROWS: tuple = (
     aberrant("psionic_sorcery", 6, "Stregoneria Psionica", "Psionic Sorcery", 146,
              ("Lanci un incantesimo psionico di 1° livello o più spendendo punti stregoneria pari al suo livello al posto dello slot, senza componenti.",
               "Cast a level 1+ psionic spell by spending sorcery points equal to its level instead of a slot, with no components."),
-             passive=True, ki_spells=tuple(KiSpell(k, v, pool=SP) for k, v in PSIONIC_LEVELS.items())),
+             passive=True, ki_spells=tuple(KiSpell(k, v, pool=SP, min_level=PSIONIC_FROM[k]) for k, v in PSIONIC_LEVELS.items())),
     aberrant("psychic_defenses", 6, "Difese Psichiche", "Psychic Defenses", 146,
              ("Resistenza ai danni psichici; vantaggio ai TS per evitare o terminare Affascinato e Spaventato.",
               "Resistance to psychic damage; advantage on saves to avoid or end Charmed and Frightened."),
