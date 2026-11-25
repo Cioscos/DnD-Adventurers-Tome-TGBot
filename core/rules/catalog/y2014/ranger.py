@@ -12,6 +12,7 @@ from typing import Any
 from core.rules.catalog._common import attacks_made, feature, state_on, style_options
 from core.rules.catalog.y2014.cleric import LANGUAGES, _languages_owned, language_label
 from core.rules.catalog.y2014.fighter import _is_ranged_weapon, _off_hand_modifier, _dueling, _weapon_in_hand, _wears_armor
+from core.rules.catalog.y2014.rogue import _can_see
 from core.rules.states import begin_state
 from core.rules.types import FORGONE, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, UseToggle
 
@@ -314,6 +315,7 @@ EVASION_FAILED = RollOptionSpec(
 
 UNCANNY_DODGE = RollOptionSpec(
     key=f"{CK}.uncanny_dodge", phase="damage_in", rolls=("damage_taken",), slot="reaction", multiplier=0.5, offered_on_damage=False,
+    available=_can_see,
     label={"it": "Schivata Prodigiosa: un attaccante che vedi ti ha colpito? Reazione, dimezza i danni dell'attacco",
            "en": "Uncanny Dodge: did an attacker you can see hit you? Reaction, halves the damage of the attack"})
 

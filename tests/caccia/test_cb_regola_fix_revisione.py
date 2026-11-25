@@ -545,3 +545,13 @@ async def test_l_attacco_di_un_compagno_non_prende_le_opzioni_di_chi_lo_comanda(
     r = await client.post(f"/characters/{cid}/companions/{r.json()['id']}/attack", json={
         "action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3], "options": [onde]})
     assert r.status_code == 409, r.text
+
+
+@pytest.mark.caccia(id="CB-4818", fonte="2014 · Ranger · Schivata Prodigiosa · pag. 106 (attaccante che si vede); Condizioni, Accecato", zona="regola:2014/ranger", voce="regola",
+                    copre=["carta:2014/classes/ranger.md#Schivata Prodigiosa / Uncanny Dodge (Cacciatore 15, pag. 106)",
+                           "GET /characters/{char_id}/roll-options"])
+async def test_schivata_prodigiosa_del_ranger_non_si_usa_da_accecato(client):
+    cid = await _superior(client, "uncanny_dodge")
+    assert "ranger.uncanny_dodge" in await _roll_keys(client, cid, "damage_taken")
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"blinded": True}})).status_code == 200
+    assert "ranger.uncanny_dodge" not in await _roll_keys(client, cid, "damage_taken")
