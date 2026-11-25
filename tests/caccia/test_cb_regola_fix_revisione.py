@@ -231,7 +231,7 @@ async def test_l_import_da_beyond_non_conta_due_volte_i_pf_per_livello(client, m
 @pytest.mark.caccia(id="CB-4782", fonte="2014 · Warlock · Presenza Fatata · pag. 117; Stregone · Presenza Draconica · pag. 102; Mago · Sguardo Ipnotico · pag. 115: TS contro la CD incantesimi; 2024 · Warlock · Investitura del Padrone delle Catene · pag. 156",
                     zona="regola:2014/warlock", voce="regola",
                     copre=["POST /characters/{char_id}/features/{feature_key}/use",
-                           "GET /characters/{char_id}/target-effects/{feature_key}", "GET /characters/{char_id}/companions"])
+                           "GET /characters/{char_id}/target-effects/{effect_key}", "GET /characters/{char_id}/companions"])
 @pytest.mark.parametrize("caso", ["warlock", "stregone", "mago", "famiglio"])
 async def test_i_privilegi_contro_la_cd_incantesimi_contano_i_bonus_degli_oggetti(client, caso):
     if caso == "famiglio":
@@ -430,7 +430,7 @@ async def test_la_pergamena_chiede_conferma_in_armatura_senza_addestramento(clie
     assert r.status_code == 200, r.text
 
 
-@pytest.mark.caccia(id="CB-4792", fonte="2024 · Talenti · Maestro d'Armi / Weapon Master · pag. 209 (un'arma in cui si è competenti)", zona="regola:2024/talenti", voce="input",
+@pytest.mark.caccia(id="CB-4792", fonte="2024 · Talenti · Maestro d'Armi / Weapon Master · pag. 209 (un'arma in cui si è competenti)", zona="regola:2024/talenti", voce="limiti",
                     copre=["PUT /characters/{char_id}/feats/{ability_id}/options"])
 async def test_maestro_d_armi_dice_che_manca_la_competenza(client):
     cid = await _crea(client, "2024", ("wizard", 4, None))

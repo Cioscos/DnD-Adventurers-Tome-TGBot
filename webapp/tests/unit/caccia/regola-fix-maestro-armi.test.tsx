@@ -13,7 +13,7 @@ vi.mock('react-i18next', async (orig) => ({
 }))
 
 describe('caccia: revisione del gruppo scelte', () => {
-  // caccia: {"id": "CB-4793", "fonte": "2024 · Talenti · Maestro d'Armi / Weapon Master · pag. 209 (un'arma in cui si è competenti)", "zona": "regola:2024/talenti", "voce": "input", "copre": ["route:/char/:id/abilities"]}
+  // caccia: {"id": "CB-4793", "fonte": "2024 · Talenti · Maestro d'Armi / Weapon Master · pag. 209 (un'arma in cui si è competenti)", "zona": "regola:2024/talenti", "voce": "limiti", "copre": ["route:/char/:id/abilities"]}
   it('2024: Maestro d\'armi con un\'arma senza competenza dice perché la scelta è rifiutata', async () => {
     complete.mockRejectedValue({ detail: 'feat_weapon_not_proficient' })
     const mago = { id: 7, rules_edition: '2024', total_level: 4, classes: [], abilities: [], ability_scores: [], proficiency_bonus: 2, skills: {} }
