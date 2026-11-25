@@ -1,6 +1,7 @@
 """Controlli scritti dalla correzione del gruppo catalogo-incantesimi per i dubbi «Q-…» risolti come difetti."""
 import pytest
 
+from core.db.models import Character
 from tests.integration._encounter_helpers import GM_ID, as_user
 
 HAIL = "spell:hail_of_thorns:hit"
@@ -66,3 +67,23 @@ async def test_eroismo_2024_i_pf_temporanei_restano_quando_l_incantesimo_finisce
     # 2024: la carta non toglie i PF temporanei a fine incantesimo, durano fino a esaurimento o al Riposo Lungo (p.29).
     # 2014: «quando l'incantesimo termina, il bersaglio perde i punti ferita temporanei rimanenti».
     assert (await _sheet(client, eroe))["temp_hp"] == restano
+
+
+@pytest.mark.caccia(id="CB-4073", fonte="2014 · Incantesimi · Vita Falsata · pag. 289; 2014 · Punti Ferita Temporanei · pag. 198",
+                    zona="regola:2014/incantesimi-S-Z", voce="regola",
+                    copre=["carta:2014/spells.md#Vita Falsata", "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/rounds/tick"])
+async def test_vita_falsata_2014_i_pf_temporanei_finiscono_dopo_l_ora(client, test_session_factory, dadi):
+    from tests.caccia.test_cb_regola_2014_incantesimi_s_z import _impara, _lancia, _pg
+    cid = await _pg(client, "sorcerer", 5)
+    vita = await _impara(client, cid, "false-life")
+    dadi(4)
+    assert (await _lancia(client, cid, vita, 1))["temp_hp"] == 8
+    stati = {s["key"]: s["rounds_left"] for s in (await client.get(f"/characters/{cid}")).json()["active_states"] or []}
+    assert "spell:false_life" in stati and stati.get("spell_cast:false_life") == 600  # 1 ora, sull'orologio di chi lancia
+    async with test_session_factory() as s:  # l'ultimo round dell'ora, senza 599 tick
+        pg = await s.get(Character, cid)
+        pg.active_states = [{**x, "rounds_left": 1} if x.get("rounds_left") else x for x in pg.active_states or []]
+        await s.commit()
+    assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    # «ottieni 1d4 + 4 punti ferita temporanei per la durata»: finita l'ora, quelli rimasti si perdono
+    assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 0

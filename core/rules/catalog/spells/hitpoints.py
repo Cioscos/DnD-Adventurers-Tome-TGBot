@@ -41,11 +41,11 @@ def _agathys(ends_at_zero: bool) -> SpellVariant:
                  "the app reminds you on every damage." + (" It ends when the temporary HP are gone." if ends_at_zero else "")))
 
 
-# Vita Falsata: istantanea nel 2024; nel 2014 dura un'ora ma i PF temporanei sono solo quelli tirati (nessuno stato)
+# Vita Falsata: istantanea nel 2024; nel 2014 i PF temporanei valgono «per la durata» (1 ora, p.289): quelli rimasti svaniscono alla fine
 _FALSE_LIFE_2014 = SpellVariant(
-    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d),
-    text=txt("I PF temporanei restano a fine durata (1 ora): se al tavolo li perdi alla fine, toglili tu.",
-             "The temporary HP stay when the duration ends (1 hour): if your table loses them at the end, remove them yourself."))
+    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d), track=True, rounds=HOUR, temp_hp_ends=True,
+    text=txt("I PF temporanei durano 1 ora: alla fine quelli rimasti svaniscono (automatico).",
+             "The temporary HP last 1 hour: those left vanish when it ends (automatic)."))
 _FALSE_LIFE_2024 = SpellVariant(temp_hp=lambda d: roll(2, 4, 4) + _HIGHER(d))
 # Parola del Potere: Fortificare: 120 PF temporanei divisi in parti uguali (la ripartizione a scelta non c'è)
 _FORTIFY = SpellVariant(
