@@ -109,16 +109,20 @@ _CONDITION_OPTIONS = (
     # Aure dei compagni di serata (Paladino 2014): il giocatore conferma di essere nella gittata (D1)
     RollOptionSpec(
         key="aura:protection", phase="before", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
-        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma",
-               "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma"},
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma "
+                     "(con una tua Aura di Protezione, solo ciò che la supera)",
+               "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma "
+                     "(with your own Aura of Protection, only what exceeds it)"},
         available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0,
     ),
     # Lo stesso bonus dopo aver visto il d20: serve al TS di concentrazione, anche quello automatico dopo il danno, per cui
     # il giocatore non può confermare prima (D1).
     RollOptionSpec(
         key="aura:protection_after", phase="after_roll", after="add", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
-        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro",
-               "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll"},
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro "
+                     "(con una tua Aura di Protezione, solo ciò che la supera)",
+               "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll "
+                     "(with your own Aura of Protection, only what exceeds it)"},
         # Il Carisma si somma una volta: se è già stata confermata prima del tiro non si ripropone.
         available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0 and "aura:protection" not in ctx.confirmed,
     ),
