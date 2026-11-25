@@ -319,7 +319,7 @@ def options_ok(options: dict, feature_key: str = "") -> bool:
     talento torna «da completare»). Liste di classe e caratteristica dipendono dal talento (``feature_key``)."""
     from core.data.feats_2024 import ALL_FEATS
     from core.rules.catalog.y2014.fighter import MANEUVERS  # import locale come WEAPONS
-    from core.rules.weapons import WEAPONS  # import locale: weapons legge il registro dei talenti
+    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS  # import locale: weapons legge il registro dei talenti
     count = lambda n: (lambda v: len(v) == n)  # noqa: E731
     checks = {
         "damage_types": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= set(ENERGY_TYPES),
@@ -331,7 +331,7 @@ def options_ok(options: dict, feature_key: str = "") -> bool:
         "list": lambda v: v in (MI_LISTS if feature_key.startswith("feat.2024_") else LIST_ABILITY),
         "maneuvers": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= {k for k, _it, _en in MANEUVERS},
         "languages": count(3),
-        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPONS),
+        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPON_NAMES_2014),
         "rituals": lambda v: len(v) <= 6,
         "picks": _picks_ok, "tools": lambda v: _tools_ok(v, None) and all(_tool(x) in FAST_CRAFTING_TOOLS for x in v), "instruments": lambda v: _tools_ok(v, ("instrument",)),
         "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,

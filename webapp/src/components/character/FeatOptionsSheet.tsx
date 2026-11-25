@@ -5,7 +5,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { WEAPON_KINDS } from '@/data/weaponMastery'
+import { WEAPON_KINDS, WEAPON_KINDS_2014 } from '@/data/weaponMastery'
 import { profBonus } from '@/lib/dnd'
 import { featByKey } from '@/lib/feats'
 import { uiLang } from '@/lib/lang'
@@ -100,7 +100,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const manyKey = needs.find((n) => n === 'maneuvers' || n === 'weapons')
   const manyCount = manyKey === 'weapons' ? 4 : 2
   const manyOptions = manyKey === 'maneuvers' ? (feat?.choices ?? []).map((c) => ({ key: c.key, label: c.name[lang] }))
-    : WEAPON_KINDS.map((w) => ({ key: w.key, label: lang === 'en' ? w.en : w.it }))
+    : WEAPON_KINDS_2014.map((w) => ({ key: w.key, label: lang === 'en' ? w.en : w.it })) // Maestro d'Armi 2014
   const cantripCount = has('spell') ? 2 : 1
   const typeCount = has('damage_types') ? 2 : 1
   const typeOptions = has('damage_types') ? ENERGY_TYPES : ADEPT_TYPES

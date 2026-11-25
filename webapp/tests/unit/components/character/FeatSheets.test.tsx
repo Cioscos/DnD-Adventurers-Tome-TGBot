@@ -270,6 +270,8 @@ describe('FeatOptionsSheet — talenti 2014 con scelte (PR 3)', () => {
   it('Weapon Master 2014 sends four weapons', async () => {
     complete.mockResolvedValue({ id: 7 })
     renderWithProviders(<FeatOptionsSheet char={char14()} ability={row("Maestro d'Armi", 'weapon_master')} open onClose={() => {}} />)
+    expect(screen.getByText('Rete')).toBeInTheDocument()  // tabella Armi 2014 (pag. 149): la Rete sì, le armi da fuoco no
+    expect(screen.queryByText('Pistola')).toBeNull()
     for (const w of ['Randello', 'Pugnale', 'Mazza']) await userEvent.click(screen.getByText(w))
     expect(confirm()).toBeDisabled()
     await userEvent.click(screen.getByText('Lancia'))

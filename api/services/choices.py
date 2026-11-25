@@ -587,7 +587,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
     from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES, FAST_CRAFTING_TOOLS
-    from core.rules.weapons import WEAPONS
+    from core.rules.weapons import WEAPON_NAMES_2014, WEAPONS
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
     if not needs:
@@ -660,11 +660,13 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         char.languages = [*(char.languages or []), *(x for x in saved["languages"] if x.lower() not in have)]
     if "weapons" in needs:  # Maestro d'Armi 2014: quattro armi semplici o da guerra
         weapons = options.get("weapons")
-        if not isinstance(weapons, list) or len(weapons) != 4 or len(set(weapons)) != 4 or any(w not in WEAPONS for w in weapons):
+        if (not isinstance(weapons, list) or len(weapons) != 4 or len(set(weapons)) != 4
+                or any(w not in WEAPON_NAMES_2014 for w in weapons)):
             raise _bad("feat_options_invalid")
         cats = normalize(char.general_proficiencies)
         have = {w.lower() for w in cats["weapons"]}
-        cats["weapons"] = [*cats["weapons"], *(WEAPONS[w].it for w in weapons if WEAPONS[w].it.lower() not in have)]
+        names = [WEAPON_NAMES_2014[w] for w in weapons]
+        cats["weapons"] = [*cats["weapons"], *(n for n in names if n.lower() not in have)]
         char.general_proficiencies = cats
         saved["weapons"] = list(weapons)
     if "weapon_mastery" in needs:  # Maestro d'armi

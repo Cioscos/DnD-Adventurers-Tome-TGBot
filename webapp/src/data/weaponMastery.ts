@@ -43,3 +43,9 @@ export const WEAPON_KINDS: { key: string; it: string; en: string; mastery: strin
   { key: 'musket', it: 'Moschetto', en: 'Musket', mastery: 'Slow' },
   { key: 'pistol', it: 'Pistola', en: 'Pistol', mastery: 'Vex' },
 ]
+
+/** Armi della tabella 2014 (pag. 149, `core/rules/weapons.py:WEAPON_NAMES_2014`): senza armi da fuoco, con la Rete. */
+export const WEAPON_KINDS_2014: { key: string; it: string; en: string }[] = [
+  ...WEAPON_KINDS.filter((w) => w.key !== 'musket' && w.key !== 'pistol'),
+  { key: 'net', it: 'Rete', en: 'Net' },
+]

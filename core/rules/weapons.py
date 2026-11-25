@@ -74,6 +74,8 @@ WEAPONS: dict[str, Weapon] = {
     "musket": _w("Musket", "Moschetto", "martial", "slow", "ranged"),
     "pistol": _w("Pistol", "Pistola", "martial", "vex", "ranged"),
 }
+# Tabella Armi del PHB 2014 (pag. 149), chiave -> nome italiano: senza armi da fuoco, con la Rete (Maestro d'Armi 2014)
+WEAPON_NAMES_2014 = {**{k: w.it for k, w in WEAPONS.items() if k not in ("musket", "pistol")}, "net": "Rete"}
 
 # Altri nomi italiani in uso: l'app e il compendio dicono «Falcione», il documento delle regole «Gliaia».
 _ALIASES = (("glaive", "Gliaia"), ("morningstar", "Stella del mattino"))  # il secondo è il nome dell'SRD italiano

@@ -140,7 +140,6 @@ async def test_un_talento_con_piu_uno_si_prende_anche_con_la_caratteristica_a_20
                     voce="edizioni",
                     copre=["carta:2014/feats.md#Maestro d'Armi / Weapon Master (pag. 168)", "PUT /characters/{char_id}/feats/{ability_id}/options"])
 @pytest.mark.parametrize(("arma", "atteso"), [("net", 200), ("pistol", 422), ("musket", 422)])
-@pytest.mark.xfail(strict=True, reason="CB-3018: difforme dal manuale, confermato")
 async def test_maestro_d_armi_2014_sceglie_fra_le_armi_del_manuale_2014(client, arma, atteso):
     ch = await _char14(client, "wizard")
     row = await _incompleto(client, ch["id"], "weapon_master", "dexterity")
