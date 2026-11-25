@@ -44,6 +44,18 @@ def _window(key: str, school: str, rounds_of: Callable[[Any], int | None] | None
     return hook
 
 
+def _enchantment_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, found: str | None, level: int | None) -> None:
+    """Alterare Ricordi: l'oblio si usa «prima che l'incantesimo termini» (2014 pag. 85), quindi la finestra dura quanto
+    l'ammaliamento e un altro lancio non la chiude."""
+    if found != "enchantment" or not level:
+        return
+    from core.game.actions import parse_duration_rounds  # import locale
+    # shortcut: senza una durata in round/minuti/ore (istantanea, giorni) resta fino al riposo lungo; da legare alla fine reale se serve
+    ends_on = ("rest_long", *(("concentration_end",) if spell.is_concentration else ()))
+    begin_state(char, StateSpec(WINDOW_ENCHANTMENT, rounds=parse_duration_rounds(spell.duration), ends_on=ends_on,
+                                data={"internal": True, "spell": spell.name}), spec.key, spec.name["it"])
+
+
 def _reality_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, found: str | None, level: int | None) -> None:
     """Realtà Illusoria: la finestra dura quanto l'incantesimo (anche nei turni seguenti); senza una durata in round, solo il turno."""
     if found != "illusion" or not level:
@@ -75,7 +87,7 @@ def _illusion_window(char: Any, row: Any, spec: FeatureSpec, spell: Any, school:
 HOOKS: dict[str, Callable[..., None]] = {
     "wizard.arcane_ward": _ward,
     "wizard.benign_transposition": _transposition,
-    "wizard.alter_memories": _window(WINDOW_ENCHANTMENT, "enchantment"),
+    "wizard.alter_memories": _enchantment_window,
     "wizard.malleable_illusions": _illusion_window,
     "wizard.illusory_reality": _reality_window,
     "wizard.transmuters_stone": _window(WINDOW_TRANSMUTATION, "transmutation"),

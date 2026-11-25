@@ -203,7 +203,6 @@ async def test_pietra_velocita_niente_bonus_da_ingombrato(client):
                     zona="regola:2014/wizard", voce="regola",
                     copre=["carta:2014/classes/wizard.md#Alterare Ricordi / Alter Memories (Ammaliamento 14, pag. 85)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2116: difforme dal manuale, confermato")
 async def test_alterare_ricordi_resta_finche_dura_l_ammaliamento(client):
     cid = await _mago(client, 14, "enchantment")
     charme = await _incantesimo(client, cid, "Charme su persone", 1, school="enchantment", duration="1 ora", attack_save="WIS")
