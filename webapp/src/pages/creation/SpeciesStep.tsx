@@ -28,6 +28,8 @@ interface Props {
   onSpecies24?: (s: Species24State) => void
   /** Abilità già date da classe e background: non sceglibili come abilità della specie. */
   takenSkills?: string[]
+  /** Talento d'Origine non ripetibile del background: non sceglibile per Versatile. */
+  takenFeats?: string[]
 }
 
 const ABBR: Record<string, string> = {
@@ -46,7 +48,7 @@ function speciesSpeed(e: Species2024Entry, options: Record<string, string>): num
   return e.speed_ft + (e.key === '2024_goliath' || (e.key === '2024_elf' && options.lineage === 'wood') ? 5 : 0)
 }
 
-export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills }: Props) {
+export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills, takenFeats }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
@@ -65,7 +67,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
 
       {e24 && species24 && onSpecies24 && (
         <>
-          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} />
+          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} takenFeats={takenFeats} />
           <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
             <p className="tabular-nums">
               {t('character.create.species_speed')}: {formatLength(speciesSpeed(e24, species24.options), unit)}

@@ -44,8 +44,12 @@ import {
   creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies,
   speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
 } from '@/lib/species'
+import { featByKey } from '@/lib/feats'
 import { localized } from '@/lib/srd/catalog'
 import { STANDARD_ARRAY, arrayScores, overMax, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
+
+/** Talento d'Origine già preso e non ripetibile, quindi non sceglibile una seconda volta. */
+const takenFeats = (key: string | null): string[] => (key && !featByKey(key)?.repeatable ? [key] : [])
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -311,10 +315,17 @@ export default function CharacterSelect() {
     setSpecies(c)
     if (c.race) dropTakenClassSkills(buildSpecies(c.race, c.sub ?? null, lang).skills)
   }
+  /** Opzioni della specie senza il talento di Versatile che il background dà già (D-035). */
+  const withoutTakenFeat = ({ origin_feat, ...rest }: Record<string, string>, feat: string | null) =>
+    origin_feat && !takenFeats(feat).includes(origin_feat) ? { ...rest, origin_feat } : rest
+  const changeOriginFeat = (feat: string | null) => {
+    setOriginFeat(feat)
+    setSpecies24({ ...species24, options: withoutTakenFeat(species24.options, feat) })
+  }
   const changeBackground24 = (bg: Background2024Choice | null) => {
     setBg24(bg)
-    const { skill, ...rest } = species24.options
-    changeSpecies24(skill && bg?.entry.skills.includes(skill) ? { ...species24, options: rest } : species24, bg)
+    const { skill, ...rest } = withoutTakenFeat(species24.options, bg?.entry.origin_feat ?? originFeat)
+    changeSpecies24({ ...species24, options: skill && !bg?.entry.skills.includes(skill) ? { ...rest, skill } : rest }, bg)
   }
   const classProf = useClassProficiencies(edition, selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
   const classSkillsIncomplete =
@@ -771,7 +782,7 @@ export default function CharacterSelect() {
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <SpeciesStep choice={species} onChoice={changeSpecies} freeText={race} onFreeText={setRace}
                 edition={edition} species24={species24} onSpecies24={changeSpecies24}
-                takenSkills={bg24?.entry.skills} />
+                takenSkills={bg24?.entry.skills} takenFeats={takenFeats(bg24?.entry.origin_feat ?? originFeat)} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -824,7 +835,7 @@ export default function CharacterSelect() {
 
           {step === 'feat' && (
             <m.div key="step-feat" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <OriginFeatStep value={originFeat} onChange={setOriginFeat} />
+              <OriginFeatStep value={originFeat} onChange={changeOriginFeat} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}

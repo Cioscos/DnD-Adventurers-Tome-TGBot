@@ -5,6 +5,7 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
 import SaveRollSheet from '@/components/SaveRollSheet'
 import Extras from '@/pages/Extras'
+import CharacterSelect from '@/pages/CharacterSelect'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
 import type { Spell } from '@/types'
@@ -15,7 +16,8 @@ const { getChar, updateXP, rollSave, createComp, useSpell, rollHealing } = vi.ho
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave }, sessionAllies: vi.fn(async () => [{ id: 9, name: 'Brann' }]) },
+    characters: { get: getChar, updateXP, rollOptions: vi.fn(async () => []), pendingSaves: { roll: rollSave }, sessionAllies: vi.fn(async () => [{ id: 9, name: 'Brann' }]), list: vi.fn(async () => []) },
+    sessions: { me: vi.fn(async () => null) },
     companions: { list: vi.fn(async () => []), create: createComp }, spells: { use: useSpell, rollHealing },
   },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
@@ -86,5 +88,31 @@ describe('caccia: decisioni', () => {
     await userEvent.type(brann, '500')
     await userEvent.click(lancia)
     await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(5, 3, expect.objectContaining({ target_character_ids: [9], amounts: { 5: 200, 9: 500 } })))
+  })
+
+  // caccia: {"id": "CB-4642", "fonte": "decisione D-035 (tests/caccia/decisioni.md): il talento non ripetibile del background non è sceglibile per Versatile e cambiando background la scelta in conflitto si toglie; 2024 · Umano · pag. 194", "zona": "regola:2024/razze", "voce": "interazione", "copre": ["carta:2024/races.md#Umano / Human (pag. 194)", "route:/"]}
+  it('Versatile non offre il talento non ripetibile del background e lo perde cambiando background', async () => {
+    renderWithProviders(<CharacterSelect />)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    const clic = async (name: string | RegExp) => user.click(await screen.findByRole('button', { name }))
+    const background = async (attuale: RegExp, nuovo: string) => { await clic(attuale); await user.click(await screen.findByText(nuovo)) }
+    await clic(/character.select.new/)
+    await user.type(await screen.findByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await clic('character.settings.rules_edition.2024')
+    await clic('common.next →')
+    await background(/background_pick/, 'Criminale') // Allerta
+    await clic('common.next →')
+    await clic(/species_pick/)
+    await user.click(await screen.findByText('Umano'))
+    expect(await screen.findByRole('button', { name: 'Allerta' })).toBeDisabled()
+    await clic('Abile') // ripetibile: sempre libero
+    await clic('Fortunato')
+    await clic('common.back')
+    await background(/Criminale/, 'Viandante') // Fortunato
+    await clic('common.next →')
+    const fortunato = await screen.findByRole('button', { name: 'Fortunato' })
+    expect(fortunato).toBeDisabled()
+    expect(fortunato).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Allerta' })).toBeEnabled()
   })
 })
