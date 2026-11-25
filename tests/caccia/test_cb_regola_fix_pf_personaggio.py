@@ -127,3 +127,27 @@ async def test_il_rilancio_con_ispirazione_sostituisce_il_ts_contro_la_morte(cli
     # vale solo il 15: il fallimento del 5 sparisce (con due fallimenti prima il PG non muore) e l'Ispirazione è spesa
     assert (scheda["death_saves"]["successes"], scheda["death_saves"]["failures"]) == esito
     assert scheda["is_dead"] is False and scheda["heroic_inspiration"] is False
+
+
+@pytest.mark.caccia(id="CB-4316", fonte="2014 · Druido · Forma Selvatica · pag. 66 (il druido assume i PF e i Dadi Vita della bestia); Riposo Breve · pag. 186",
+                    zona="regola:2014/druid", voce="regola",
+                    copre=["carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)",
+                           "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
+@pytest.mark.xfail(strict=True, reason="CB-4316: difforme dal manuale, confermato (Q-2014-druid-2, rinviato: serve il pulsante dei Dadi Vita sulla forma)")
+async def test_in_forma_selvatica_2014_si_spendono_i_dadi_vita_della_bestia(client, dadi):
+    cid = await _pg(client, "druid", 2)
+    pf = (await client.get(f"/characters/{cid}")).json()["current_hit_points"]
+    r = await client.post(f"/characters/{cid}/companions", json={
+        "kind": "wild_shape", "name": "Lupo", "max_hp": 11, "armor_class": 13,
+        "statblock": {"size": "Medium", "type": "beast", "challenge_rating": 0.25, "hit_dice": "2d8+2",
+                      "abilities": {"con": 10}, "actions": []}})
+    assert r.status_code == 201, r.text
+    forma = r.json()["id"]
+    assert (await client.post(f"/characters/{cid}/companions/{forma}/activate", json={})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 8})).status_code == 200
+    dadi(6)
+    r = await client.post(f"/characters/{cid}/companions/{forma}/hit-dice", json={"count": 1})
+    assert r.status_code == 200, r.text
+    # il d8 della bestia (Costituzione 10) cura la forma: 3 + 6; i PF del druido restano quelli di prima
+    assert r.json()["companion"]["current_hp"] == 9
+    assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == pf
