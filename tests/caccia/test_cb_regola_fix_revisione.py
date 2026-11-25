@@ -130,3 +130,17 @@ def test_evoca_elementale_2024_e_fatale_2014_hanno_i_dadi_della_carta():
     assert granted_spell("conjure-elemental", "2014").damage_dice is None  # nel 2014 evoca una creatura, nessun danno
     fatale = _voce("2014", "weird")
     assert (fatale["damage_dice"], fatale["damage_type"], fatale["higher_levels_dice"]) == ("4d10", "psychic", None)
+
+
+@pytest.mark.caccia(id="CB-4767", fonte="2014 · Chierico · Incantesimi · pag. 58; Paladino · Incantesimi · pag. 97 (dal 2° livello); Multiclasse · pag. 164",
+                    zona="regola:2014/cleric", voce="interazione",
+                    copre=["carta:2014/spells.md#Cura Ferite", "POST /characters/{char_id}/spells"])
+async def test_un_paladino_2014_di_primo_livello_non_toglie_al_chierico_il_livello_massimo_dei_preparati(client):
+    cid, _ = await _pg(client, "cleric", 3, wisdom=16, charisma=16)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "paladin", "level": 1, "hit_die": 10})
+    assert r.status_code == 201, r.text
+    # l'unica classe che incanta è il chierico (slot fino al 2°): un incantesimo non assegnato è suo
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Rianimare Morti", "level": 5, "is_prepared": True})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "spell_above_slots", r.text
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Aiuto", "level": 2, "is_prepared": True})
+    assert r.status_code == 201, r.text

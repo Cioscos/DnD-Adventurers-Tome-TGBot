@@ -86,7 +86,8 @@ def _spell_row(char: Any, spell: Any) -> Any | None:
     """La classe dell'incantesimo: quella assegnata, o l'unico incantatore se non è assegnato."""
     if spell.class_id is not None:
         return next((c for c in char.classes if c.id == spell.class_id), None)
-    casters = [c for c in char.classes if caster_ability(c)]
+    edition = character_edition(char)  # una classe del catalogo che non lancia (ancora) non è un incantatore: Paladino 1 2014
+    casters = [c for c in char.classes if caster_ability(c) and (class_key(c) is None or caster_kind(c, edition))]
     return casters[0] if len(casters) == 1 else None
 
 
