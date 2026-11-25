@@ -93,7 +93,8 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   if (!selectedClass) return null
 
-  const entriesForClass = progressionRows(selectedClass.class_name)
+  // La tabella è solo 2014: per un personaggio 2024 non si mostra (come in Experience), privilegi e slot sarebbero sbagliati
+  const entriesForClass = char.rules_edition === '2024' ? undefined : progressionRows(selectedClass.class_name)
 
   // Portal come Sheet e ResultDialog: dentro <main> l'intestazione, più alta coi
   // breadcrumb da 44 px, resta sopra l'overlay e taglia il bordo della modale.

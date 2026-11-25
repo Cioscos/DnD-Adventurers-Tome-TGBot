@@ -11,7 +11,8 @@ import SpeciesChoices from '@/components/character/SpeciesChoices'
 import type { RaceEntry, Species2024Entry, SubraceEntry } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
-export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null }
+/** `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17: dove la razza ne ha, è obbligatoria). */
+export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null | undefined }
 export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
@@ -38,6 +39,12 @@ function visibleTraits(e: Species2024Entry, options: Record<string, string>) {
     o.key !== options[c.key] && tr.key.startsWith(`${c.key}_`) && tr.key.endsWith(`_${o.key}`))))
 }
 
+/** Velocità della specie: speed_ft è la base della scheda, il +5 di Goliath ed Elfo dei boschi (PHB 2024 pag. 192, 190)
+ *  è un modificatore del motore (core/rules/catalog/species_2024.py), qui ripetuto per mostrarlo prima della creazione. */
+function speciesSpeed(e: Species2024Entry, options: Record<string, string>): number {
+  return e.speed_ft + (e.key === '2024_goliath' || (e.key === '2024_elf' && options.lineage === 'wood') ? 5 : 0)
+}
+
 export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
@@ -60,7 +67,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
           <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} />
           <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
             <p className="tabular-nums">
-              {t('character.create.species_speed')}: {formatLength(e24.speed_ft, unit)}
+              {t('character.create.species_speed')}: {formatLength(speciesSpeed(e24, species24.options), unit)}
             </p>
             <p className="text-dnd-text-muted">
               {visibleTraits(e24, species24.options).map((tr) => tr.name[lang]).join(', ')}
@@ -82,10 +89,10 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
               key={s?.index ?? 'none'}
               onClick={() => onChoice({ race, sub: s })}
               className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
-                ${(sub?.index ?? null) === (s?.index ?? null)
+                ${sub !== undefined && (sub?.index ?? null) === (s?.index ?? null)
                   ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
             >
-              {s ? localized(s.name, lang).text : t('character.create.subrace_none')}
+              {s ? localized(s.name, lang).text : t('character.create.subrace_other')}
             </Pressable>
           ))}
         </div>
@@ -129,7 +136,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
         <CatalogPicker
           kind="races"
           onClose={() => setPicking(false)}
-          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: null }); setPicking(false) }}
+          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: undefined }); setPicking(false) }}
         />
       )}
       {picking && edition === '2024' && (

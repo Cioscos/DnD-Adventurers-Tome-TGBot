@@ -90,7 +90,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         ...(restType === 'short' && Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}),
         ...(restType === 'short' && restoration > 0 ? { sorcerous_restoration: restoration } : {}),
         ...(restType === 'short' && memorize ? { memorize_spell: memorize } : {}),
-        ...(restType === 'long' && reopenTome ? { reopen_tome: true } : {}),
+        ...(reopenTome ? { reopen_tome: true } : {}),
         ...(resistance ? { fiendish_resilience: resistance } : {}),
         ...(tempAllies.length > 0 ? { temp_hp_allies: tempAllies } : {}),
       })

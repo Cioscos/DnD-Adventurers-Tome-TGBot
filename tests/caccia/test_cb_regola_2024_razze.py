@@ -83,15 +83,19 @@ async def test_fortuna_con_svantaggio_ritira_solo_l_1_e_lo_svantaggio_resta(clie
 @pytest.mark.caccia(id="CB-3513", fonte="2024 · Specie · Goliath · Ascendenza gigante, Ardore del fuoco · pag. 192", zona="regola:2024/razze",
                     voce="regola", copre=["carta:2024/races.md#Goliath / Goliath (pag. 192)", "POST /characters/{char_id}/spells/{spell_id}/attack",
                                           "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3513: difforme dal manuale, confermato")
 async def test_ardore_del_fuoco_vale_anche_quando_colpisci_con_un_attacco_con_incantesimo(client):
     cid = await _pg(client, "2024_goliath", {"giant": "fire"}, classe="wizard")
     dardo = await _dardo_di_fuoco(client, cid)
     r = await client.post(f"/characters/{cid}/spells/{dardo}/attack", json={"die": 15})
     assert r.status_code == 200, r.text
-    # Dardo di fuoco è un attacco: colpito il bersaglio, l'Ardore aggiunge 1d10 di fuoco e spende un uso
-    r = await client.post(f"/characters/{cid}/spells/{dardo}/roll_damage", json={"options": [FIRE_BURN]})
+    # Dardo di fuoco è un attacco: colpito il bersaglio, l'Ardore aggiunge 1d10 di fuoco e spende un uso. L'opzione si prende
+    # da quelle offerte sul danno dell'incantesimo, come fa l'app (la chiave della variante per gli incantesimi non è quella del tratto)
+    offerte = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "spell_damage", "spell_id": dardo})).json()
+    ardore = next((o["key"] for o in offerte if o["source"] == f"feature:{FIRE_BURN}"), None)
+    assert ardore is not None, offerte
+    r = await client.post(f"/characters/{cid}/spells/{dardo}/roll_damage", json={"options": [ardore]})
     assert r.status_code == 200, r.text
+    assert r.json()["option_result"]["extra_types"] == ["fire"], r.json()
     assert (await _riga(client, cid, FIRE_BURN))["uses"] == 1
 
 
@@ -99,7 +103,6 @@ async def test_ardore_del_fuoco_vale_anche_quando_colpisci_con_un_attacco_con_in
                     copre=["carta:2024/races.md#Aasimar / Aasimar (pag. 186)", "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/attack/{attack_id}/damage"])
 @pytest.mark.parametrize("forma,tipo", [("wings", "radiant"), ("shroud", "necrotic")])
-@pytest.mark.xfail(strict=True, reason="CB-3514: difforme dal manuale, confermato")
 async def test_i_danni_extra_della_rivelazione_celeste_hanno_il_tipo_della_forma(client, forma, tipo):
     cid = await _pg(client, "2024_aasimar", {"size": "medium"}, livello=3)
     assert (await _usa(client, cid, "species.2024_aasimar_celestial_revelation", params={"form": forma})).status_code == 200

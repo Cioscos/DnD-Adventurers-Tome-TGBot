@@ -25,7 +25,7 @@ function velocitaMostrata(key: string, options: Record<string, string>): string 
 
 describe('caccia: regola 2024 razze', () => {
   // caccia: {"id": "CB-3516", "fonte": "2024 · Specie · Goliath, velocità 35 piedi (pag. 192) ed Elfo dei boschi, velocità 35 piedi (pag. 190)", "zona": "regola:2024/razze", "voce": "regola", "copre": ["carta:2024/races.md#Goliath / Goliath (pag. 192)", "carta:2024/races.md#Elfo dei boschi (lignaggio elfico) / Wood Elf (pag. 190)", "route:/"]}
-  it.fails.each([
+  it.each([
     ['2024_goliath', { giant: 'hill' }],
     ['2024_elf', { lineage: 'wood', spell_ability: 'wisdom', skill: 'survival' }],
   ])('la creazione mostra la velocità della specie scelta (%s): 35 piedi', (key, options) => {

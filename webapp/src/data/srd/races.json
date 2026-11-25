@@ -169,7 +169,16 @@
      "en": "Advantage on saving throws against poison, and resistance against poison damage.",
      "it": "Vantaggio ai tiri salvezza contro il veleno e resistenza ai danni da veleno."
     }
-   }
+   },
+   "resistances": [
+    "poison"
+   ],
+   "weapons": [
+    "battleaxe",
+    "handaxe",
+    "light_hammer",
+    "warhammer"
+   ]
   },
   {
    "index": "elf",
@@ -283,6 +292,12 @@
         "it": "Puoi parlare, leggere e scrivere un linguaggio aggiuntivo a tua scelta."
        }
       }
+     ],
+     "weapons": [
+      "longsword",
+      "shortsword",
+      "shortbow",
+      "longbow"
      ]
     }
    ],
@@ -291,7 +306,10 @@
      "en": "Advantage on saving throws against being charmed, and magic can't put you to sleep.",
      "it": "Vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
     }
-   }
+   },
+   "skills": [
+    "perception"
+   ]
   },
   {
    "index": "gnome",
@@ -372,10 +390,18 @@
         "it": "Hai competenza con gli strumenti da artigiano (strumenti da inventore). Usando quegli strumenti, puoi spendere 1 ora e materiali per un valore di 10 mo per costruire un congegno a orologeria Minuscolo (CA 5, 1 pf). Il congegno smette di funzionare dopo 24 ore (a meno che tu non spenda 1 ora a ripararlo per mantenerlo in funzione), o quando usi la tua azione per smantellarlo; in quel momento, puoi recuperare i materiali usati per crearlo. Puoi avere fino a tre congegni di questo tipo attivi contemporaneamente.\n\nQuando crei un congegno, scegli una delle seguenti opzioni:\n\nGiocattolo a orologeria: Questo giocattolo è un animale, un mostro o una persona a orologeria, come una rana, un topo, un uccello, un drago o un soldato. Quando viene posato a terra, il giocattolo si muove di 5 piedi sul terreno in una direzione casuale a ciascuno dei tuoi turni. Emette rumori appropriati alla creatura che rappresenta.\n\nAccendifuoco: Il congegno produce una fiamma in miniatura, che puoi usare per accendere una candela, una torcia o un fuoco da campo. Usare il congegno richiede la tua azione.\n\nScatola musicale: Quando viene aperta, questa scatola musicale suona un'unica canzone a un volume moderato. La scatola smette di suonare quando raggiunge la fine della canzone o quando viene chiusa."
        }
       }
+     ],
+     "tools": [
+      "tinkers_tools"
      ]
     }
    ],
-   "roll_notes": {}
+   "roll_notes": {
+    "magic_save": {
+     "en": "Advantage on Intelligence, Wisdom, and Charisma saving throws against magic.",
+     "it": "Vantaggio ai tiri salvezza di Intelligenza, Saggezza e Carisma contro la magia."
+    }
+   }
   },
   {
    "index": "half-elf",
@@ -434,7 +460,12 @@
     }
    ],
    "subraces": [],
-   "roll_notes": {}
+   "roll_notes": {
+    "charm_save": {
+     "en": "Advantage on saving throws against being charmed, and magic can't put you to sleep.",
+     "it": "Vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
+    }
+   }
   },
   {
    "index": "half-orc",
@@ -505,7 +536,10 @@
     }
    ],
    "subraces": [],
-   "roll_notes": {}
+   "roll_notes": {},
+   "skills": [
+    "intimidation"
+   ]
   },
   {
    "index": "halfling",
@@ -673,7 +707,10 @@
     }
    ],
    "subraces": [],
-   "roll_notes": {}
+   "roll_notes": {},
+   "resistances": [
+    "fire"
+   ]
   }
  ]
 }

@@ -17,7 +17,7 @@ vi.mock('react-i18next', async (orig) => ({
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }), telegramConfirm: vi.fn() }))
 vi.mock('@/hooks/useClassProficiencies', () => ({
   useClassProficiencies: (_e: string, cls: string | null) => ({
-    isLoading: false, data: cls ? { skills_count: 2, skills_from: ['history', 'insight', 'medicine', 'religion'] } : undefined,
+    isLoading: false, data: cls ? { skills_count: 2, skills_from: ['history', 'insight', 'medicine', 'religion', 'perception'] } : undefined,
   }),
 }))
 vi.mock('@/pages/creation/AbilityScoresStep', async (orig) => ({ ...((await orig()) as Record<string, unknown>), default: () => null }))
@@ -103,17 +103,19 @@ describe('caccia: creazione', () => {
     await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
     await user.click(avanti())
     await user.click(avanti())
+    await user.click(avanti()) // specie libera
     await clic(/dnd.classes.cleric/)
     await clic('character.skills.insight')
     await clic('character.skills.history')
+    await clic('common.back')
     await clic('common.back') // il background scelto dopo fa cadere l'abilità doppia
     await clic(/character.create.background_pick/)
     await user.click(await screen.findByText('Accolito'))
     await user.click(avanti())
+    await user.click(avanti())
     expect(screen.getByRole('button', { name: 'character.skills.insight' })).toBeDisabled()
     expect(avanti()).toBeDisabled()
     await clic('character.skills.medicine')
-    await user.click(avanti())
     await user.click(avanti())
     await clic('character.create.scores_skip')
     await clic('character.create.equipment_skip')
@@ -121,6 +123,38 @@ describe('caccia: creazione', () => {
     expect(create.mock.calls[0][1].skill_choices).toEqual(['history', 'medicine'])
     expect(create.mock.calls[0][2]).toEqual({ background: 'Accolito' })
     expect(create.mock.calls[0][3].skills).toEqual({ insight: true, religion: true })
+  })
+
+  // caccia: {"id": "CB-4555", "fonte": "2014 · Razze · Elfo, Sensi Acuti (pag. 20); 2014 · Background · competenza da due fonti: se ne sceglie un'altra (pag. 125); decisioni D-008 e D-012", "zona": "flusso:creazione", "voce": "interazione", "copre": ["carta:2014/races.md#Elfo / Elf - tratti base (pag. 20)", "carta:2014/backgrounds.md#Regole generali dei background (pag. 125)", "route:/"]}
+  it("2014: la specie viene prima della classe, la Percezione dell'elfo non si sceglie e la scelta doppia cade", async () => {
+    create.mockClear()
+    create.mockResolvedValue({ id: 9 })
+    const user = userEvent.setup()
+    const clic = (name: string | RegExp) => user.click(screen.getByRole('button', { name }))
+    const avanti = () => screen.getByRole('button', { name: 'common.next →' })
+    renderWithProviders(<CharacterSelect />)
+    await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await user.click(avanti())
+    await user.click(avanti()) // nessun background
+    await user.click(avanti()) // specie libera
+    await clic(/dnd.classes.cleric/)
+    await clic('character.skills.perception')
+    await clic('character.skills.history')
+    await clic('common.back') // l'elfo scelto dopo fa cadere la Percezione presa per la classe
+    await clic(/character.create.species_pick/)
+    await user.click(await screen.findByText('Elfo'))
+    await clic('Elfo alto')
+    await user.click(avanti())
+    expect(screen.getByRole('button', { name: 'character.skills.perception' })).toBeDisabled()
+    expect(avanti()).toBeDisabled()
+    await clic('character.skills.medicine')
+    await user.click(avanti())
+    await clic('character.create.scores_skip')
+    await clic('character.create.equipment_skip')
+    await clic('character.create.identity_skip')
+    expect(create.mock.calls[0][1].skill_choices).toEqual(['history', 'medicine'])
+    expect(create.mock.calls[0][3].skills).toEqual({ perception: true })
   })
 })
 
@@ -253,15 +287,15 @@ describe('caccia: creazione, giro 3', () => {
         if (screen.getByRole('button', { name: 'common.next →' }).hasAttribute('disabled')) await user.click(b)
       }
       await clic('common.next →')
-      await clic('common.next →') // specie libera
       if (screen.queryByRole('button', { name: /^monete/ }) === null) await clic('character.create.scores_skip')
     }
-    const indietro = async () => { for (let i = 0; i < 3; i++) await clic('common.back') }
+    const indietro = async () => { for (let i = 0; i < 2; i++) await clic('common.back') }
     renderWithProviders(<CharacterSelect />)
     await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
     await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Tia')
     await clic('common.next →')
     await clic('common.next →') // background saltato
+    await clic('common.next →') // specie libera
     await classe(/dnd.classes.cleric/)
     await clic('monete spente')
     expect(screen.getByRole('button', { name: 'monete accese' })).toBeInTheDocument()

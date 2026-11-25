@@ -47,7 +47,9 @@ from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTE
 from core.rules.level_choices import FREE_KNOWN_KEY, TOOL_SEED_FLAG, sync_level_choices
 from core.rules.states import ALLY_EXCLUSIVE, EXCLUSIVE_TARGETS, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
-from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
+from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG, normalize
+from core.rules.weapons import WEAPONS
+from core.data.damage_types import DAMAGE_TYPES
 from api.routers import maps, notes, silhouette
 from api.schemas.character import (
     CharacterCreate,
@@ -251,6 +253,9 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
         for k, v in sp.roll_notes.items():
             if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
                 raise bad(f"Invalid roll note: {k}")
+        if (any(w not in WEAPONS for w in sp.weapons) or any(t not in TOOLS for t in sp.tools)
+                or any(d not in DAMAGE_TYPES for d in sp.resistances)):
+            raise bad("Invalid species proficiency")
     if body.ability_scores or sp or bg:
         if any(not 3 <= v <= 20 for v in scores.values()):
             raise bad("Ability scores must be between 3 and 20")
@@ -276,6 +281,14 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
         char.settings = s
         langs = list(char.languages or [])
         char.languages = langs + [l for l in sp.languages if l not in langs]
+        if sp.weapons:  # per nome, come il Maestro d'Armi: is_weapon_proficient li riconosce in entrambe le lingue
+            cats = normalize(char.general_proficiencies)
+            cats["weapons"] += [WEAPONS[w].en if lang == "en" else WEAPONS[w].it for w in dict.fromkeys(sp.weapons)]
+            char.general_proficiencies = cats
+        if sp.tools:
+            add_tools(char, sp.tools)
+        if sp.resistances:
+            char.damage_modifiers = {**(char.damage_modifiers or {}), "resistances": sorted(set(sp.resistances))}
     return bg
 
 

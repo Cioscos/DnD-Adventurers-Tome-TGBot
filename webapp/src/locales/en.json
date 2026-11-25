@@ -2602,7 +2602,7 @@
       "species_hint": "Pick a species from the catalogue (optional) or type your own.",
       "species_pick": "Pick from catalogue",
       "subrace": "Subrace",
-      "subrace_none": "None",
+      "subrace_other": "Other (by hand)",
       "species_speed": "Speed",
       "species_clear": "Remove species",
       "species_free": "Species (free text)",
@@ -2647,7 +2647,7 @@
         "background_unknown": "Unknown background.",
         "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
         "background_tool_invalid": "Invalid background tool.",
-        "class_skill_taken": "A skill chosen for the class is already granted by your background: pick another.",
+        "class_skill_taken": "A skill chosen for the class is already granted by your background or race: pick another.",
         "species_skill_taken": "The skill chosen for the species is already granted by your class or background: pick another."
       },
       "create_cta": "Create"
