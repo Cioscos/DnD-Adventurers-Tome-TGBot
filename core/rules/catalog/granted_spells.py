@@ -135,7 +135,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'dominate-beast': GrantedSpell(
         'dominate-beast', {"it": 'Dominare bestie', "en": 'Dominate Beast'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'grasping-vine': GrantedSpell(
-        'grasping-vine', {"it": 'Rampicante afferrante', "en": 'Grasping Vine'}, 4, '1 azione bonus', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+        'grasping-vine', {"it": 'Rampicante afferrante', "en": 'Grasping Vine'}, 4, '1 azione bonus', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'insect-plague': GrantedSpell(
         'insect-plague', {"it": 'Piaga di insetti', "en": 'Insect Plague'}, 5, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='4d10', damage_type='piercing', higher_levels_dice='1d10'),
     'tree-stride': GrantedSpell(
@@ -206,7 +206,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'hallucinatory-terrain': GrantedSpell(
         'hallucinatory-terrain', {"it": 'Terreno illusorio', "en": 'Hallucinatory Terrain'}, 4, '10 minuti', '90 m', '24 ore'),
     'wall-of-stone': GrantedSpell(
-        'wall-of-stone', {"it": 'Muro di pietra', "en": 'Wall of Stone'}, 5, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+        'wall-of-stone', {"it": 'Muro di pietra', "en": 'Wall of Stone'}, 5, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE'),
     'spider-climb': GrantedSpell(
         'spider-climb', {"it": 'Movimento del ragno', "en": 'Spider Climb'}, 2, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
     'divination': GrantedSpell(
@@ -445,8 +445,9 @@ _COMPONENTS["animate-dead"] = "V, S, M"
 # Bardo 2024, Parole della Creazione: le due Parole del Potere sempre preparate
 for _key, _it, _en in (("power-word-heal", "Parola del Potere: Guarigione", "Power Word Heal"),
                        ("power-word-kill", "Parola del Potere: Uccisione", "Power Word Kill")):
-    GRANTED_SPELLS[_key] = GrantedSpell(_key, {"it": _it, "en": _en}, 9, "1 azione", "18 m", "Istantanea")
-    _COMPONENTS[_key] = "V, S"
+    GRANTED_SPELLS[_key] = GrantedSpell(_key, {"it": _it, "en": _en}, 9, "1 azione", "18 m", "Istantanea",
+                                        **({"damage_dice": "12d12", "damage_type": "psychic"} if _key == "power-word-kill" else {}))  # oltre i 100 PF (p.306)
+    _COMPONENTS[_key] = "V"
 # Chierico 2024, incantesimi di dominio che il 2014 non aveva
 for _spell, _comp in (
         (GrantedSpell("aid", {"it": "Aiuto", "en": "Aid"}, 2, "1 azione", "9 m", "8 ore"), "V, S, M"),
@@ -476,7 +477,8 @@ for _spell, _comp in (
         (GrantedSpell("enhance-ability", {"it": "Potenziare caratteristica", "en": "Enhance Ability"}, 2, "1 azione", "Contatto",
                       "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
         (GrantedSpell("yolandes-regal-presence", {"it": "Presenza regale di Yolande", "en": "Yolande's Regal Presence"}, 5, "1 azione",
-                      "Personale (3 m)", "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M")):
+                      "Personale (3 m)", "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE",
+                      damage_dice="4d6", damage_type="psychic"), "V, S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
 # Druido 2024, circoli: incantesimi che il 2014 non concedeva
@@ -504,7 +506,7 @@ for _spell, _comp in (
                       "Concentrazione, fino a 10 minuti", is_concentration=True, attack_save="SAVE", damage_dice="3d10",
                       damage_type="slashing", higher_levels_dice="1d10"), "V, S"),
         (GrantedSpell("fount-of-moonlight", {"it": "Fonte di luce lunare", "en": "Fount of Moonlight"}, 4, "1 azione", "Personale",
-                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S")):
+                      "Concentrazione, fino a 10 minuti", is_concentration=True, attack_save="SAVE"), "V, S")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
 # Guerriero Psionico 2024 (Maestro Telecinetico)
@@ -537,7 +539,8 @@ for _spell, _comp in (
         (GrantedSpell("detect-thoughts", {"it": "Individuazione dei pensieri", "en": "Detect Thoughts"}, 2, "1 azione", "Personale",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M"),  # sondare a fondo: TS Saggezza (2024 p.262)
         (GrantedSpell("hunger-of-hadar", {"it": "Fame di Hadar", "en": "Hunger of Hadar"}, 3, "1 azione", "45 m",
-                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="2d6", damage_type="cold",
+                      higher_levels_dice="1d6"), "V, S, M"),
         (GrantedSpell("sending", {"it": "Messaggio a distanza", "en": "Sending"}, 3, "1 azione", "Illimitata", "1 round"), "V, S, M"),
         (GrantedSpell("black-tentacles", {"it": "Tentacoli neri di Evard", "en": "Evard's Black Tentacles"}, 4, "1 azione", "27 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="3d6",
@@ -691,10 +694,11 @@ GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "spiritual-weapon": replace(GRANTED_SPELLS["spiritual-weapon"], higher_levels_dice="1d8"),
     # Tempesta di ghiaccio: 2d10 contundenti, +1d10 per livello oltre il 4° (p.287)
     "ice-storm": replace(GRANTED_SPELLS["ice-storm"], damage_dice="2d10", higher_levels_dice="1d10"),
-    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti (p.254)
+    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti, TS Destrezza (p.254)
     "conjure-elemental": replace(GRANTED_SPELLS["conjure-elemental"], casting_time="1 azione", range_area="18 m",
-                                 duration="Concentrazione, fino a 10 minuti", components="V, S"),
+                                 duration="Concentrazione, fino a 10 minuti", components="V, S", attack_save="SAVE"),
     # Saltare: azione bonus (p.290); Inviare: istantanea (p.314)
+    "lesser-restoration": replace(GRANTED_SPELLS["lesser-restoration"], casting_time="1 azione bonus"),  # p.291
     "jump": replace(GRANTED_SPELLS["jump"], casting_time="1 azione bonus"),
     "sending": replace(GRANTED_SPELLS["sending"], duration="Istantanea"),
 }

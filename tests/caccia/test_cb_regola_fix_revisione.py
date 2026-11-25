@@ -84,3 +84,24 @@ async def test_rigenerazione_senza_tiro_di_cura_da_comunque_i_4d8_piu_15(client,
     # 4d8 + 15 subito; la riga del catalogo li tira dalla «Cura» dell'incantesimo, non anche dal lancio (CB-3363)
     attesi = 10 if come == "riga_del_catalogo" else 45
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == attesi
+
+
+@pytest.mark.caccia(id="CB-4764", fonte="2024 · Incantesimi · Ristorare Inferiore · pag. 291; Fame di Hadar · pag. 286; Presenza Regale di Yolande · pag. 343; "
+                                        "Evoca Elementale · pag. 254; Muro di Pietra · pag. 339; Fonte di luce lunare · pag. 277; Parola del Potere · pag. 306; "
+                                        "2014 · Muro di Pietra · pag. 254; Rampicante Afferrante · pag. 267",
+                    zona="regola:2024/incantesimi-G-L", voce="edizioni",
+                    copre=["carta:2024/spells.md#Ristorare Inferiore", "carta:2024/spells.md#Fame di Hadar", "carta:2014/spells.md#Muro di Pietra",
+                           "GET /characters/{char_id}/spells"])
+@pytest.mark.parametrize("edizione, chiave, campo, valore", [
+    ("2024", "lesser-restoration", "casting_time", "1 azione bonus"), ("2014", "lesser-restoration", "casting_time", "1 azione"),
+    ("2024", "hunger-of-hadar", "damage_dice", "2d6"), ("2024", "hunger-of-hadar", "higher_levels_dice", "1d6"),
+    ("2024", "hunger-of-hadar", "damage_type", "cold"), ("2024", "hunger-of-hadar", "attack_save", "SAVE"),
+    ("2024", "yolandes-regal-presence", "damage_dice", "4d6"), ("2024", "yolandes-regal-presence", "damage_type", "psychic"),
+    ("2024", "conjure-elemental", "attack_save", "SAVE"), ("2024", "fount-of-moonlight", "attack_save", "SAVE"),
+    ("2014", "wall-of-stone", "attack_save", "SAVE"), ("2024", "wall-of-stone", "attack_save", "SAVE"),
+    ("2014", "grasping-vine", "attack_save", "SAVE"),
+    ("2024", "power-word-heal", "components", "V"), ("2024", "power-word-kill", "components", "V"),
+    ("2024", "power-word-kill", "damage_dice", "12d12"), ("2024", "power-word-kill", "damage_type", "psychic"),
+])
+def test_gli_incantesimi_concessi_hanno_i_dati_della_carta(edizione, chiave, campo, valore):
+    assert getattr(granted_spell(chiave, edizione), campo) == valore

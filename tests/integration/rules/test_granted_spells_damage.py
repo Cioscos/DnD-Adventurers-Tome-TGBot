@@ -22,7 +22,8 @@ def test_every_granted_spell_has_damage_data_the_server_can_roll():
         if spell.damage_dice:  # un incantesimo che fa danno dice come: tiro per colpire o tiro salvezza
             # Scudo di Fuoco ferisce chi ti colpisce senza attacco né TS (2014 p.275, 2024 p.274). Spiriti Guardiani: radiosi o
             # necrotici secondo l'allineamento di chi lancia (2014 p.240, 2024 p.319), tipo ancora da decidere (Q-2014-incantesimi-g-l-2)
-            assert spell.attack_save is not None or key == "fire-shield", key
+            # Parola del Potere: Uccidere 2024 non chiede né l'uno né l'altro (p.306)
+            assert spell.attack_save is not None or key in ("fire-shield", "power-word-kill"), key
             assert spell.damage_type or key == "spirit-guardians", key
         else:  # senza danno non c'è altro da tirare
             assert spell.extra_damage_dice is None and spell.higher_levels_dice is None, key
