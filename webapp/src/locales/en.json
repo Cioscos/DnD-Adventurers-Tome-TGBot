@@ -2591,7 +2591,7 @@
       "species_hint": "Pick a species from the catalogue (optional) or type your own.",
       "species_pick": "Pick from catalogue",
       "subrace": "Subrace",
-      "subrace_none": "None",
+      "subrace_other": "Other (by hand)",
       "species_speed": "Speed",
       "species_clear": "Remove species",
       "species_free": "Species (free text)",

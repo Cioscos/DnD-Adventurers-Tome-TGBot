@@ -11,7 +11,8 @@ import SpeciesChoices from '@/components/character/SpeciesChoices'
 import type { RaceEntry, Species2024Entry, SubraceEntry } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
-export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null }
+/** `sub`: null = «altra sottorazza», da completare a mano; undefined = non ancora scelta (2014 pag. 17: dove la razza ne ha, è obbligatoria). */
+export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null | undefined }
 export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
@@ -88,10 +89,10 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
               key={s?.index ?? 'none'}
               onClick={() => onChoice({ race, sub: s })}
               className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
-                ${(sub?.index ?? null) === (s?.index ?? null)
+                ${sub !== undefined && (sub?.index ?? null) === (s?.index ?? null)
                   ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
             >
-              {s ? localized(s.name, lang).text : t('character.create.subrace_none')}
+              {s ? localized(s.name, lang).text : t('character.create.subrace_other')}
             </Pressable>
           ))}
         </div>
@@ -135,7 +136,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
         <CatalogPicker
           kind="races"
           onClose={() => setPicking(false)}
-          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: null }); setPicking(false) }}
+          onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: undefined }); setPicking(false) }}
         />
       )}
       {picking && edition === '2024' && (

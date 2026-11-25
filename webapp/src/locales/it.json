@@ -2590,7 +2590,7 @@
       "species_hint": "Scegli una specie dal catalogo (facoltativo) o scrivila a mano.",
       "species_pick": "Scegli dal catalogo",
       "subrace": "Sottospecie",
-      "subrace_none": "Nessuna",
+      "subrace_other": "Altra (a mano)",
       "species_speed": "Velocità",
       "species_clear": "Rimuovi specie",
       "species_free": "Specie (testo libero)",

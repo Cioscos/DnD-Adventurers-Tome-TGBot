@@ -56,7 +56,10 @@ async function creaConRazza(nome: string, sottorazza: string | null): Promise<un
   await avanti()
   await clic(/character.create.species_pick/)
   await user.click(await screen.findByText(nome))
+  // 2014 pag. 17: la sottorazza è obbligatoria dove la razza ne ha; senza una del catalogo si sceglie «altra», a mano
+  const altra = screen.queryByRole('button', { name: 'character.create.subrace_other' })
   if (sottorazza) await clic(sottorazza)
+  else if (altra) await user.click(altra)
   await avanti()
   await clic('character.create.scores_skip')
   await clic('character.create.equipment_skip')
